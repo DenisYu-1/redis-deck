@@ -1,0 +1,49 @@
+<section class="add-key-section">
+    <h2>Add/Update Key</h2>
+    <div class="form-group">
+        <label for="new-key">Key:</label>
+        <input type="text" id="new-key" placeholder="Enter key name">
+    </div>
+    <div class="form-group">
+        <label for="key-type">Type:</label>
+        <select id="key-type">
+            <option value="string">String</option>
+            <option value="zset">Sorted Set (ZSet)</option>
+            <option value="hash">Hash</option>
+            <option value="list">List</option>
+            <option value="set">Set</option>
+        </select>
+    </div>
+    
+    <!-- String type fields -->
+    <div id="string-fields" class="type-fields">
+        <div class="form-group">
+            <label for="new-value">Value:</label>
+            <textarea id="new-value" placeholder="Enter value"></textarea>
+        </div>
+    </div>
+    
+    <!-- ZSet type fields -->
+    <div id="zset-fields" class="type-fields hidden">
+        <div class="form-group">
+            <label>Members (Score-Value pairs):</label>
+            <div id="zset-members">
+                <div class="zset-member">
+                    <input type="number" class="zset-score" placeholder="Score" step="any">
+                    <input type="text" class="zset-value" placeholder="Value">
+                    <button type="button" class="remove-member-btn secondary-btn" title="Remove member">×</button>
+                </div>
+            </div>
+            <button type="button" id="add-zset-member-btn" class="secondary-btn">Add Member</button>
+        </div>
+    </div>
+    
+    <!-- Common fields -->
+    <div class="form-group">
+        <label for="expiry">Expiry (seconds, optional):</label>
+        <input type="number" id="expiry" placeholder="Leave empty for no expiry">
+    </div>
+    <button id="add-key-btn">Save Key</button>
+</section>
+
+

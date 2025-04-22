@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedisDeck - Settings</title>
+    <script>
+        (function() {
+            const theme = localStorage.getItem('redisdeck-theme') || 'light';
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark-theme');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .connections-manager {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .connections-list {
+            margin-bottom: 20px;
+        }
+        .connection-card {
+            background-color: var(--bg-card);
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .connection-card::before {
+            content: '⋮⋮';
+            position: absolute;
+            left: 5px;
+            color: var(--text-tertiary);
+            font-size: 18px;
+            line-height: 1;
+            cursor: move;
+        }
+        .connection-card:hover {
+            background-color: var(--bg-hover);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .connection-card.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+        .connection-card.drag-over {
+            border-top: 3px solid var(--accent-primary);
+        }
+        .connection-details {
+            margin-left: 25px;
+        }
+        .connection-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .connection-form {
+            background-color: var(--bg-tertiary);
+            border-radius: 4px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            flex: 1;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-secondary);
+            border-radius: 4px;
+            background-color: var(--bg-input);
+            color: var(--text-primary);
+        }
+        .form-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .tls-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        .tls-checkbox input {
+            width: auto;
+        }
+        .edit-mode-header {
+            background-color: var(--bg-card);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .testing-indicator {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            background-color: var(--bg-card);
+        }
+        .testing-indicator.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .testing-indicator.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .nav-buttons {
+            margin-bottom: 20px;
+        }
+        #total-keys-count {
+            display: none;
+        }
+        .settings-section {
+            background-color: var(--bg-secondary);
+            border-radius: 6px;
+            box-shadow: var(--shadow-sm);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .settings-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        .setting-info {
+            flex: 1;
+        }
+        .setting-info label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .setting-info .description {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+        .setting-control {
+            margin-left: 20px;
+        }
+        .theme-selector {
+            display: flex;
+            gap: 10px;
+        }
+        .theme-option {
+            padding: 8px 16px;
+            border: 2px solid var(--border-secondary);
+            border-radius: 4px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .theme-option:hover {
+            background-color: var(--bg-hover);
+        }
+        .theme-option.active {
+            border-color: var(--accent-primary);
+            background-color: var(--accent-primary);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <svg class="logo" viewBox="0 0 465 100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <style>
+                            .primary-red { fill: #DC382D; }
+                            .dark-accent { fill: #1A1A1A; }
+                            .light-red { fill: #E85D52; }
+                        </style>
+                    </defs>
+                    <g transform="translate(215, 50)">
+                        <g transform="translate(-215, -40)">
+                            <rect x="20" y="20" width="100" height="70" rx="4" class="dark-accent" opacity="0.3"/>
+                            <rect x="10" y="10" width="100" height="70" rx="4" class="primary-red" opacity="0.7"/>
+                            <g>
+                                <rect x="0" y="0" width="100" height="70" rx="4" class="primary-red"/>
+                                <line x1="35" y1="8" x2="35" y2="62" stroke="#FAFAFA" stroke-width="2"/>
+                                <line x1="65" y1="8" x2="65" y2="62" stroke="#FAFAFA" stroke-width="2"/>
+                                <line x1="8" y1="35" x2="92" y2="35" stroke="#FAFAFA" stroke-width="2"/>
+                                <circle cx="20" cy="20" r="4" fill="#FAFAFA"/>
+                                <circle cx="50" cy="20" r="4" fill="#FAFAFA"/>
+                                <circle cx="80" cy="20" r="4" fill="#FAFAFA"/>
+                                <circle cx="20" cy="50" r="4" fill="#FAFAFA"/>
+                                <circle cx="50" cy="50" r="4" fill="#FAFAFA"/>
+                                <circle cx="80" cy="50" r="4" fill="#FAFAFA"/>
+                            </g>
+                        </g>
+                        <text x="-90" y="11" dominant-baseline="middle" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="68" font-weight="700" class="primary-red" letter-spacing="-2">Redis</text>
+                        <text x="85" y="11" dominant-baseline="middle" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="68" font-weight="700" class="dark-accent" letter-spacing="-2">Deck</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="connection-info">
+                <span id="total-keys-count" class="total-keys">Total Keys: N/A</span>
+            </div>
+            <div class="redis-info-button">
+                <a href="/" class="secondary-btn" title="Back to Main UI">↩️</a>
+            </div>
+        </header>
+        
+        <main class="connections-manager">
+            <h2>Settings</h2>
+            
+            <section class="settings-section">
+                <h3>Appearance</h3>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <label>Theme</label>
+                        <span class="description">Choose your preferred color theme</span>
+                    </div>
+                    <div class="setting-control">
+                        <div class="theme-selector">
+                            <button class="theme-option" data-theme="light">☀️ Light</button>
+                            <button class="theme-option" data-theme="dark">🌙 Dark</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <h2>Redis Connections Manager</h2>
+            
+            <section class="connections-list" id="connections-container">
+                <h3>Available Connections</h3>
+                <div id="connections-list">
+                    <p>Loading connections...</p>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button id="add-connection-btn">Add New Connection</button>
+                    <button id="import-connections-btn" class="secondary-btn">Import Connections</button>
+                    <button id="export-connections-btn" class="secondary-btn" style="display: none;">Export Connections</button>
+                </div>
+                <input type="file" id="import-file-input" accept="application/json,.json" style="display: none;">
+            </section>
+            
+            <section class="connection-form" id="connection-form-container" style="display: none;">
+                <div id="edit-mode-header" class="edit-mode-header" style="display: none;">
+                    <h3>Edit Connection</h3>
+                </div>
+                <div id="add-mode-header" class="edit-mode-header" style="display: none;">
+                    <h3>Add New Connection</h3>
+                </div>
+                
+                <form id="connection-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="connection-id">Connection ID (alphanumeric, no spaces):</label>
+                            <input type="text" id="connection-id" name="id" placeholder="e.g., production, development" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="connection-host">Host:</label>
+                            <input type="text" id="connection-host" name="host" placeholder="e.g., localhost, redis.example.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="connection-port">Port:</label>
+                            <input type="number" id="connection-port" name="port" placeholder="e.g., 6379" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="connection-username">Username (optional):</label>
+                            <input type="text" id="connection-username" name="username" placeholder="Redis username">
+                        </div>
+                        <div class="form-group">
+                            <label for="connection-password">Password (optional):</label>
+                            <input type="password" id="connection-password" name="password" placeholder="Redis password">
+                        </div>
+                    </div>
+                    
+                    <div class="tls-checkbox">
+                        <input type="checkbox" id="connection-tls" name="tls">
+                        <label for="connection-tls">Use TLS/SSL</label>
+                    </div>
+                    <div class="tls-checkbox">
+                        <input type="checkbox" id="connection-cluster" name="cluster">
+                        <label for="connection-cluster">Redis Cluster (enable redirects)</label>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" id="save-connection-btn">Save Connection</button>
+                        <button type="button" id="test-connection-btn" class="secondary-btn">Test Connection</button>
+                        <button type="button" id="cancel-edit-btn" class="secondary-btn">Cancel</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+        
+        <div id="toast" class="toast"></div>
+    </div>
+    
+    <script type="module" src="settings.js"></script>
+</body>
+</html> 

@@ -1,0 +1,27 @@
+{
+  "plugins": [
+    {
+      "id": "custom-searches",
+      "name": "Custom Searches",
+      "enabled": true,
+      "path": "./extensions/customSearches/customSearches.js",
+      "priority": 1,
+      "config": {
+        "searchLimit": 100
+      }
+    },
+    {
+      "id": "bookings",
+      "name": "Booking Manager",
+      "enabled": true,
+      "path": "./extensions/bookings/bookings.js",
+      "priority": 0,
+      "config": {
+        "maxRetries": 3,
+        "timeframeStart": -14,
+        "timeframeEnd": 90
+      }
+    }
+  ]
+}
+
