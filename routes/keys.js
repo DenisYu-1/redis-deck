@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { execRedisCommand, scanClusterNodes, getKeyFromCluster } = require('../services/redis');
+const {
+    execRedisCommand,
+    scanClusterNodes,
+    getKeyFromCluster
+} = require('../services/redis');
 
 // Search keys by pattern with pagination using SCAN
 router.get('/keys', async (req, res) => {
@@ -30,7 +34,12 @@ router.get('/keys', async (req, res) => {
 
         // Auto-pagination loop - continue until we find at least one key or exhaust pagination
         do {
-            const result = await scanClusterNodes(pattern, nextCursors, count, env);
+            const result = await scanClusterNodes(
+                pattern,
+                nextCursors,
+                count,
+                env
+            );
 
             // Add keys to results
             keys = keys.concat(result.keys);
@@ -91,23 +100,29 @@ router.get('/keys/:key', async (req, res) => {
             const result = await getKeyFromCluster(key, env);
 
             // Format hash values as clean key-value pairs if needed
-            if (result.type === 'hash' && typeof result.value === 'string' && !result.value.includes(':')) {
-                const lines = result.value.split('\n').filter(line => line.trim() !== '');
+            if (
+                result.type === 'hash' &&
+                typeof result.value === 'string' &&
+                !result.value.includes(':')
+            ) {
+                const lines = result.value
+                    .split('\n')
+                    .filter((line) => line.trim() !== '');
                 if (lines.length > 0 && lines.length % 2 === 0) {
                     const formattedResult = {};
                     for (let i = 0; i < lines.length; i += 2) {
-                        formattedResult[lines[i].trim()] = lines[i+1].trim();
+                        formattedResult[lines[i].trim()] = lines[i + 1].trim();
                     }
                     result.value = formattedResult;
                 }
             }
 
             res.json(result);
-
         } catch {
             return res.status(404).json({
                 error: 'Key not found',
-                message: 'This key was found in search results but does not actually exist (ghost key)',
+                message:
+                    'This key was found in search results but does not actually exist (ghost key)',
                 key
             });
         }
@@ -144,7 +159,9 @@ router.post('/keys', async (req, res) => {
         const { key, value, expiry } = req.body;
 
         if (!key || value === undefined) {
-            return res.status(400).json({ error: 'Key and value are required' });
+            return res
+                .status(400)
+                .json({ error: 'Key and value are required' });
         }
 
         // Handle different value types
@@ -157,7 +174,7 @@ router.post('/keys', async (req, res) => {
 
         // Escape quotes and special characters in the value
         const escapedValue = strValue
-            .replace(/"/g, '\\"')          // Escape double quotes
+            .replace(/"/g, '\\"') // Escape double quotes
             .replace(/(\r\n|\n|\r)/g, '\\n'); // Escape newlines
 
         let command = `SET "${key}" "${escapedValue}"`;
@@ -246,7 +263,11 @@ router.delete('/keys/:key', async (req, res) => {
                     };
 
                     // Retry DEL on the correct node
-                    result = await execRedisCommand(`DEL "${key}"`, env, targetNode);
+                    result = await execRedisCommand(
+                        `DEL "${key}"`,
+                        env,
+                        targetNode
+                    );
                 }
             }
         } catch (error) {
@@ -274,7 +295,9 @@ router.delete('/allkeys', async (req, res) => {
         const pattern = req.query.pattern;
 
         if (!pattern) {
-            return res.status(400).json({ error: 'Pattern parameter is required' });
+            return res
+                .status(400)
+                .json({ error: 'Pattern parameter is required' });
         }
 
         // First get all keys matching the pattern using cluster-aware scanning
@@ -291,7 +314,10 @@ router.delete('/allkeys', async (req, res) => {
         }
 
         if (keys.length === 0) {
-            return res.json({ count: 0, message: 'No keys found matching the pattern' });
+            return res.json({
+                count: 0,
+                message: 'No keys found matching the pattern'
+            });
         }
 
         // Delete each key individually instead of using Promise.all
@@ -303,7 +329,9 @@ router.delete('/allkeys', async (req, res) => {
                     delResult = await execRedisCommand(`DEL "${key}"`, env);
                     // Check for MOVED response
                     if (delResult.includes('MOVED')) {
-                        const movedMatch = delResult.match(/MOVED\s+\d+\s+([^:]+):(\d+)/);
+                        const movedMatch = delResult.match(
+                            /MOVED\s+\d+\s+([^:]+):(\d+)/
+                        );
                         if (movedMatch) {
                             const targetHost = movedMatch[1];
                             const targetPort = parseInt(movedMatch[2]);
@@ -312,11 +340,18 @@ router.delete('/allkeys', async (req, res) => {
                                 host: targetHost,
                                 port: targetPort
                             };
-                            delResult = await execRedisCommand(`DEL "${key}"`, env, targetNode);
+                            delResult = await execRedisCommand(
+                                `DEL "${key}"`,
+                                env,
+                                targetNode
+                            );
                         }
                     }
                 } catch (delError) {
-                    console.error(`Error executing DEL for "${key}":`, delError);
+                    console.error(
+                        `Error executing DEL for "${key}":`,
+                        delError
+                    );
                     continue;
                 }
                 deletedCount += parseInt(delResult.trim()) || 0;
@@ -360,7 +395,10 @@ router.post('/keys/:key/rename', async (req, res) => {
             return res.status(400).json({ error: 'New key name is required' });
         }
 
-        const result = await execRedisCommand(`RENAME "${oldKey}" "${newKey}"`, env);
+        const result = await execRedisCommand(
+            `RENAME "${oldKey}" "${newKey}"`,
+            env
+        );
         res.json({ result, oldKey, newKey });
     } catch (error) {
         res.status(500).json(error);
@@ -375,7 +413,9 @@ router.post('/keys/:key/expire', async (req, res) => {
         const { seconds } = req.body;
 
         if (seconds === undefined) {
-            return res.status(400).json({ error: 'Expiry seconds are required' });
+            return res
+                .status(400)
+                .json({ error: 'Expiry seconds are required' });
         }
 
         let result;
@@ -401,7 +441,9 @@ router.post('/keys/:key/copy', async (req, res) => {
         const { targetKey, targetEnv } = req.body;
 
         if (!targetKey) {
-            return res.status(400).json({ error: 'Target key name is required' });
+            return res
+                .status(400)
+                .json({ error: 'Target key name is required' });
         }
 
         const targetEnvironment = targetEnv || env;
@@ -435,15 +477,27 @@ router.post('/keys/:key/copy', async (req, res) => {
 
                 try {
                     // Try to find which node has the key and dump from there
-                    const clusterMode = await require('../services/redis').isClusterMode(env);
+                    const clusterMode =
+                        await require('../services/redis').isClusterMode(env);
 
                     if (clusterMode) {
-                        const nodes = await require('../services/redis').getClusterNodes(env);
+                        const nodes =
+                            await require('../services/redis').getClusterNodes(
+                                env
+                            );
                         for (const node of nodes) {
                             try {
-                                const existsResult = await execRedisCommand(`EXISTS "${key}"`, env, node);
+                                const existsResult = await execRedisCommand(
+                                    `EXISTS "${key}"`,
+                                    env,
+                                    node
+                                );
                                 if (parseInt(existsResult.trim()) === 1) {
-                                    dumpResult = await execRedisCommand(`--raw DUMP "${key}"`, env, node);
+                                    dumpResult = await execRedisCommand(
+                                        `--raw DUMP "${key}"`,
+                                        env,
+                                        node
+                                    );
                                     break;
                                 }
                             } catch {
@@ -451,10 +505,16 @@ router.post('/keys/:key/copy', async (req, res) => {
                             }
                         }
                     } else {
-                        dumpResult = await execRedisCommand(`--raw DUMP "${key}"`, env);
+                        dumpResult = await execRedisCommand(
+                            `--raw DUMP "${key}"`,
+                            env
+                        );
                     }
                 } catch {
-                    dumpResult = await execRedisCommand(`--raw DUMP "${key}"`, env);
+                    dumpResult = await execRedisCommand(
+                        `--raw DUMP "${key}"`,
+                        env
+                    );
                 }
 
                 if (dumpResult) {
@@ -502,22 +562,36 @@ router.post('/keys/:key/zadd', async (req, res) => {
         const key = req.params.key;
         const { members, expiry } = req.body;
 
-        if (!key || !members || !Array.isArray(members) || members.length === 0) {
-            return res.status(400).json({ error: 'Key and members array are required' });
+        if (
+            !key ||
+            !members ||
+            !Array.isArray(members) ||
+            members.length === 0
+        ) {
+            return res
+                .status(400)
+                .json({ error: 'Key and members array are required' });
         }
 
         // Build ZADD command with score-member pairs
         let command = `ZADD "${key}"`;
 
         for (const member of members) {
-            if (typeof member.score !== 'number' || member.value === undefined) {
-                return res.status(400).json({ error: 'Each member must have score (number) and value properties' });
+            if (
+                typeof member.score !== 'number' ||
+                member.value === undefined
+            ) {
+                return res.status(400).json({
+                    error: 'Each member must have score (number) and value properties'
+                });
             }
 
             const memberValue = String(member.value);
 
             // Escape quotes and backslashes for Redis command
-            const escapedValue = memberValue.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            const escapedValue = memberValue
+                .replace(/\\/g, '\\\\')
+                .replace(/"/g, '\\"');
             command += ` ${member.score} "${escapedValue}"`;
         }
 

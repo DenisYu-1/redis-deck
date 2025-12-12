@@ -118,7 +118,11 @@ describe('Info Routes', () => {
         });
 
         test('should execute GET command', async () => {
-            await createTestKey('test:info:execget', 'get-value', testConnectionId);
+            await createTestKey(
+                'test:info:execget',
+                'get-value',
+                testConnectionId
+            );
 
             const response = await request(app)
                 .post('/api/exec')
@@ -155,7 +159,11 @@ describe('Info Routes', () => {
 
     describe('POST /api/copy-key', () => {
         test('should copy string key between environments', async () => {
-            await createTestKey('test:info:copykey', 'copy-value', testConnectionId);
+            await createTestKey(
+                'test:info:copykey',
+                'copy-value',
+                testConnectionId
+            );
 
             const response = await request(app)
                 .post('/api/copy-key')
@@ -170,7 +178,10 @@ describe('Info Routes', () => {
             expect(response.body).toHaveProperty('message');
             expect(response.body.message).toContain('successfully');
 
-            const targetExists = await keyExists('test:info:copytarget', testConnectionId);
+            const targetExists = await keyExists(
+                'test:info:copytarget',
+                testConnectionId
+            );
             expect(targetExists).toBe(true);
 
             await deleteTestKeys('test:info:copytarget', testConnectionId);
@@ -202,7 +213,12 @@ describe('Info Routes', () => {
         });
 
         test('should handle keys with TTL', async () => {
-            await createTestKey('test:info:copykey-ttl', 'value', testConnectionId, 120);
+            await createTestKey(
+                'test:info:copykey-ttl',
+                'value',
+                testConnectionId,
+                120
+            );
 
             const response = await request(app)
                 .post('/api/copy-key')
@@ -220,4 +236,3 @@ describe('Info Routes', () => {
         });
     });
 });
-

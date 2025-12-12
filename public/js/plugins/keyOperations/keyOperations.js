@@ -6,7 +6,10 @@ import { showToast } from '../../utils/domUtils.js';
 export default class KeyOperationsPlugin extends PluginBase {
     async init(context) {
         this.context = context;
-        await ComponentHelper.injectHTML('/js/plugins/keyOperations/view.html', this.priority);
+        await ComponentHelper.injectHTML(
+            '/js/plugins/keyOperations/view.html',
+            this.priority
+        );
         this.setupEventListeners();
     }
 
@@ -75,14 +78,20 @@ export default class KeyOperationsPlugin extends PluginBase {
                 const members = this.getZsetMembers();
 
                 if (members.length === 0) {
-                    showToast('At least one member is required for a sorted set', 'error');
+                    showToast(
+                        'At least one member is required for a sorted set',
+                        'error'
+                    );
                     return;
                 }
 
                 await addToSortedSet(key, members, expiry, environment);
                 this.clearZsetMembers();
             } else {
-                showToast(`Support for ${keyType} keys is not implemented yet`, 'error');
+                showToast(
+                    `Support for ${keyType} keys is not implemented yet`,
+                    'error'
+                );
                 return;
             }
 
@@ -102,7 +111,7 @@ export default class KeyOperationsPlugin extends PluginBase {
 
     showTypeFields(keyType) {
         const allTypeFields = document.querySelectorAll('.type-fields');
-        allTypeFields.forEach(field => field.classList.add('hidden'));
+        allTypeFields.forEach((field) => field.classList.add('hidden'));
 
         const targetField = document.getElementById(`${keyType}-fields`);
         if (targetField) {
@@ -139,7 +148,7 @@ export default class KeyOperationsPlugin extends PluginBase {
         const members = [];
         const memberDivs = document.querySelectorAll('.zset-member');
 
-        memberDivs.forEach(memberDiv => {
+        memberDivs.forEach((memberDiv) => {
             const scoreInput = memberDiv.querySelector('.zset-score');
             const valueInput = memberDiv.querySelector('.zset-value');
 
@@ -168,8 +177,5 @@ export default class KeyOperationsPlugin extends PluginBase {
         `;
     }
 
-    async destroy() {
-    }
+    async destroy() {}
 }
-
-

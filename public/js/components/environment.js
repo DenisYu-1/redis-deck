@@ -24,7 +24,7 @@ export function init(onEnvironmentChange) {
     // Load available environments
     loadAvailableEnvironments().then(() => {
         // Check initial connection
-        testConnection().then(success => {
+        testConnection().then((success) => {
             // Call the callback on initial load to trigger keys request
             if (success && onEnvironmentChangeCallback) {
                 onEnvironmentChangeCallback(currentEnvironment);
@@ -57,7 +57,7 @@ async function loadAvailableEnvironments() {
 
     if (environments && environments.length > 0) {
         // Add options for each environment
-        environments.forEach(env => {
+        environments.forEach((env) => {
             if (env.host) {
                 const option = document.createElement('option');
                 option.value = env.id;
@@ -78,7 +78,6 @@ async function loadAvailableEnvironments() {
         // Set the default environment
         currentEnvironment = 'staging';
     }
-
 }
 
 /**

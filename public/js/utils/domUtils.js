@@ -43,7 +43,12 @@ export function escapeHTML(str) {
  * @param {string[]} cursors - Array of pagination cursors
  * @param {number} [cursorIndex] - Current index in the cursors array
  */
-export function updatePaginationInfo(totalCount, loadedCount, cursors, cursorIndex = 0) {
+export function updatePaginationInfo(
+    totalCount,
+    loadedCount,
+    cursors,
+    cursorIndex = 0
+) {
     const paginationInfo = document.getElementById('pagination-info');
 
     // Get current cursor from array
@@ -56,4 +61,3 @@ export function updatePaginationInfo(totalCount, loadedCount, cursors, cursorInd
         paginationInfo.innerHTML = `Showing ${loadedCount} keys${hasMore ? '<br>(more available)' : ''}`;
     }
 }
-

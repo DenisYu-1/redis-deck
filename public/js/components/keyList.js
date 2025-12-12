@@ -39,24 +39,38 @@ export function init(onKeySelected) {
     const keysResults = document.getElementById('keys-results');
     const searchPattern = document.getElementById('search-pattern');
     const loadMoreBtn = document.getElementById('load-more-btn');
-    const prevPageBtn = document.getElementById('prev-page-btn') || document.createElement('button'); // Fallback if not in DOM
-    const nextPageBtn = document.getElementById('next-page-btn') || document.createElement('button'); // Fallback if not in DOM
+    const prevPageBtn =
+        document.getElementById('prev-page-btn') ||
+        document.createElement('button'); // Fallback if not in DOM
+    const nextPageBtn =
+        document.getElementById('next-page-btn') ||
+        document.createElement('button'); // Fallback if not in DOM
 
     // Set up virtual list container styles
     setupVirtualListContainer();
 
     // Event listeners
-    searchBtn.addEventListener('click', () => search(Environment.getCurrentEnvironment()));
-    showAllBtn.addEventListener('click', () => showAll(Environment.getCurrentEnvironment()));
+    searchBtn.addEventListener('click', () =>
+        search(Environment.getCurrentEnvironment())
+    );
+    showAllBtn.addEventListener('click', () =>
+        showAll(Environment.getCurrentEnvironment())
+    );
     keysResults.addEventListener('click', handleKeySelection);
-    loadMoreBtn.addEventListener('click', () => loadMore(Environment.getCurrentEnvironment()));
+    loadMoreBtn.addEventListener('click', () =>
+        loadMore(Environment.getCurrentEnvironment())
+    );
 
     // Pagination navigation buttons
     if (prevPageBtn.id === 'prev-page-btn') {
-        prevPageBtn.addEventListener('click', () => navigateToPreviousCursor(Environment.getCurrentEnvironment()));
+        prevPageBtn.addEventListener('click', () =>
+            navigateToPreviousCursor(Environment.getCurrentEnvironment())
+        );
     }
     if (nextPageBtn.id === 'next-page-btn') {
-        nextPageBtn.addEventListener('click', () => navigateToNextCursor(Environment.getCurrentEnvironment()));
+        nextPageBtn.addEventListener('click', () =>
+            navigateToNextCursor(Environment.getCurrentEnvironment())
+        );
     }
 
     // Add scroll event handler for virtual list
@@ -95,7 +109,8 @@ function setupVirtualListContainer() {
 function adjustContainerHeight() {
     const keysResults = document.getElementById('keys-results');
     const container = keysResults.parentElement;
-    const availableHeight = window.innerHeight - container.getBoundingClientRect().top - 100; // 100px buffer for bottom
+    const availableHeight =
+        window.innerHeight - container.getBoundingClientRect().top - 100; // 100px buffer for bottom
 
     virtualListConfig.containerHeight = Math.max(300, availableHeight); // Minimum 300px height
     keysResults.style.height = `${virtualListConfig.containerHeight}px`;
@@ -136,7 +151,10 @@ export async function search(environment) {
 
     try {
         // Check if this is a direct key search (no wildcards) and not the default pattern
-        const hasWildcards = pattern.includes('*') || pattern.includes('?') || pattern.includes('[');
+        const hasWildcards =
+            pattern.includes('*') ||
+            pattern.includes('?') ||
+            pattern.includes('[');
 
         if (!hasWildcards) {
             // This is a direct key lookup
@@ -152,7 +170,8 @@ export async function search(environment) {
                 updatePaginationInfo(1, 1, ['0'], 0);
             } catch {
                 // Key doesn't exist
-                keysResults.innerHTML = '<li class="no-results">Key not found</li>';
+                keysResults.innerHTML =
+                    '<li class="no-results">Key not found</li>';
                 updatePaginationInfo(0, 0, ['0'], 0);
             }
         } else {
@@ -164,7 +183,11 @@ export async function search(environment) {
             displayKeys(data.keys, true);
 
             // Update pagination status
-            if (data.cursors && Array.isArray(data.cursors) && data.cursors.length > 0) {
+            if (
+                data.cursors &&
+                Array.isArray(data.cursors) &&
+                data.cursors.length > 0
+            ) {
                 // Backend returns array of cursors (one for each node in cluster mode, or single cursor for standalone)
                 cursors = data.cursors;
                 currentCursorIndex = 0; // Reset to beginning since we now have the complete cursor state
@@ -191,11 +214,17 @@ export async function search(environment) {
             loadMoreBtn.disabled = !data.hasMore;
 
             // Pass the cursors array and current index for display
-            updatePaginationInfo(totalKeys, loadedKeysCount, cursors, currentCursorIndex);
+            updatePaginationInfo(
+                totalKeys,
+                loadedKeysCount,
+                cursors,
+                currentCursorIndex
+            );
 
             // If no keys found, show a message
             if (data.keys.length === 0) {
-                keysResults.innerHTML = '<li class="no-results">No keys found matching the pattern</li>';
+                keysResults.innerHTML =
+                    '<li class="no-results">No keys found matching the pattern</li>';
             }
         }
     } catch (error) {
@@ -235,7 +264,7 @@ export async function refreshCurrentView(environment) {
         // Update pagination info with current state
         const loadMoreBtn = document.getElementById('load-more-btn');
         // Check if any cursor has more data (for cluster mode)
-        const hasMore = cursors.some(cursor => cursor !== '0');
+        const hasMore = cursors.some((cursor) => cursor !== '0');
         loadMoreBtn.disabled = !hasMore;
 
         let totalKeys = loadedKeysCount;
@@ -243,7 +272,12 @@ export async function refreshCurrentView(environment) {
             totalKeys = `${loadedKeysCount}+`;
         }
 
-        updatePaginationInfo(totalKeys, loadedKeysCount, cursors, currentCursorIndex);
+        updatePaginationInfo(
+            totalKeys,
+            loadedKeysCount,
+            cursors,
+            currentCursorIndex
+        );
     } else {
         // If no keys are loaded, fall back to a fresh search
         await search(environment);
@@ -258,7 +292,7 @@ export async function loadMore(environment) {
     const loadMoreBtn = document.getElementById('load-more-btn');
 
     // Check if any cursor has more data (for cluster mode)
-    const hasMore = cursors.some(cursor => cursor !== '0');
+    const hasMore = cursors.some((cursor) => cursor !== '0');
 
     if (isLoading || !hasMore) {
         loadMoreBtn.disabled = true;
@@ -270,13 +304,22 @@ export async function loadMore(environment) {
 
     try {
         // Send entire cursor array to backend
-        const data = await searchKeys(currentPattern, cursors, 10000, environment);
+        const data = await searchKeys(
+            currentPattern,
+            cursors,
+            10000,
+            environment
+        );
 
         // Append new keys to the existing list
         displayKeys(data.keys, false);
 
         // Update pagination status
-        if (data.cursors && Array.isArray(data.cursors) && data.cursors.length > 0) {
+        if (
+            data.cursors &&
+            Array.isArray(data.cursors) &&
+            data.cursors.length > 0
+        ) {
             // Backend returns array of cursors (one for each node in cluster mode, or single cursor for standalone)
             cursors = data.cursors;
         }
@@ -293,7 +336,12 @@ export async function loadMore(environment) {
         // Enable/disable load more button
         loadMoreBtn.disabled = !data.hasMore;
 
-        updatePaginationInfo(totalKeys, loadedKeysCount, cursors, currentCursorIndex);
+        updatePaginationInfo(
+            totalKeys,
+            loadedKeysCount,
+            cursors,
+            currentCursorIndex
+        );
     } catch (error) {
         console.error('Error loading more keys:', error);
         throw error;
@@ -345,7 +393,7 @@ function handleKeySelection(e) {
         // Highlight selected key - only need to update class for visible elements
         const keysResults = document.getElementById('keys-results');
         const items = keysResults.querySelectorAll('li');
-        items.forEach(item => item.classList.remove('active'));
+        items.forEach((item) => item.classList.remove('active'));
         e.target.classList.add('active');
 
         currentKey = selectedKey;
@@ -366,9 +414,8 @@ function handleKeySelection(e) {
 function displayKeys(keys, resetList) {
     const keysCount = document.getElementById('keys-count');
 
-
     // Filter out empty keys
-    const validKeys = keys.filter(key => key && key.trim() !== '');
+    const validKeys = keys.filter((key) => key && key.trim() !== '');
 
     if (resetList) {
         allKeys = [];
@@ -407,7 +454,8 @@ function displayKeys(keys, resetList) {
  */
 function renderVisibleItems() {
     const keysResults = document.getElementById('keys-results');
-    const container = keysResults.querySelector('.virtual-list-container') || keysResults;
+    const container =
+        keysResults.querySelector('.virtual-list-container') || keysResults;
 
     // If no keys or still loading, don't render
     if (allKeys.length === 0) {
@@ -416,10 +464,18 @@ function renderVisibleItems() {
 
     // Calculate visible range
     const scrollTop = virtualListConfig.scrollTop;
-    const startIndex = Math.max(0, Math.floor(scrollTop / virtualListConfig.itemHeight) - virtualListConfig.bufferItems);
+    const startIndex = Math.max(
+        0,
+        Math.floor(scrollTop / virtualListConfig.itemHeight) -
+            virtualListConfig.bufferItems
+    );
     const endIndex = Math.min(
         allKeys.length,
-        startIndex + Math.ceil(virtualListConfig.containerHeight / virtualListConfig.itemHeight) + virtualListConfig.bufferItems
+        startIndex +
+            Math.ceil(
+                virtualListConfig.containerHeight / virtualListConfig.itemHeight
+            ) +
+            virtualListConfig.bufferItems
     );
 
     // Set container height to accommodate all items
@@ -436,7 +492,9 @@ function renderVisibleItems() {
         // Truncate long key names
         if (key.length > virtualListConfig.maxKeyDisplayLength) {
             // Truncate the middle part of the key
-            const halfLength = Math.floor(virtualListConfig.maxKeyDisplayLength / 2);
+            const halfLength = Math.floor(
+                virtualListConfig.maxKeyDisplayLength / 2
+            );
             const firstPart = key.substring(0, halfLength);
             const lastPart = key.substring(key.length - halfLength);
             li.textContent = `${firstPart}…${lastPart}`;
@@ -519,7 +577,12 @@ export async function navigateToPreviousCursor(environment) {
         keysResults.innerHTML = '<li class="loading">Loading keys...</li>';
 
         // Just send the sliced cursors array
-        const data = await searchKeys(currentPattern, currentCursors, 10000, environment);
+        const data = await searchKeys(
+            currentPattern,
+            currentCursors,
+            10000,
+            environment
+        );
 
         // Accumulate keys
         if (data.keys && data.keys.length > 0) {
@@ -528,8 +591,12 @@ export async function navigateToPreviousCursor(environment) {
         }
 
         // Update pagination display
-        updatePaginationInfo(loadedKeysCount, loadedKeysCount, cursors, currentCursorIndex);
-
+        updatePaginationInfo(
+            loadedKeysCount,
+            loadedKeysCount,
+            cursors,
+            currentCursorIndex
+        );
     } catch (error) {
         console.error('Error navigating to previous cursor:', error);
         throw error;
@@ -551,7 +618,11 @@ export async function navigateToNextCursor(environment) {
     }
 
     // Single cursor mode (standalone Redis)
-    if (isLoading || currentCursorIndex >= cursors.length - 1 || cursors[currentCursorIndex] === '0') {
+    if (
+        isLoading ||
+        currentCursorIndex >= cursors.length - 1 ||
+        cursors[currentCursorIndex] === '0'
+    ) {
         return; // Already at last cursor or loading
     }
 

@@ -15,7 +15,9 @@ export function init() {
 
     // Event listeners
     showInfoBtn.addEventListener('click', () => showRedisInfo());
-    closeInfoBtn.addEventListener('click', () => redisInfoModal.classList.add('hidden'));
+    closeInfoBtn.addEventListener('click', () =>
+        redisInfoModal.classList.add('hidden')
+    );
 }
 
 /**
@@ -28,7 +30,8 @@ async function showRedisInfo(environment) {
         const redisInfoContent = document.getElementById('redis-info-content');
 
         // Show loading state
-        redisInfoContent.innerHTML = '<p>Loading Redis server information...</p>';
+        redisInfoContent.innerHTML =
+            '<p>Loading Redis server information...</p>';
         redisInfoModal.classList.remove('hidden');
 
         const data = await getRedisInfo(environment);

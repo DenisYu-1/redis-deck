@@ -24,7 +24,9 @@ router.post('/flush', async (req, res) => {
         const env = req.query.env;
 
         if (!req.body.confirm || req.body.confirm !== true) {
-            return res.status(400).json({ error: 'Confirmation required to flush database' });
+            return res
+                .status(400)
+                .json({ error: 'Confirmation required to flush database' });
         }
 
         const result = await execRedisCommand('FLUSHDB', env);
@@ -51,7 +53,9 @@ router.post('/exec', async (req, res) => {
         const result = await execRedisCommand(command, env);
         res.json({ result });
     } catch (error) {
-        res.status(500).json({ error: error.message || 'Error executing Redis command' });
+        res.status(500).json({
+            error: error.message || 'Error executing Redis command'
+        });
     }
 });
 
@@ -67,11 +71,16 @@ router.post('/copy-key', async (req, res) => {
 
     try {
         // First, get the key type
-        const typeResult = await execRedisCommand(`TYPE ${sourceKey}`, sourceEnv);
+        const typeResult = await execRedisCommand(
+            `TYPE ${sourceKey}`,
+            sourceEnv
+        );
         const keyType = typeResult.trim();
 
         if (keyType === 'none') {
-            return res.status(404).json({ error: `Key '${sourceKey}' not found in ${sourceEnv} environment` });
+            return res.status(404).json({
+                error: `Key '${sourceKey}' not found in ${sourceEnv} environment`
+            });
         }
 
         // Get TTL of the source key
@@ -82,25 +91,42 @@ router.post('/copy-key', async (req, res) => {
 
         // Try to use DUMP and RESTORE for reliable copying (preserves all data types)
         try {
-            const dumpResult = await execRedisCommand(`--raw DUMP ${sourceKey}`, sourceEnv);
+            const dumpResult = await execRedisCommand(
+                `--raw DUMP ${sourceKey}`,
+                sourceEnv
+            );
 
             // Use RESTORE with REPLACE option and apply the TTL
             const ttlMs = ttl > 0 ? ttl * 1000 : 0;
-            await execRedisCommand(`RESTORE ${targetKey} ${ttlMs} "${dumpResult.replace(/"/g, '\\"')}" REPLACE`, targetEnv);
+            await execRedisCommand(
+                `RESTORE ${targetKey} ${ttlMs} "${dumpResult.replace(/"/g, '\\"')}" REPLACE`,
+                targetEnv
+            );
             copySuccessful = true;
         } catch (dumpError) {
             // Fallback to type-specific copying for simple types
             if (keyType === 'string') {
-                const value = await execRedisCommand(`GET ${sourceKey}`, sourceEnv);
-                await execRedisCommand(`SET ${targetKey} "${value.replace(/"/g, '\\"')}"`, targetEnv);
+                const value = await execRedisCommand(
+                    `GET ${sourceKey}`,
+                    sourceEnv
+                );
+                await execRedisCommand(
+                    `SET ${targetKey} "${value.replace(/"/g, '\\"')}"`,
+                    targetEnv
+                );
 
                 // Set TTL if it's positive
                 if (ttl > 0) {
-                    await execRedisCommand(`EXPIRE ${targetKey} ${ttl}`, targetEnv);
+                    await execRedisCommand(
+                        `EXPIRE ${targetKey} ${ttl}`,
+                        targetEnv
+                    );
                 }
                 copySuccessful = true;
             } else {
-                throw new Error(`Failed to copy key of type ${keyType}: ${dumpError.message}`);
+                throw new Error(
+                    `Failed to copy key of type ${keyType}: ${dumpError.message}`
+                );
             }
         }
 

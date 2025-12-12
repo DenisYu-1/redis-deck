@@ -6,7 +6,10 @@ import { showToast } from '../../utils/domUtils.js';
 export default class BatchDeletePlugin extends PluginBase {
     async init(context) {
         this.context = context;
-        await ComponentHelper.injectHTML('/js/plugins/batchDelete/view.html', this.priority);
+        await ComponentHelper.injectHTML(
+            '/js/plugins/batchDelete/view.html',
+            this.priority
+        );
         this.setupEventListeners();
     }
 
@@ -39,7 +42,11 @@ export default class BatchDeletePlugin extends PluginBase {
             return;
         }
 
-        if (!confirm(`Are you sure you want to delete all keys matching the pattern "${pattern}"?`)) {
+        if (
+            !confirm(
+                `Are you sure you want to delete all keys matching the pattern "${pattern}"?`
+            )
+        ) {
             return;
         }
 
@@ -59,7 +66,5 @@ export default class BatchDeletePlugin extends PluginBase {
         }
     }
 
-    async destroy() {
-    }
+    async destroy() {}
 }
-

@@ -1,20 +1,20 @@
 {
-  "plugins": [
-    {
-      "id": "key-operations",
-      "name": "Key Operations",
-      "enabled": true,
-      "path": "./keyOperations/keyOperations.js",
-      "priority": 100,
-      "config": {}
-    },
-    {
-      "id": "batch-delete",
-      "name": "Batch Delete Keys",
-      "enabled": true,
-      "path": "./batchDelete/batchDelete.js",
-      "priority": 50,
-      "config": {}
-    }
-  ]
+    "plugins": [
+        {
+            "id": "key-operations",
+            "name": "Key Operations",
+            "enabled": true,
+            "path": "./keyOperations/keyOperations.js",
+            "priority": 100,
+            "config": {}
+        },
+        {
+            "id": "batch-delete",
+            "name": "Batch Delete Keys",
+            "enabled": true,
+            "path": "./batchDelete/batchDelete.js",
+            "priority": 50,
+            "config": {}
+        }
+    ]
 }

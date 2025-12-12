@@ -46,7 +46,10 @@ describe('Environment Routes', () => {
                 .expect(200);
 
             expect(response.body).toHaveProperty('status', 'ok');
-            expect(response.body).toHaveProperty('environment', testConnectionId);
+            expect(response.body).toHaveProperty(
+                'environment',
+                testConnectionId
+            );
             expect(response.body).toHaveProperty('host');
             expect(response.body).toHaveProperty('port');
         });
@@ -71,13 +74,10 @@ describe('Environment Routes', () => {
         });
 
         test('should return 404 when environment is not specified', async () => {
-            const response = await request(app)
-                .get('/api/health')
-                .expect(404);
+            const response = await request(app).get('/api/health').expect(404);
 
             expect(response.body).toHaveProperty('error');
             expect(response.body.error).toContain('not found');
         });
     });
 });
-

@@ -34,7 +34,9 @@ describe('Database Service', () => {
             const connections = getAllConnections();
 
             for (let i = 0; i < connections.length - 1; i++) {
-                expect(connections[i].order).toBeLessThanOrEqual(connections[i + 1].order);
+                expect(connections[i].order).toBeLessThanOrEqual(
+                    connections[i + 1].order
+                );
             }
         });
     });
@@ -158,7 +160,7 @@ describe('Database Service', () => {
     describe('updateConnectionOrder', () => {
         test('should update connection order', () => {
             const connections = getAllConnections();
-            const connectionIds = connections.map(conn => conn.id);
+            const connectionIds = connections.map((conn) => conn.id);
 
             const reversedIds = [...connectionIds].reverse();
 
@@ -166,7 +168,9 @@ describe('Database Service', () => {
 
             const updatedConnections = getAllConnections();
             expect(updatedConnections[0].id).toBe(reversedIds[0]);
-            expect(updatedConnections[updatedConnections.length - 1].id).toBe(reversedIds[reversedIds.length - 1]);
+            expect(updatedConnections[updatedConnections.length - 1].id).toBe(
+                reversedIds[reversedIds.length - 1]
+            );
 
             updateConnectionOrder(connectionIds);
         });
@@ -208,7 +212,7 @@ describe('Database Service', () => {
         test('should throw error for non-existent connection', () => {
             expect(() => {
                 getConnectionConfig('non-existent-connection');
-            }).toThrow('Connection \'non-existent-connection\' not found');
+            }).toThrow("Connection 'non-existent-connection' not found");
         });
 
         test('should convert tls and cluster flags to boolean', () => {
@@ -219,4 +223,3 @@ describe('Database Service', () => {
         });
     });
 });
-

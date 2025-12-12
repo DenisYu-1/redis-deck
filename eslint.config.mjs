@@ -1,5 +1,8 @@
+import prettier from 'eslint-plugin-prettier';
+
 export default [
     {
+        files: ['**/*.js'],
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: 'module',
@@ -23,15 +26,13 @@ export default [
                 exports: 'readonly'
             }
         },
+        plugins: {
+            prettier: prettier
+        },
         rules: {
             'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
             'no-console': ['warn', { allow: ['error'] }],
-            'semi': ['error', 'always'],
-            'quotes': ['error', 'single', { avoidEscape: true }],
-            'indent': ['error', 4],
-            'comma-dangle': ['error', 'never'],
-            'no-trailing-spaces': 'error',
-            'eol-last': ['error', 'always']
+            'prettier/prettier': 'error'
         }
     },
     {
@@ -41,5 +42,3 @@ export default [
         }
     }
 ];
-
-

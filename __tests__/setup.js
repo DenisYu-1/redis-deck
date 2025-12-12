@@ -11,12 +11,16 @@ beforeAll(async () => {
     const connections = db.prepare('SELECT * FROM connections').all();
     ORIGINAL_CONNECTIONS.push(...connections);
 
-    const hasTestConnection = connections.some(conn => conn.id === TEST_CONNECTION_ID);
+    const hasTestConnection = connections.some(
+        (conn) => conn.id === TEST_CONNECTION_ID
+    );
     if (!hasTestConnection) {
-        db.prepare(`
+        db.prepare(
+            `
             INSERT INTO connections (id, host, port, username, password, tls, cluster, \`order\`)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
+        `
+        ).run(
             TEST_CONNECTION_ID,
             process.env.REDIS_TEST_HOST || '127.0.0.1',
             parseInt(process.env.REDIS_TEST_PORT || '6379'),
@@ -40,4 +44,3 @@ afterAll(async () => {
 });
 
 global.TEST_CONNECTION_ID = TEST_CONNECTION_ID;
-

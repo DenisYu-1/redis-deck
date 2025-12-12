@@ -10,11 +10,15 @@ router.post('/execute', async (req, res) => {
         const { commands, env } = req.body;
 
         if (!commands || !Array.isArray(commands) || commands.length === 0) {
-            return res.status(400).json({ error: 'Valid commands array is required' });
+            return res
+                .status(400)
+                .json({ error: 'Valid commands array is required' });
         }
 
         if (!env) {
-            return res.status(400).json({ error: 'Environment (env) parameter is required' });
+            return res
+                .status(400)
+                .json({ error: 'Environment (env) parameter is required' });
         }
 
         const results = [];
@@ -41,7 +45,7 @@ router.post('/execute', async (req, res) => {
         }
 
         res.json({
-            success: results.every(r => r.success),
+            success: results.every((r) => r.success),
             results
         });
     } catch (error) {

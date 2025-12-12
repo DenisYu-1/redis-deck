@@ -2,8 +2,18 @@
  * Key Details Component
  * Manages the details view of a Redis key and related operations
  */
-import { getKeyDetails, deleteKey, renameKey, setKeyExpiry, copyKey } from '../services/apiService.js';
-import { formatValue, formatTtl, getDisplayTypeName } from '../utils/dataFormatter.js';
+import {
+    getKeyDetails,
+    deleteKey,
+    renameKey,
+    setKeyExpiry,
+    copyKey
+} from '../services/apiService.js';
+import {
+    formatValue,
+    formatTtl,
+    getDisplayTypeName
+} from '../utils/dataFormatter.js';
 import { showToast, escapeHTML } from '../utils/domUtils.js';
 import * as Environment from '../components/environment.js';
 
@@ -51,17 +61,23 @@ export function init() {
     applyTtlBtn.addEventListener('click', () => {
         handleApplyTtl(Environment.getCurrentEnvironment(), refreshCallback);
     });
-    cancelTtlBtn.addEventListener('click', () => document.getElementById('set-ttl-modal').classList.add('hidden'));
+    cancelTtlBtn.addEventListener('click', () =>
+        document.getElementById('set-ttl-modal').classList.add('hidden')
+    );
 
     applyRenameBtn.addEventListener('click', () => {
         handleApplyRename(Environment.getCurrentEnvironment(), refreshCallback);
     });
-    cancelRenameBtn.addEventListener('click', () => document.getElementById('rename-key-modal').classList.add('hidden'));
+    cancelRenameBtn.addEventListener('click', () =>
+        document.getElementById('rename-key-modal').classList.add('hidden')
+    );
 
     applyCopyBtn.addEventListener('click', () => {
         handleApplyCopy(Environment.getCurrentEnvironment(), refreshCallback);
     });
-    cancelCopyBtn.addEventListener('click', () => document.getElementById('copy-key-modal').classList.add('hidden'));
+    cancelCopyBtn.addEventListener('click', () =>
+        document.getElementById('copy-key-modal').classList.add('hidden')
+    );
 
     setupViewValueModal();
     setupModalEscapeKey();
@@ -88,15 +104,16 @@ function setupViewValueModal() {
     });
 
     const tabButtons = viewValueModal.querySelectorAll('.value-tab-btn');
-    tabButtons.forEach(btn => {
+    tabButtons.forEach((btn) => {
         btn.addEventListener('click', () => {
             const tabName = btn.dataset.tab;
 
-            tabButtons.forEach(b => b.classList.remove('active'));
+            tabButtons.forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
 
-            const tabContents = viewValueModal.querySelectorAll('.value-tab-content');
-            tabContents.forEach(content => {
+            const tabContents =
+                viewValueModal.querySelectorAll('.value-tab-content');
+            tabContents.forEach((content) => {
                 if (content.dataset.content === tabName) {
                     content.classList.add('active');
                 } else {
@@ -121,7 +138,7 @@ function setupModalEscapeKey() {
                 'copy-key-modal'
             ];
 
-            modals.forEach(modalId => {
+            modals.forEach((modalId) => {
                 const modal = document.getElementById(modalId);
                 if (modal && !modal.classList.contains('hidden')) {
                     modal.classList.add('hidden');
@@ -211,11 +228,15 @@ function displayKeyDetails(data) {
     const copyValueBtn = document.getElementById('copy-value-btn');
 
     if (viewValueBtn) {
-        viewValueBtn.addEventListener('click', () => handleViewValue(value, type));
+        viewValueBtn.addEventListener('click', () =>
+            handleViewValue(value, type)
+        );
     }
 
     if (copyValueBtn) {
-        copyValueBtn.addEventListener('click', () => handleCopyValue(value, type));
+        copyValueBtn.addEventListener('click', () =>
+            handleCopyValue(value, type)
+        );
     }
 
     keyActions.classList.remove('hidden');
@@ -261,9 +282,10 @@ async function handleApplyTtl(environment, _onRefresh) {
         await setKeyExpiry(currentKeyData.key, parseInt(seconds), environment);
 
         const secondsValue = parseInt(seconds);
-        const message = secondsValue < 0
-            ? `Expiry removed from key "${currentKeyData.key}"`
-            : `Expiry set to ${seconds} seconds for key "${currentKeyData.key}"`;
+        const message =
+            secondsValue < 0
+                ? `Expiry removed from key "${currentKeyData.key}"`
+                : `Expiry set to ${seconds} seconds for key "${currentKeyData.key}"`;
 
         showToast(message, 'success');
 
@@ -315,7 +337,10 @@ async function handleApplyRename(environment, onRefresh) {
     try {
         await renameKey(currentKeyData.key, newKey, environment);
 
-        showToast(`Key renamed from "${currentKeyData.key}" to "${newKey}"`, 'success');
+        showToast(
+            `Key renamed from "${currentKeyData.key}" to "${newKey}"`,
+            'success'
+        );
 
         // Reset the current key and UI
         resetKeyDetails();
@@ -380,9 +405,10 @@ async function handleApplyCopy(environment, onRefresh) {
     try {
         await copyKey(currentKeyData.key, targetKey, targetEnv, environment);
 
-        const message = targetEnv === environment
-            ? `Key copied to "${targetKey}" in the same environment`
-            : `Key copied to "${targetKey}" in ${targetEnv} environment`;
+        const message =
+            targetEnv === environment
+                ? `Key copied to "${targetKey}" in the same environment`
+                : `Key copied to "${targetKey}" in ${targetEnv} environment`;
 
         showToast(message, 'success');
 
@@ -408,14 +434,21 @@ async function handleApplyCopy(environment, onRefresh) {
 async function handleDeleteKey(environment, onRefresh) {
     if (!currentKeyData) return;
 
-    if (!confirm(`Are you sure you want to delete the key "${currentKeyData.key}"?`)) {
+    if (
+        !confirm(
+            `Are you sure you want to delete the key "${currentKeyData.key}"?`
+        )
+    ) {
         return;
     }
 
     try {
         await deleteKey(currentKeyData.key, environment);
 
-        showToast(`Key "${currentKeyData.key}" deleted successfully`, 'success');
+        showToast(
+            `Key "${currentKeyData.key}" deleted successfully`,
+            'success'
+        );
 
         // Reset key details
         resetKeyDetails();
@@ -459,7 +492,10 @@ function handleViewValue(value, type) {
             } catch {
                 rawViewer.textContent = value;
             }
-        } else if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+        } else if (
+            Array.isArray(value) ||
+            (typeof value === 'object' && value !== null)
+        ) {
             dataToDisplay = value;
             isJsonCompatible = true;
         } else {
@@ -471,7 +507,12 @@ function handleViewValue(value, type) {
             jsonViewer.data = dataToDisplay;
         }
 
-        showViewerModal(viewValueModal, treeTabBtn, isJsonCompatible, jsonViewer);
+        showViewerModal(
+            viewValueModal,
+            treeTabBtn,
+            isJsonCompatible,
+            jsonViewer
+        );
     } catch (error) {
         showToast('Failed to display value', 'error');
         console.error('Error displaying value:', error);
@@ -485,7 +526,7 @@ function handleViewValue(value, type) {
  * @private
  */
 function parseZsetForViewer(value) {
-    const lines = value.split('\n').filter(line => line.trim());
+    const lines = value.split('\n').filter((line) => line.trim());
     const formattedLines = [];
     const jsonMap = {};
     let hasJson = false;
@@ -497,7 +538,9 @@ function parseZsetForViewer(value) {
 
             try {
                 const parsed = JSON.parse(member);
-                formattedLines.push(`• ${JSON.stringify(parsed, null, 2)} → ${score}`);
+                formattedLines.push(
+                    `• ${JSON.stringify(parsed, null, 2)} → ${score}`
+                );
                 jsonMap[score] = parsed;
                 hasJson = true;
             } catch {
@@ -528,12 +571,15 @@ function showViewerModal(modal, treeTabBtn, hasJson, jsonViewer) {
 
     treeTabBtn.style.display = hasJson ? 'inline-block' : 'none';
 
-    tabButtons.forEach(btn => {
+    tabButtons.forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.tab === activeTab);
     });
 
-    tabContents.forEach(content => {
-        content.classList.toggle('active', content.dataset.content === activeTab);
+    tabContents.forEach((content) => {
+        content.classList.toggle(
+            'active',
+            content.dataset.content === activeTab
+        );
     });
 
     modal.classList.remove('hidden');

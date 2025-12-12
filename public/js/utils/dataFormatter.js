@@ -22,11 +22,13 @@ export function formatValue(type, value) {
         return formatted;
     } else if (type === 'list' || type === 'set') {
         // Format list or set as numbered items
-        const items = value.split('\n').filter(item => item.trim());
-        return items.map((item, index) => `${index + 1}) ${escapeHTML(item)}`).join('\n');
+        const items = value.split('\n').filter((item) => item.trim());
+        return items
+            .map((item, index) => `${index + 1}) ${escapeHTML(item)}`)
+            .join('\n');
     } else if (type === 'zset') {
         // Format sorted set with scores in a more readable way
-        const lines = value.split('\n').filter(line => line.trim() !== '');
+        const lines = value.split('\n').filter((line) => line.trim() !== '');
         if (lines.length === 0) {
             return 'Empty sorted set';
         }
@@ -69,7 +71,7 @@ export function formatTtl(ttl) {
  */
 export function parseZsetValue(value) {
     const members = [];
-    const lines = value.split('\n').filter(line => line.trim() !== '');
+    const lines = value.split('\n').filter((line) => line.trim() !== '');
 
     for (let i = 0; i < lines.length; i += 2) {
         if (i + 1 < lines.length) {
@@ -99,7 +101,7 @@ export function parseHashValue(value) {
     }
 
     const hash = {};
-    const lines = value.split('\n').filter(line => line.trim() !== '');
+    const lines = value.split('\n').filter((line) => line.trim() !== '');
 
     for (let i = 0; i < lines.length; i += 2) {
         if (i + 1 < lines.length) {
@@ -118,7 +120,10 @@ export function parseHashValue(value) {
  * @returns {Array} Array of string values
  */
 export function parseListSetValue(value) {
-    return value.split('\n').filter(item => item.trim() !== '').map(item => item.trim());
+    return value
+        .split('\n')
+        .filter((item) => item.trim() !== '')
+        .map((item) => item.trim());
 }
 
 /**
@@ -128,11 +133,11 @@ export function parseListSetValue(value) {
  */
 export function getDisplayTypeName(type) {
     const typeNames = {
-        'string': 'String',
-        'zset': 'Sorted Set',
-        'hash': 'Hash',
-        'list': 'List',
-        'set': 'Set'
+        string: 'String',
+        zset: 'Sorted Set',
+        hash: 'Hash',
+        list: 'List',
+        set: 'Set'
     };
 
     return typeNames[type] || type.charAt(0).toUpperCase() + type.slice(1);

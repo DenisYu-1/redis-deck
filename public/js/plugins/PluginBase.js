@@ -10,8 +10,5 @@ export class PluginBase {
         throw new Error(`Plugin ${this.id} must implement init()`);
     }
 
-    async destroy() {
-    }
+    async destroy() {}
 }
-
-

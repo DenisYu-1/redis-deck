@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Initial release
 - Web UI for Redis cluster management
 - Key search and filtering
@@ -22,11 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 
 ### Changed
+
 - N/A
 
 ### Fixed
+
 - N/A
 
 ### Security
-- N/A
 
+- N/A

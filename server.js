@@ -13,12 +13,15 @@ setInterval(async () => {
     try {
         console.log('Running scheduled stats collection...');
         const connections = getAllConnections();
-        
+
         for (const conn of connections) {
             try {
                 await statsCollector.collectSnapshot(conn.id);
             } catch (error) {
-                console.error(`Failed to collect stats for ${conn.id}:`, error.message);
+                console.error(
+                    `Failed to collect stats for ${conn.id}:`,
+                    error.message
+                );
             }
         }
     } catch (error) {
@@ -39,12 +42,16 @@ app.listen(PORT, () => {
     console.log('Available Redis Connections:');
 
     const connections = getAllConnections();
-    connections.forEach(conn => {
-        console.log(`- ${conn.id}: ${conn.host}:${conn.port}${conn.tls ? ' (TLS)' : ''}${conn.cluster ? ' (Cluster)' : ''}`);
+    connections.forEach((conn) => {
+        console.log(
+            `- ${conn.id}: ${conn.host}:${conn.port}${conn.tls ? ' (TLS)' : ''}${conn.cluster ? ' (Cluster)' : ''}`
+        );
     });
 
     console.log('\nConnections can be managed at: /api/connections');
     console.log('Custom Redis commands available at: /api/custom/execute');
     console.log('Statistics available at: /statistics.html');
-    console.log(`Stats collection running every ${COLLECTION_INTERVAL / 60000} minutes`);
+    console.log(
+        `Stats collection running every ${COLLECTION_INTERVAL / 60000} minutes`
+    );
 });

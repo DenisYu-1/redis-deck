@@ -90,23 +90,32 @@ function refreshKeyList(preservePagination = false) {
         const environment = Environment.getCurrentEnvironment();
 
         // Update loading status
-        document.getElementById('total-keys-count').textContent = 'Total Keys: Loading...';
+        document.getElementById('total-keys-count').textContent =
+            'Total Keys: Loading...';
 
         // Test connection first
         Environment.testConnection(environment)
-            .then(connected => {
+            .then((connected) => {
                 if (connected) {
                     // Connection successful
 
                     // Get total key count
-                    import('./services/apiService.js').then(api => {
+                    import('./services/apiService.js').then((api) => {
                         api.getKeyCount(environment)
-                            .then(data => {
-                                document.getElementById('total-keys-count').textContent = `Total Keys: ${data.count.toLocaleString()}`;
+                            .then((data) => {
+                                document.getElementById(
+                                    'total-keys-count'
+                                ).textContent =
+                                    `Total Keys: ${data.count.toLocaleString()}`;
                             })
-                            .catch(error => {
-                                document.getElementById('total-keys-count').textContent = 'Total Keys: Error';
-                                console.error('Error getting key count:', error);
+                            .catch((error) => {
+                                document.getElementById(
+                                    'total-keys-count'
+                                ).textContent = 'Total Keys: Error';
+                                console.error(
+                                    'Error getting key count:',
+                                    error
+                                );
                             });
                     });
 
@@ -119,17 +128,23 @@ function refreshKeyList(preservePagination = false) {
                         return KeyList.search(environment);
                     }
                 } else {
-                    document.getElementById('total-keys-count').textContent = 'Total Keys: N/A';
-                    showToast('Connection failed. Please check your Redis connection settings.', 'error');
+                    document.getElementById('total-keys-count').textContent =
+                        'Total Keys: N/A';
+                    showToast(
+                        'Connection failed. Please check your Redis connection settings.',
+                        'error'
+                    );
                 }
             })
-            .catch(error => {
-                document.getElementById('total-keys-count').textContent = 'Total Keys: N/A';
+            .catch((error) => {
+                document.getElementById('total-keys-count').textContent =
+                    'Total Keys: N/A';
                 showToast('Error refreshing data: ' + error.message, 'error');
                 console.error('Error refreshing data:', error);
             });
     } catch (error) {
-        document.getElementById('total-keys-count').textContent = 'Total Keys: N/A';
+        document.getElementById('total-keys-count').textContent =
+            'Total Keys: N/A';
         showToast('Error refreshing data: ' + error.message, 'error');
         console.error('Error refreshing data:', error);
     }
@@ -149,7 +164,7 @@ function handleKeyOperationComplete() {
  */
 function setupModalCloseButtons() {
     const closeModalButtons = document.querySelectorAll('.close-modal');
-    closeModalButtons.forEach(btn => {
+    closeModalButtons.forEach((btn) => {
         btn.addEventListener('click', () => {
             document.getElementById('set-ttl-modal').classList.add('hidden');
             document.getElementById('rename-key-modal').classList.add('hidden');

@@ -30,7 +30,7 @@ describe('Connection Routes', () => {
                 .get('/api/connections')
                 .expect(200);
 
-            response.body.connections.forEach(conn => {
+            response.body.connections.forEach((conn) => {
                 expect(conn).not.toHaveProperty('password');
             });
         });
@@ -186,7 +186,9 @@ describe('Connection Routes', () => {
                 .get('/api/connections')
                 .expect(200);
 
-            const connectionIds = connectionsResponse.body.connections.map(c => c.id);
+            const connectionIds = connectionsResponse.body.connections.map(
+                (c) => c.id
+            );
 
             const response = await request(app)
                 .put('/api/connections/order')
@@ -301,7 +303,7 @@ describe('Connection Routes', () => {
                 .get('/api/connections/export')
                 .expect(200);
 
-            response.body.connections.forEach(conn => {
+            response.body.connections.forEach((conn) => {
                 expect(typeof conn.tls).toBe('boolean');
                 expect(typeof conn.cluster).toBe('boolean');
             });
@@ -375,8 +377,12 @@ describe('Connection Routes', () => {
                 .expect(200);
 
             expect(response.body.results.imported.length).toBe(1);
-            expect(response.body.results.imported[0].originalId).toBe(importTestId1);
-            expect(response.body.results.imported[0].importedAs).toBe(`${importTestId1}_copy1`);
+            expect(response.body.results.imported[0].originalId).toBe(
+                importTestId1
+            );
+            expect(response.body.results.imported[0].importedAs).toBe(
+                `${importTestId1}_copy1`
+            );
 
             const connection = getConnection(`${importTestId1}_copy1`);
             expect(connection).toBeDefined();
@@ -490,4 +496,3 @@ describe('Connection Routes', () => {
         });
     });
 });
-

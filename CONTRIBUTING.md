@@ -32,6 +32,7 @@ This document provides guidelines and instructions for contributing.
 ## Commit Messages
 
 Use clear, descriptive commit messages:
+
 - `Add: feature description` - for new features
 - `Fix: bug description` - for bug fixes
 - `Update: what was updated` - for updates to existing features
@@ -44,14 +45,15 @@ Use clear, descriptive commit messages:
 2. Test your changes thoroughly
 3. Update documentation if needed
 4. Write a clear PR description explaining:
-   - What changes were made
-   - Why the changes were made
-   - How to test the changes
+    - What changes were made
+    - Why the changes were made
+    - How to test the changes
 5. Reference any related issues
 
 ## Reporting Bugs
 
 When reporting bugs, please include:
+
 - Description of the bug
 - Steps to reproduce
 - Expected behavior
@@ -62,6 +64,7 @@ When reporting bugs, please include:
 ## Feature Requests
 
 For feature requests, please describe:
+
 - The feature you'd like to see
 - Use case or problem it would solve
 - Any implementation ideas (optional)
@@ -71,7 +74,3 @@ For feature requests, please describe:
 Feel free to open an issue for any questions or discussions.
 
 Thank you for contributing!
-
-
-
-

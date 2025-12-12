@@ -25,7 +25,7 @@ router.get('/connections', (req, res) => {
 router.get('/connections/export', (req, res) => {
     try {
         const allConnections = getAllConnections();
-        const connectionsWithPasswords = allConnections.map(conn => {
+        const connectionsWithPasswords = allConnections.map((conn) => {
             const fullConnection = getConnection(conn.id);
             return {
                 id: fullConnection.id,
@@ -40,7 +40,10 @@ router.get('/connections/export', (req, res) => {
         });
 
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', 'attachment; filename=redis-connections.json');
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=redis-connections.json'
+        );
         res.json({ connections: connectionsWithPasswords });
     } catch (error) {
         console.error('Error exporting connections:', error);
@@ -55,7 +58,9 @@ router.get('/connections/:id', (req, res) => {
         const connection = getConnection(id);
 
         if (!connection) {
-            return res.status(404).json({ error: `Connection '${id}' not found` });
+            return res
+                .status(404)
+                .json({ error: `Connection '${id}' not found` });
         }
 
         // Don't send the password back to the client
@@ -75,13 +80,17 @@ router.post('/connections', (req, res) => {
 
         // Validate required fields
         if (!connection.id || !connection.host || !connection.port) {
-            return res.status(400).json({ error: 'Connection ID, host and port are required' });
+            return res
+                .status(400)
+                .json({ error: 'Connection ID, host and port are required' });
         }
 
         // Check if connection ID already exists
         const existing = getConnection(connection.id);
         if (existing) {
-            return res.status(409).json({ error: `Connection with ID '${connection.id}' already exists` });
+            return res.status(409).json({
+                error: `Connection with ID '${connection.id}' already exists`
+            });
         }
 
         const success = createConnection(connection);
@@ -108,22 +117,28 @@ router.put('/connections/order', (req, res) => {
         const { connectionIds } = req.body;
 
         if (!Array.isArray(connectionIds)) {
-            return res.status(400).json({ error: 'connectionIds must be an array' });
+            return res
+                .status(400)
+                .json({ error: 'connectionIds must be an array' });
         }
 
         // Validate that all IDs exist
         const allConnections = getAllConnections();
-        const allIds = allConnections.map(conn => conn.id);
+        const allIds = allConnections.map((conn) => conn.id);
 
         for (const id of connectionIds) {
             if (!allIds.includes(id)) {
-                return res.status(400).json({ error: `Connection '${id}' not found` });
+                return res
+                    .status(400)
+                    .json({ error: `Connection '${id}' not found` });
             }
         }
 
         // Validate that all connections are included
         if (connectionIds.length !== allIds.length) {
-            return res.status(400).json({ error: 'All connections must be included in the order' });
+            return res.status(400).json({
+                error: 'All connections must be included in the order'
+            });
         }
 
         updateConnectionOrder(connectionIds);
@@ -143,13 +158,17 @@ router.put('/connections/:id', (req, res) => {
 
         // Validate required fields
         if (!connection.host || !connection.port) {
-            return res.status(400).json({ error: 'Connection host and port are required' });
+            return res
+                .status(400)
+                .json({ error: 'Connection host and port are required' });
         }
 
         // Check if connection exists
         const existing = getConnection(id);
         if (!existing) {
-            return res.status(404).json({ error: `Connection '${id}' not found` });
+            return res
+                .status(404)
+                .json({ error: `Connection '${id}' not found` });
         }
 
         // If password is not provided, keep the existing one
@@ -183,7 +202,9 @@ router.delete('/connections/:id', (req, res) => {
         // Check if connection exists
         const existing = getConnection(id);
         if (!existing) {
-            return res.status(404).json({ error: `Connection '${id}' not found` });
+            return res
+                .status(404)
+                .json({ error: `Connection '${id}' not found` });
         }
 
         const success = deleteConnection(id);
@@ -207,7 +228,9 @@ router.post('/connections/:id/test', async (req, res) => {
         // Check if connection exists
         const connection = getConnection(id);
         if (!connection) {
-            return res.status(404).json({ error: `Connection '${id}' not found` });
+            return res
+                .status(404)
+                .json({ error: `Connection '${id}' not found` });
         }
 
         // Try to execute PING command
@@ -215,9 +238,10 @@ router.post('/connections/:id/test', async (req, res) => {
 
         res.json({
             success: result === 'PONG',
-            message: result === 'PONG'
-                ? 'Connection successful'
-                : 'Connection failed',
+            message:
+                result === 'PONG'
+                    ? 'Connection successful'
+                    : 'Connection failed',
             result
         });
     } catch (error) {
@@ -235,12 +259,16 @@ router.post('/connections/import', (req, res) => {
         const { connections } = req.body;
 
         if (!Array.isArray(connections)) {
-            return res.status(400).json({ error: 'Invalid format: connections must be an array' });
+            return res.status(400).json({
+                error: 'Invalid format: connections must be an array'
+            });
         }
 
         const allConnections = getAllConnections();
-        const existingIds = new Set(allConnections.map(conn => conn.id));
-        const existingOrders = new Set(allConnections.map(conn => conn.order));
+        const existingIds = new Set(allConnections.map((conn) => conn.id));
+        const existingOrders = new Set(
+            allConnections.map((conn) => conn.order)
+        );
 
         const results = {
             imported: [],
@@ -248,7 +276,7 @@ router.post('/connections/import', (req, res) => {
             errors: []
         };
 
-        connections.forEach(conn => {
+        connections.forEach((conn) => {
             try {
                 if (!conn.id || !conn.host || conn.port === undefined) {
                     results.errors.push({

@@ -15,7 +15,10 @@ function createApp() {
     // Middleware
     app.use(express.json());
     app.use(express.static(path.join(__dirname, '..', 'public')));
-    app.use('/node_modules', express.static(path.join(__dirname, '..', 'node_modules')));
+    app.use(
+        '/node_modules',
+        express.static(path.join(__dirname, '..', 'node_modules'))
+    );
 
     // API Routes
     app.use('/api', environmentRoutes);

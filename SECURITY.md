@@ -18,6 +18,7 @@ If you discover a security vulnerability, please **do not** open a public issue.
 ### What to Include
 
 When reporting a vulnerability, please include:
+
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
@@ -32,6 +33,7 @@ When reporting a vulnerability, please include:
 ### Security Best Practices
 
 When using this tool:
+
 - Never commit `.env` files with real credentials
 - Use environment variables for sensitive configuration
 - Run the application in a secure network environment
@@ -42,11 +44,8 @@ When using this tool:
 ## Security Considerations
 
 This tool provides direct access to Redis instances. Please ensure:
+
 - The application is not exposed to untrusted networks
 - Redis authentication is properly configured
 - Network access is restricted appropriately
 - Regular security audits are performed
-
-
-
-

@@ -4,26 +4,38 @@ document.addEventListener('DOMContentLoaded', () => {
     initThemeSelector();
 
     // DOM Elements
-    const connectionsListContainer = document.getElementById('connections-list');
-    const connectionFormContainer = document.getElementById('connection-form-container');
+    const connectionsListContainer =
+        document.getElementById('connections-list');
+    const connectionFormContainer = document.getElementById(
+        'connection-form-container'
+    );
     const connectionForm = document.getElementById('connection-form');
     const addConnectionBtn = document.getElementById('add-connection-btn');
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const testConnectionBtn = document.getElementById('test-connection-btn');
     const editModeHeader = document.getElementById('edit-mode-header');
     const addModeHeader = document.getElementById('add-mode-header');
-    const exportConnectionsBtn = document.getElementById('export-connections-btn');
-    const importConnectionsBtn = document.getElementById('import-connections-btn');
+    const exportConnectionsBtn = document.getElementById(
+        'export-connections-btn'
+    );
+    const importConnectionsBtn = document.getElementById(
+        'import-connections-btn'
+    );
     const importFileInput = document.getElementById('import-file-input');
 
     // Form fields
     const connectionIdInput = document.getElementById('connection-id');
     const connectionHostInput = document.getElementById('connection-host');
     const connectionPortInput = document.getElementById('connection-port');
-    const connectionUsernameInput = document.getElementById('connection-username');
-    const connectionPasswordInput = document.getElementById('connection-password');
+    const connectionUsernameInput = document.getElementById(
+        'connection-username'
+    );
+    const connectionPasswordInput = document.getElementById(
+        'connection-password'
+    );
     const connectionTlsInput = document.getElementById('connection-tls');
-    const connectionClusterInput = document.getElementById('connection-cluster');
+    const connectionClusterInput =
+        document.getElementById('connection-cluster');
 
     // State
     let currentEditId = null;
@@ -35,7 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
     testConnectionBtn.addEventListener('click', testConnection);
     connectionForm.addEventListener('submit', handleFormSubmit);
     exportConnectionsBtn.addEventListener('click', exportConnections);
-    importConnectionsBtn.addEventListener('click', () => importFileInput.click());
+    importConnectionsBtn.addEventListener('click', () =>
+        importFileInput.click()
+    );
     importFileInput.addEventListener('change', importConnections);
 
     // Initial load of connections
@@ -56,13 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error loading connections:', error);
             showToast('Failed to load connections', 'error');
-            connectionsListContainer.innerHTML = '<p class="error">Failed to load connections</p>';
+            connectionsListContainer.innerHTML =
+                '<p class="error">Failed to load connections</p>';
         }
     }
 
     function renderConnections() {
         if (connections.length === 0) {
-            connectionsListContainer.innerHTML = '<p>No connections configured. Click "Add New Connection" to get started.</p>';
+            connectionsListContainer.innerHTML =
+                '<p>No connections configured. Click "Add New Connection" to get started.</p>';
             exportConnectionsBtn.style.display = 'none';
             return;
         }
@@ -71,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
 
-        connections.forEach(conn => {
+        connections.forEach((conn) => {
             html += `
                 <div class="connection-card" draggable="true" data-id="${conn.id}">
                     <div class="connection-details">
@@ -94,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupDragAndDrop();
 
         // Add event listeners to buttons
-        document.querySelectorAll('.test-btn').forEach(btn => {
+        document.querySelectorAll('.test-btn').forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id = e.target.dataset.id;
@@ -105,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        document.querySelectorAll('.edit-btn').forEach(btn => {
+        document.querySelectorAll('.edit-btn').forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id = e.target.dataset.id;
@@ -116,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        document.querySelectorAll('.delete-btn').forEach(btn => {
+        document.querySelectorAll('.delete-btn').forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id = e.target.dataset.id;
@@ -148,24 +164,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', card.dataset.id);
 
-                initialOrder = Array.from(connectionsListContainer.querySelectorAll('.connection-card'))
-                    .map(c => c.dataset.id);
+                initialOrder = Array.from(
+                    connectionsListContainer.querySelectorAll(
+                        '.connection-card'
+                    )
+                ).map((c) => c.dataset.id);
             });
 
             card.addEventListener('dragend', () => {
                 isDragging = false;
                 card.classList.remove('dragging');
-                document.querySelectorAll('.connection-card').forEach(c => {
+                document.querySelectorAll('.connection-card').forEach((c) => {
                     c.classList.remove('drag-over');
                 });
 
                 if (!dropHandled && initialOrder.length > 0) {
-                    const finalOrder = Array.from(connectionsListContainer.querySelectorAll('.connection-card'))
-                        .map(c => c.dataset.id);
+                    const finalOrder = Array.from(
+                        connectionsListContainer.querySelectorAll(
+                            '.connection-card'
+                        )
+                    ).map((c) => c.dataset.id);
 
-                    const orderChanged = JSON.stringify(initialOrder) !== JSON.stringify(finalOrder);
+                    const orderChanged =
+                        JSON.stringify(initialOrder) !==
+                        JSON.stringify(finalOrder);
 
-                    if (orderChanged && finalOrder.length === initialOrder.length) {
+                    if (
+                        orderChanged &&
+                        finalOrder.length === initialOrder.length
+                    ) {
                         updateConnectionOrder(finalOrder);
                     }
                 }
@@ -183,12 +210,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                const afterElement = getDragAfterElement(connectionsListContainer, e.clientY);
+                const afterElement = getDragAfterElement(
+                    connectionsListContainer,
+                    e.clientY
+                );
 
                 if (afterElement == null) {
                     connectionsListContainer.appendChild(cardBeingDragged);
                 } else {
-                    connectionsListContainer.insertBefore(cardBeingDragged, afterElement);
+                    connectionsListContainer.insertBefore(
+                        cardBeingDragged,
+                        afterElement
+                    );
                 }
             });
 
@@ -217,12 +250,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const cardBeingDragged = document.querySelector('.dragging');
             if (!cardBeingDragged) return;
 
-            const afterElement = getDragAfterElement(connectionsListContainer, e.clientY);
+            const afterElement = getDragAfterElement(
+                connectionsListContainer,
+                e.clientY
+            );
 
             if (afterElement == null) {
                 connectionsListContainer.appendChild(cardBeingDragged);
             } else {
-                connectionsListContainer.insertBefore(cardBeingDragged, afterElement);
+                connectionsListContainer.insertBefore(
+                    cardBeingDragged,
+                    afterElement
+                );
             }
         });
 
@@ -231,10 +270,14 @@ document.addEventListener('DOMContentLoaded', () => {
             dropHandled = true;
 
             if (initialOrder.length > 0) {
-                const finalOrder = Array.from(connectionsListContainer.querySelectorAll('.connection-card'))
-                    .map(c => c.dataset.id);
+                const finalOrder = Array.from(
+                    connectionsListContainer.querySelectorAll(
+                        '.connection-card'
+                    )
+                ).map((c) => c.dataset.id);
 
-                const orderChanged = JSON.stringify(initialOrder) !== JSON.stringify(finalOrder);
+                const orderChanged =
+                    JSON.stringify(initialOrder) !== JSON.stringify(finalOrder);
 
                 if (orderChanged && finalOrder.length === initialOrder.length) {
                     updateConnectionOrder(finalOrder);
@@ -244,18 +287,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('.connection-card:not(.dragging)')];
+        const draggableElements = [
+            ...container.querySelectorAll('.connection-card:not(.dragging)')
+        ];
 
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
+        return draggableElements.reduce(
+            (closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
 
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            },
+            { offset: Number.NEGATIVE_INFINITY }
+        ).element;
     }
 
     async function updateConnectionOrder(connectionIds) {
@@ -270,14 +318,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || 'Failed to update connection order');
+                throw new Error(
+                    error.error || 'Failed to update connection order'
+                );
             }
 
             await loadConnections();
             showToast('Connection order updated', 'success');
         } catch (error) {
             console.error('Error updating connection order:', error);
-            showToast(error.message || 'Failed to update connection order', 'error');
+            showToast(
+                error.message || 'Failed to update connection order',
+                'error'
+            );
         }
     }
 
@@ -301,11 +354,14 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEditId = null;
 
         // Smooth scroll to the form
-        connectionFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        connectionFormContainer.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
     }
 
     function showEditForm(id) {
-        const connection = connections.find(conn => conn.id === id);
+        const connection = connections.find((conn) => conn.id === id);
         if (!connection) {
             showToast(`Connection ${id} not found`, 'error');
             return;
@@ -317,8 +373,10 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionPortInput.value = connection.port;
         connectionUsernameInput.value = connection.username || '';
         connectionPasswordInput.value = ''; // Don't fill password for security
-        connectionTlsInput.checked = connection.tls === 1 || connection.tls === true;
-        connectionClusterInput.checked = connection.cluster === 1 || connection.cluster === true;
+        connectionTlsInput.checked =
+            connection.tls === 1 || connection.tls === true;
+        connectionClusterInput.checked =
+            connection.cluster === 1 || connection.cluster === true;
 
         // Disable ID field for existing connections
         connectionIdInput.setAttribute('readonly', true);
@@ -332,7 +390,10 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEditId = id;
 
         // Smooth scroll to the form
-        connectionFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        connectionFormContainer.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
     }
 
     function hideConnectionForm() {
@@ -371,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const connectionId = id || connection.id;
 
             // If we're testing a form, we need to save it first if it's new
-            if (!id && !connections.find(conn => conn.id === connection.id)) {
+            if (!id && !connections.find((conn) => conn.id === connection.id)) {
                 await saveConnection(connection);
             }
 
@@ -398,7 +459,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (buttonEl) {
                 // Remove existing indicator if any
                 const existingIndicator = buttonEl.nextElementSibling;
-                if (existingIndicator && existingIndicator.classList.contains('testing-indicator')) {
+                if (
+                    existingIndicator &&
+                    existingIndicator.classList.contains('testing-indicator')
+                ) {
                     existingIndicator.remove();
                 }
 
@@ -418,8 +482,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Update the indicator if present
             if (testIndicator) {
-                testIndicator.textContent = result.success ? 'Success!' : 'Failed';
-                testIndicator.classList.add(result.success ? 'success' : 'error');
+                testIndicator.textContent = result.success
+                    ? 'Success!'
+                    : 'Failed';
+                testIndicator.classList.add(
+                    result.success ? 'success' : 'error'
+                );
 
                 // Remove the indicator after a delay
                 setTimeout(() => {
@@ -438,7 +506,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (buttonEl) {
                 // Update the indicator if present
                 const existingIndicator = buttonEl.nextElementSibling;
-                if (existingIndicator && existingIndicator.classList.contains('testing-indicator')) {
+                if (
+                    existingIndicator &&
+                    existingIndicator.classList.contains('testing-indicator')
+                ) {
                     existingIndicator.textContent = 'Error';
                     existingIndicator.classList.add('error');
 
@@ -492,7 +563,9 @@ document.addEventListener('DOMContentLoaded', () => {
             connection.cluster = connection.cluster ? 1 : 0;
 
             const method = currentEditId ? 'PUT' : 'POST';
-            const url = currentEditId ? `/api/connections/${currentEditId}` : '/api/connections';
+            const url = currentEditId
+                ? `/api/connections/${currentEditId}`
+                : '/api/connections';
 
             const response = await fetch(url, {
                 method,
@@ -527,14 +600,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const connection = connections.find(conn => conn.id === id);
+        const connection = connections.find((conn) => conn.id === id);
         if (!connection) {
             showToast(`Connection '${id}' not found`, 'error');
             return;
         }
 
         // Confirm deletion
-        if (!confirm(`Are you sure you want to delete the connection "${id}"?`)) {
+        if (
+            !confirm(`Are you sure you want to delete the connection "${id}"?`)
+        ) {
             return;
         }
 
@@ -545,7 +620,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || `Failed to delete connection ${id}`);
+                throw new Error(
+                    error.error || `Failed to delete connection ${id}`
+                );
             }
 
             showToast('Connection deleted successfully', 'success');
@@ -576,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const themeOptions = document.querySelectorAll('.theme-option');
         const currentTheme = getTheme();
 
-        themeOptions.forEach(option => {
+        themeOptions.forEach((option) => {
             if (option.dataset.theme === currentTheme) {
                 option.classList.add('active');
             }
@@ -585,7 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectedTheme = option.dataset.theme;
                 setTheme(selectedTheme);
 
-                themeOptions.forEach(opt => opt.classList.remove('active'));
+                themeOptions.forEach((opt) => opt.classList.remove('active'));
                 option.classList.add('active');
             });
         });
@@ -631,7 +708,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = JSON.parse(fileContent);
 
             if (!data.connections || !Array.isArray(data.connections)) {
-                throw new Error('Invalid file format: missing connections array');
+                throw new Error(
+                    'Invalid file format: missing connections array'
+                );
             }
 
             const response = await fetch('/api/connections/import', {

@@ -49,19 +49,27 @@ describe('Keys Routes', () => {
                 .expect(200);
 
             expect(response.body.keys.length).toBeGreaterThanOrEqual(2);
-            response.body.keys.forEach(key => {
+            response.body.keys.forEach((key) => {
                 expect(key).toMatch(/test:keys:match:/);
             });
         });
 
         test('should handle custom count parameter', async () => {
             for (let i = 0; i < 5; i++) {
-                await createTestKey(`test:keys:count:${i}`, 'value', testConnectionId);
+                await createTestKey(
+                    `test:keys:count:${i}`,
+                    'value',
+                    testConnectionId
+                );
             }
 
             const response = await request(app)
                 .get('/api/keys')
-                .query({ env: testConnectionId, pattern: 'test:keys:count:*', count: 10 })
+                .query({
+                    env: testConnectionId,
+                    pattern: 'test:keys:count:*',
+                    count: 10
+                })
                 .expect(200);
 
             expect(response.body.keys.length).toBeGreaterThanOrEqual(5);
@@ -86,7 +94,11 @@ describe('Keys Routes', () => {
 
     describe('GET /api/keys/:key', () => {
         test('should get string key value', async () => {
-            await createTestKey('test:keys:get', 'test-value', testConnectionId);
+            await createTestKey(
+                'test:keys:get',
+                'test-value',
+                testConnectionId
+            );
 
             const response = await request(app)
                 .get('/api/keys/test:keys:get')
@@ -113,10 +125,14 @@ describe('Keys Routes', () => {
         });
 
         test('should get hash key', async () => {
-            await createTestHash('test:keys:hash', {
-                field1: 'value1',
-                field2: 'value2'
-            }, testConnectionId);
+            await createTestHash(
+                'test:keys:hash',
+                {
+                    field1: 'value1',
+                    field2: 'value2'
+                },
+                testConnectionId
+            );
 
             const response = await request(app)
                 .get('/api/keys/test:keys:hash')
@@ -249,7 +265,10 @@ describe('Keys Routes', () => {
             expect(response.body).toHaveProperty('deleted', true);
             expect(response.body).toHaveProperty('key', 'test:keys:delete');
 
-            const exists = await keyExists('test:keys:delete', testConnectionId);
+            const exists = await keyExists(
+                'test:keys:delete',
+                testConnectionId
+            );
             expect(exists).toBe(false);
         });
 
@@ -278,9 +297,18 @@ describe('Keys Routes', () => {
             expect(response.body).toHaveProperty('count');
             expect(response.body.count).toBeGreaterThanOrEqual(3);
 
-            const exists1 = await keyExists('test:keys:batch:1', testConnectionId);
-            const exists2 = await keyExists('test:keys:batch:2', testConnectionId);
-            const exists3 = await keyExists('test:keys:batch:3', testConnectionId);
+            const exists1 = await keyExists(
+                'test:keys:batch:1',
+                testConnectionId
+            );
+            const exists2 = await keyExists(
+                'test:keys:batch:2',
+                testConnectionId
+            );
+            const exists3 = await keyExists(
+                'test:keys:batch:3',
+                testConnectionId
+            );
 
             expect(exists1).toBe(false);
             expect(exists2).toBe(false);
@@ -299,7 +327,10 @@ describe('Keys Routes', () => {
         test('should handle pattern with no matches', async () => {
             const response = await request(app)
                 .delete('/api/allkeys')
-                .query({ env: testConnectionId, pattern: 'test:keys:nomatch:*' })
+                .query({
+                    env: testConnectionId,
+                    pattern: 'test:keys:nomatch:*'
+                })
                 .expect(200);
 
             expect(response.body.count).toBe(0);
@@ -334,8 +365,14 @@ describe('Keys Routes', () => {
             expect(response.body).toHaveProperty('oldKey', 'test:keys:oldname');
             expect(response.body).toHaveProperty('newKey', 'test:keys:newname');
 
-            const oldExists = await keyExists('test:keys:oldname', testConnectionId);
-            const newExists = await keyExists('test:keys:newname', testConnectionId);
+            const oldExists = await keyExists(
+                'test:keys:oldname',
+                testConnectionId
+            );
+            const newExists = await keyExists(
+                'test:keys:newname',
+                testConnectionId
+            );
 
             expect(oldExists).toBe(false);
             expect(newExists).toBe(true);
@@ -356,7 +393,11 @@ describe('Keys Routes', () => {
 
     describe('POST /api/keys/:key/expire', () => {
         test('should set expiry on key', async () => {
-            await createTestKey('test:keys:setexpiry', 'value', testConnectionId);
+            await createTestKey(
+                'test:keys:setexpiry',
+                'value',
+                testConnectionId
+            );
 
             const response = await request(app)
                 .post('/api/keys/test:keys:setexpiry/expire')
@@ -367,13 +408,21 @@ describe('Keys Routes', () => {
             expect(response.body).toHaveProperty('key', 'test:keys:setexpiry');
             expect(response.body).toHaveProperty('ttl', 120);
 
-            const ttl = await getKeyTTL('test:keys:setexpiry', testConnectionId);
+            const ttl = await getKeyTTL(
+                'test:keys:setexpiry',
+                testConnectionId
+            );
             expect(ttl).toBeGreaterThan(0);
             expect(ttl).toBeLessThanOrEqual(120);
         });
 
         test('should remove expiry with negative seconds', async () => {
-            await createTestKey('test:keys:persist', 'value', testConnectionId, 60);
+            await createTestKey(
+                'test:keys:persist',
+                'value',
+                testConnectionId,
+                60
+            );
 
             await request(app)
                 .post('/api/keys/test:keys:persist/expire')
@@ -398,7 +447,11 @@ describe('Keys Routes', () => {
 
     describe('POST /api/keys/:key/copy', () => {
         test('should copy string key within same environment', async () => {
-            await createTestKey('test:keys:source', 'source-value', testConnectionId);
+            await createTestKey(
+                'test:keys:source',
+                'source-value',
+                testConnectionId
+            );
 
             const response = await request(app)
                 .post('/api/keys/test:keys:source/copy')
@@ -413,15 +466,26 @@ describe('Keys Routes', () => {
             expect(response.body.sourceKey).toBe('test:keys:source');
             expect(response.body.targetKey).toBe('test:keys:target');
 
-            const targetExists = await keyExists('test:keys:target', testConnectionId);
+            const targetExists = await keyExists(
+                'test:keys:target',
+                testConnectionId
+            );
             expect(targetExists).toBe(true);
 
-            const targetValue = await getKeyValue('test:keys:target', testConnectionId);
+            const targetValue = await getKeyValue(
+                'test:keys:target',
+                testConnectionId
+            );
             expect(targetValue.trim()).toBe('source-value');
         });
 
         test('should copy key with TTL', async () => {
-            await createTestKey('test:keys:source-ttl', 'value', testConnectionId, 120);
+            await createTestKey(
+                'test:keys:source-ttl',
+                'value',
+                testConnectionId,
+                120
+            );
 
             const response = await request(app)
                 .post('/api/keys/test:keys:source-ttl/copy')
@@ -434,7 +498,10 @@ describe('Keys Routes', () => {
 
             expect(response.body.result).toContain('successfully');
 
-            const ttl = await getKeyTTL('test:keys:target-ttl', testConnectionId);
+            const ttl = await getKeyTTL(
+                'test:keys:target-ttl',
+                testConnectionId
+            );
             expect(ttl).toBeGreaterThan(0);
             expect(ttl).toBeLessThanOrEqual(120);
         });
@@ -473,9 +540,7 @@ describe('Keys Routes', () => {
         });
 
         test('should add sorted set with expiry', async () => {
-            const members = [
-                { score: 10, value: 'item1' }
-            ];
+            const members = [{ score: 10, value: 'item1' }];
 
             const response = await request(app)
                 .post('/api/keys/test:keys:zset-exp/zadd')
@@ -511,4 +576,3 @@ describe('Keys Routes', () => {
         });
     });
 });
-

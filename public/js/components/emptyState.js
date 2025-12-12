@@ -42,7 +42,9 @@ export function init() {
     const emptyStateContainer = document.getElementById('empty-state');
     emptyStateContainer.innerHTML = emptyStateHTML;
 
-    const addConnectionBtn = document.getElementById('add-first-connection-btn');
+    const addConnectionBtn = document.getElementById(
+        'add-first-connection-btn'
+    );
     addConnectionBtn.addEventListener('click', () => {
         window.location.href = '/settings.html';
     });
@@ -57,4 +59,3 @@ export function hide() {
     const emptyState = document.getElementById('empty-state');
     emptyState.style.display = 'none';
 }
-

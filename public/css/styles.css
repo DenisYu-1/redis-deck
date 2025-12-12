@@ -16,17 +16,17 @@
     --bg-card: #f5f5f5;
     --bg-badge: #eaeaea;
     --bg-info: #e8f4fc;
-    
+
     --text-primary: #333333;
     --text-secondary: #555555;
     --text-tertiary: #7f8c8d;
     --text-heading: #2c3e50;
     --text-info: #0c5460;
-    
+
     --border-primary: #e0e0e0;
     --border-secondary: #ddd;
     --border-tertiary: #f0f0f0;
-    
+
     --button-primary: #3498db;
     --button-primary-hover: #2980b9;
     --button-secondary: #ecf0f1;
@@ -37,11 +37,11 @@
     --button-danger: #e74c3c;
     --button-danger-hover: #c0392b;
     --button-disabled: #95a5a6;
-    
+
     --accent-primary: #3498db;
     --accent-success: #27ae60;
     --accent-danger: #e74c3c;
-    
+
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.2);
     --modal-overlay: rgba(0, 0, 0, 0.5);
@@ -59,17 +59,17 @@ html.dark-theme body {
     --bg-card: #2a2a2a;
     --bg-badge: #3a3a3a;
     --bg-info: #1e3a5f;
-    
+
     --text-primary: #e0e0e0;
     --text-secondary: #b0b0b0;
     --text-tertiary: #888888;
     --text-heading: #f0f0f0;
     --text-info: #6cb4d4;
-    
+
     --border-primary: #3a3a3a;
     --border-secondary: #404040;
     --border-tertiary: #333333;
-    
+
     --button-primary: #3498db;
     --button-primary-hover: #5faee3;
     --button-secondary: #3a3a3a;
@@ -80,22 +80,26 @@ html.dark-theme body {
     --button-danger: #e74c3c;
     --button-danger-hover: #ef6b5e;
     --button-disabled: #4a4a4a;
-    
+
     --accent-primary: #3498db;
     --accent-success: #27ae60;
     --accent-danger: #e74c3c;
-    
+
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
     --modal-overlay: rgba(0, 0, 0, 0.7);
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+        Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
     background-color: var(--bg-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease;
 }
 
 .container {
@@ -167,8 +171,6 @@ h1 {
     padding: 4px 24px 4px 8px;
     font-size: 13px;
 }
-
-
 
 #db-stats {
     padding: 5px 10px;
@@ -275,7 +277,8 @@ label {
     color: var(--text-secondary);
 }
 
-input, textarea {
+input,
+textarea {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid var(--border-secondary);
@@ -576,8 +579,10 @@ json-viewer {
     --indentguide-style: solid;
     --indentguide-color: var(--border-primary);
     --indentguide-color-hover: var(--accent-primary);
-    --indentguide: var(--indentguide-size) var(--indentguide-style) var(--indentguide-color);
-    --indentguide-hover: var(--indentguide-size) var(--indentguide-style) var(--indentguide-color-hover);
+    --indentguide: var(--indentguide-size) var(--indentguide-style)
+        var(--indentguide-color);
+    --indentguide-hover: var(--indentguide-size) var(--indentguide-style)
+        var(--indentguide-color-hover);
 }
 
 html.dark-theme json-viewer {
@@ -814,7 +819,7 @@ html.dark-theme json-viewer {
         gap: 5px;
         align-items: stretch;
     }
-    
+
     .zset-score {
         width: 100%;
     }
@@ -890,13 +895,13 @@ html.dark-theme json-viewer {
     .empty-state-title {
         font-size: 24px;
     }
-    
+
     .empty-state-description {
         font-size: 14px;
     }
-    
+
     .add-connection-btn {
         padding: 14px 28px;
         font-size: 16px;
     }
-} 
+}

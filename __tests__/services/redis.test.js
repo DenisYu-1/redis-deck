@@ -31,7 +31,10 @@ describe('Redis Service', () => {
         });
 
         test('should execute SET command', async () => {
-            const result = await execRedisCommand('SET "test:simple-key" "test-value"', testConnectionId);
+            const result = await execRedisCommand(
+                'SET "test:simple-key" "test-value"',
+                testConnectionId
+            );
             expect(result).toBe('OK');
 
             const exists = await keyExists('test:simple-key', testConnectionId);
@@ -41,14 +44,20 @@ describe('Redis Service', () => {
         test('should execute GET command', async () => {
             await createTestKey('test:get-key', 'get-value', testConnectionId);
 
-            const result = await execRedisCommand('--raw GET "test:get-key"', testConnectionId);
+            const result = await execRedisCommand(
+                '--raw GET "test:get-key"',
+                testConnectionId
+            );
             expect(result.trim()).toBe('get-value');
         });
 
         test('should execute DEL command', async () => {
             await createTestKey('test:del-key', 'del-value', testConnectionId);
 
-            const result = await execRedisCommand('DEL "test:del-key"', testConnectionId);
+            const result = await execRedisCommand(
+                'DEL "test:del-key"',
+                testConnectionId
+            );
             expect(parseInt(result.trim())).toBe(1);
 
             const exists = await keyExists('test:del-key', testConnectionId);
@@ -56,49 +65,96 @@ describe('Redis Service', () => {
         });
 
         test('should execute EXISTS command', async () => {
-            await createTestKey('test:exists-key', 'exists-value', testConnectionId);
+            await createTestKey(
+                'test:exists-key',
+                'exists-value',
+                testConnectionId
+            );
 
-            const result = await execRedisCommand('EXISTS "test:exists-key"', testConnectionId);
+            const result = await execRedisCommand(
+                'EXISTS "test:exists-key"',
+                testConnectionId
+            );
             expect(parseInt(result.trim())).toBe(1);
         });
 
         test('should execute TYPE command', async () => {
-            await createTestKey('test:type-key', 'type-value', testConnectionId);
+            await createTestKey(
+                'test:type-key',
+                'type-value',
+                testConnectionId
+            );
 
-            const result = await execRedisCommand('TYPE "test:type-key"', testConnectionId);
+            const result = await execRedisCommand(
+                'TYPE "test:type-key"',
+                testConnectionId
+            );
             expect(result.trim()).toBe('string');
         });
 
         test('should execute TTL command', async () => {
-            await createTestKey('test:ttl-key', 'ttl-value', testConnectionId, 100);
+            await createTestKey(
+                'test:ttl-key',
+                'ttl-value',
+                testConnectionId,
+                100
+            );
 
-            const result = await execRedisCommand('TTL "test:ttl-key"', testConnectionId);
+            const result = await execRedisCommand(
+                'TTL "test:ttl-key"',
+                testConnectionId
+            );
             const ttl = parseInt(result.trim());
             expect(ttl).toBeGreaterThan(0);
             expect(ttl).toBeLessThanOrEqual(100);
         });
 
         test('should execute EXPIRE command', async () => {
-            await createTestKey('test:expire-key', 'expire-value', testConnectionId);
+            await createTestKey(
+                'test:expire-key',
+                'expire-value',
+                testConnectionId
+            );
 
-            const result = await execRedisCommand('EXPIRE "test:expire-key" 60', testConnectionId);
+            const result = await execRedisCommand(
+                'EXPIRE "test:expire-key" 60',
+                testConnectionId
+            );
             expect(parseInt(result.trim())).toBe(1);
 
-            const ttl = await execRedisCommand('TTL "test:expire-key"', testConnectionId);
+            const ttl = await execRedisCommand(
+                'TTL "test:expire-key"',
+                testConnectionId
+            );
             expect(parseInt(ttl.trim())).toBeGreaterThan(0);
         });
 
         test('should execute HSET and HGET commands', async () => {
-            await execRedisCommand('HSET "test:hash-key" "field1" "value1"', testConnectionId);
-            const result = await execRedisCommand('--raw HGET "test:hash-key" "field1"', testConnectionId);
+            await execRedisCommand(
+                'HSET "test:hash-key" "field1" "value1"',
+                testConnectionId
+            );
+            const result = await execRedisCommand(
+                '--raw HGET "test:hash-key" "field1"',
+                testConnectionId
+            );
             expect(result.trim()).toBe('value1');
         });
 
         test('should execute HGETALL command', async () => {
-            await execRedisCommand('HSET "test:hash-all" "field1" "value1"', testConnectionId);
-            await execRedisCommand('HSET "test:hash-all" "field2" "value2"', testConnectionId);
+            await execRedisCommand(
+                'HSET "test:hash-all" "field1" "value1"',
+                testConnectionId
+            );
+            await execRedisCommand(
+                'HSET "test:hash-all" "field2" "value2"',
+                testConnectionId
+            );
 
-            const result = await execRedisCommand('HGETALL "test:hash-all"', testConnectionId);
+            const result = await execRedisCommand(
+                'HGETALL "test:hash-all"',
+                testConnectionId
+            );
             expect(result).toContain('field1');
             expect(result).toContain('value1');
             expect(result).toContain('field2');
@@ -118,7 +174,9 @@ describe('Redis Service', () => {
                 await execRedisCommand('PING', 'non-existent-connection');
                 fail('Should have thrown an error');
             } catch (error) {
-                expect(error.message).toContain('Connection \'non-existent-connection\' not found');
+                expect(error.message).toContain(
+                    "Connection 'non-existent-connection' not found"
+                );
             }
         });
     });
@@ -217,7 +275,12 @@ total_commands_processed:1000`;
             await createTestKey('test:scan:key2', 'value2', testConnectionId);
             await createTestKey('test:scan:key3', 'value3', testConnectionId);
 
-            const result = await scanClusterNodes('test:scan:*', ['0'], 100, testConnectionId);
+            const result = await scanClusterNodes(
+                'test:scan:*',
+                ['0'],
+                100,
+                testConnectionId
+            );
 
             expect(result).toHaveProperty('keys');
             expect(result).toHaveProperty('cursors');
@@ -227,7 +290,12 @@ total_commands_processed:1000`;
         });
 
         test('should return empty array for non-matching pattern', async () => {
-            const result = await scanClusterNodes('non:existent:pattern:*', ['0'], 100, testConnectionId);
+            const result = await scanClusterNodes(
+                'non:existent:pattern:*',
+                ['0'],
+                100,
+                testConnectionId
+            );
 
             expect(result.keys).toEqual([]);
             expect(result.hasMore).toBe(false);
@@ -235,10 +303,19 @@ total_commands_processed:1000`;
 
         test('should handle pagination with cursors', async () => {
             for (let i = 0; i < 10; i++) {
-                await createTestKey(`test:pagination:key${i}`, `value${i}`, testConnectionId);
+                await createTestKey(
+                    `test:pagination:key${i}`,
+                    `value${i}`,
+                    testConnectionId
+                );
             }
 
-            const result = await scanClusterNodes('test:pagination:*', ['0'], 10, testConnectionId);
+            const result = await scanClusterNodes(
+                'test:pagination:*',
+                ['0'],
+                10,
+                testConnectionId
+            );
 
             expect(Array.isArray(result.cursors)).toBe(true);
             expect(typeof result.hasMore).toBe('boolean');
@@ -248,7 +325,12 @@ total_commands_processed:1000`;
             await createTestKey('test:wildcard:a', 'value', testConnectionId);
             await createTestKey('test:wildcard:b', 'value', testConnectionId);
 
-            const result = await scanClusterNodes('*', ['0'], 1000, testConnectionId);
+            const result = await scanClusterNodes(
+                '*',
+                ['0'],
+                1000,
+                testConnectionId
+            );
 
             expect(result.keys.length).toBeGreaterThanOrEqual(2);
         });
@@ -256,9 +338,16 @@ total_commands_processed:1000`;
 
     describe('getKeyFromCluster', () => {
         test('should get key value from cluster', async () => {
-            await createTestKey('test:cluster-get', 'cluster-value', testConnectionId);
+            await createTestKey(
+                'test:cluster-get',
+                'cluster-value',
+                testConnectionId
+            );
 
-            const result = await getKeyFromCluster('test:cluster-get', testConnectionId);
+            const result = await getKeyFromCluster(
+                'test:cluster-get',
+                testConnectionId
+            );
 
             expect(result).toHaveProperty('key');
             expect(result).toHaveProperty('type');
@@ -270,19 +359,36 @@ total_commands_processed:1000`;
         });
 
         test('should get key with TTL', async () => {
-            await createTestKey('test:cluster-ttl', 'ttl-value', testConnectionId, 120);
+            await createTestKey(
+                'test:cluster-ttl',
+                'ttl-value',
+                testConnectionId,
+                120
+            );
 
-            const result = await getKeyFromCluster('test:cluster-ttl', testConnectionId);
+            const result = await getKeyFromCluster(
+                'test:cluster-ttl',
+                testConnectionId
+            );
 
             expect(result.ttl).toBeGreaterThan(0);
             expect(result.ttl).toBeLessThanOrEqual(120);
         });
 
         test('should get hash type key', async () => {
-            await execRedisCommand('HSET "test:cluster-hash" "field1" "value1"', testConnectionId);
-            await execRedisCommand('HSET "test:cluster-hash" "field2" "value2"', testConnectionId);
+            await execRedisCommand(
+                'HSET "test:cluster-hash" "field1" "value1"',
+                testConnectionId
+            );
+            await execRedisCommand(
+                'HSET "test:cluster-hash" "field2" "value2"',
+                testConnectionId
+            );
 
-            const result = await getKeyFromCluster('test:cluster-hash', testConnectionId);
+            const result = await getKeyFromCluster(
+                'test:cluster-hash',
+                testConnectionId
+            );
 
             expect(result.type).toBe('hash');
             expect(result.value).toBeDefined();
@@ -298,7 +404,10 @@ total_commands_processed:1000`;
             const specialKey = 'test:special:key:with:colons';
             await createTestKey(specialKey, 'special-value', testConnectionId);
 
-            const result = await getKeyFromCluster(specialKey, testConnectionId);
+            const result = await getKeyFromCluster(
+                specialKey,
+                testConnectionId
+            );
 
             expect(result.key).toBe(specialKey);
             expect(result.value.trim()).toBe('special-value');
@@ -333,17 +442,23 @@ total_commands_processed:1000`;
             const operations = [];
             for (let i = 0; i < 5; i++) {
                 operations.push(
-                    createTestKey(`test:concurrent:${i}`, `value${i}`, testConnectionId)
+                    createTestKey(
+                        `test:concurrent:${i}`,
+                        `value${i}`,
+                        testConnectionId
+                    )
                 );
             }
 
             await Promise.all(operations);
 
             for (let i = 0; i < 5; i++) {
-                const exists = await keyExists(`test:concurrent:${i}`, testConnectionId);
+                const exists = await keyExists(
+                    `test:concurrent:${i}`,
+                    testConnectionId
+                );
                 expect(exists).toBe(true);
             }
         });
     });
 });
-

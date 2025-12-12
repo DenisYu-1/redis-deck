@@ -18,7 +18,7 @@ function initializeDatabase() {
     try {
         // Check if the name column exists in the connections table
         const tableInfo = db.prepare('PRAGMA table_info(connections)').all();
-        hasOldSchema = tableInfo.some(col => col.name === 'name');
+        hasOldSchema = tableInfo.some((col) => col.name === 'name');
     } catch {
         // Table doesn't exist yet, so we'll create it with the new schema
     }
@@ -71,9 +71,11 @@ function initializeDatabase() {
     // Ensure 'cluster' column exists for older installs without full migration
     try {
         const tableInfo = db.prepare('PRAGMA table_info(connections)').all();
-        const hasCluster = tableInfo.some(col => col.name === 'cluster');
+        const hasCluster = tableInfo.some((col) => col.name === 'cluster');
         if (!hasCluster) {
-            db.exec('ALTER TABLE connections ADD COLUMN cluster INTEGER DEFAULT 0');
+            db.exec(
+                'ALTER TABLE connections ADD COLUMN cluster INTEGER DEFAULT 0'
+            );
         }
     } catch {
         // ignore
@@ -82,13 +84,17 @@ function initializeDatabase() {
     // Ensure 'order' column exists for drag and drop ordering
     try {
         const tableInfo = db.prepare('PRAGMA table_info(connections)').all();
-        const hasOrder = tableInfo.some(col => col.name === 'order');
+        const hasOrder = tableInfo.some((col) => col.name === 'order');
         if (!hasOrder) {
-            db.exec('ALTER TABLE connections ADD COLUMN `order` INTEGER DEFAULT 0');
+            db.exec(
+                'ALTER TABLE connections ADD COLUMN `order` INTEGER DEFAULT 0'
+            );
 
             // Set initial order values based on existing connections
             const connections = db.prepare('SELECT id FROM connections').all();
-            const updateOrderStmt = db.prepare('UPDATE connections SET `order` = ? WHERE id = ?');
+            const updateOrderStmt = db.prepare(
+                'UPDATE connections SET `order` = ? WHERE id = ?'
+            );
             connections.forEach((conn, index) => {
                 updateOrderStmt.run(index, conn.id);
             });
@@ -132,9 +138,11 @@ function initializeDatabase() {
 
     // Add new columns to existing stats_snapshots table if they don't exist
     try {
-        const tableInfo = db.prepare('PRAGMA table_info(stats_snapshots)').all();
-        const columns = tableInfo.map(col => col.name);
-        
+        const tableInfo = db
+            .prepare('PRAGMA table_info(stats_snapshots)')
+            .all();
+        const columns = tableInfo.map((col) => col.name);
+
         const newColumns = [
             { name: 'ops_per_sec', type: 'INTEGER' },
             { name: 'total_net_input_bytes', type: 'BIGINT' },
@@ -144,17 +152,18 @@ function initializeDatabase() {
             { name: 'total_connections_received', type: 'BIGINT' },
             { name: 'rejected_connections', type: 'BIGINT' }
         ];
-        
+
         for (const col of newColumns) {
             if (!columns.includes(col.name)) {
-                db.exec(`ALTER TABLE stats_snapshots ADD COLUMN ${col.name} ${col.type}`);
+                db.exec(
+                    `ALTER TABLE stats_snapshots ADD COLUMN ${col.name} ${col.type}`
+                );
                 console.log(`Added column ${col.name} to stats_snapshots`);
             }
         }
     } catch (error) {
         console.error('Error adding new columns to stats_snapshots:', error);
     }
-
 }
 
 // Initialize the database
@@ -162,7 +171,11 @@ initializeDatabase();
 
 // Get all connections
 function getAllConnections() {
-    return db.prepare('SELECT id, host, port, username, tls, cluster, `order` FROM connections ORDER BY `order` ASC').all();
+    return db
+        .prepare(
+            'SELECT id, host, port, username, tls, cluster, `order` FROM connections ORDER BY `order` ASC'
+        )
+        .all();
 }
 
 // Get a specific connection by ID
@@ -172,7 +185,9 @@ function getConnection(id) {
 
 // Create a new connection
 function createConnection(connection) {
-    const maxOrderResult = db.prepare('SELECT MAX(`order`) as maxOrder FROM connections').get();
+    const maxOrderResult = db
+        .prepare('SELECT MAX(`order`) as maxOrder FROM connections')
+        .get();
     const nextOrder = (maxOrderResult.maxOrder ?? -1) + 1;
 
     const stmt = db.prepare(`
@@ -224,7 +239,9 @@ function deleteConnection(id) {
 
 // Update connection order
 function updateConnectionOrder(connectionIds) {
-    const updateStmt = db.prepare('UPDATE connections SET `order` = ? WHERE id = ?');
+    const updateStmt = db.prepare(
+        'UPDATE connections SET `order` = ? WHERE id = ?'
+    );
     const transaction = db.transaction((ids) => {
         ids.forEach((id, index) => {
             updateStmt.run(index, id);

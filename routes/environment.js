@@ -7,7 +7,7 @@ router.get('/environments', (req, res) => {
     try {
         const connections = getAllConnections();
 
-        const envList = connections.map(conn => ({
+        const envList = connections.map((conn) => ({
             id: conn.id,
             name: conn.name,
             host: conn.host,
@@ -29,7 +29,9 @@ router.get('/health', (req, res) => {
         const connection = getConnection(env);
 
         if (!connection) {
-            return res.status(404).json({ error: `Environment '${env}' not found` });
+            return res
+                .status(404)
+                .json({ error: `Environment '${env}' not found` });
         }
 
         res.json({
@@ -40,7 +42,10 @@ router.get('/health', (req, res) => {
             tls: connection.tls === 1
         });
     } catch (error) {
-        console.error(`Error checking health for environment '${req.query.env}':`, error);
+        console.error(
+            `Error checking health for environment '${req.query.env}':`,
+            error
+        );
         res.status(500).json({ error: 'Failed to check environment health' });
     }
 });

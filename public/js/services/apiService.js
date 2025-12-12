@@ -91,11 +91,15 @@ export async function searchKeys(pattern, cursors, count, environment) {
     // Ensure cursors is always an array
     const cursorArray = Array.isArray(cursors) ? cursors : [cursors || '0'];
 
-    const url = createApiUrl('/api/keys', {
-        pattern: pattern,
-        cursors: JSON.stringify(cursorArray), // Send as JSON array (supports both single node and cluster)
-        count: count
-    }, environment);
+    const url = createApiUrl(
+        '/api/keys',
+        {
+            pattern: pattern,
+            cursors: JSON.stringify(cursorArray), // Send as JSON array (supports both single node and cluster)
+            count: count
+        },
+        environment
+    );
 
     const response = await fetch(url);
 
@@ -113,7 +117,11 @@ export async function searchKeys(pattern, cursors, count, environment) {
  * @returns {Promise<Object>} - Key details including type, value and TTL
  */
 export async function getKeyDetails(key, environment) {
-    const url = createApiUrl(`/api/keys/${encodeURIComponent(key)}`, {}, environment);
+    const url = createApiUrl(
+        `/api/keys/${encodeURIComponent(key)}`,
+        {},
+        environment
+    );
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -130,7 +138,11 @@ export async function getKeyDetails(key, environment) {
  * @returns {Promise<Object>} - Deletion result
  */
 export async function deleteKey(key, environment) {
-    const url = createApiUrl(`/api/keys/${encodeURIComponent(key)}`, {}, environment);
+    const url = createApiUrl(
+        `/api/keys/${encodeURIComponent(key)}`,
+        {},
+        environment
+    );
     const response = await fetch(url, {
         method: 'DELETE'
     });
@@ -178,9 +190,13 @@ export async function saveKey(key, value, expiry, environment) {
  * @returns {Promise<Object>} - Deletion result
  */
 export async function deleteKeysByPattern(pattern, environment) {
-    const url = createApiUrl('/api/allkeys', {
-        pattern: pattern
-    }, environment);
+    const url = createApiUrl(
+        '/api/allkeys',
+        {
+            pattern: pattern
+        },
+        environment
+    );
 
     const response = await fetch(url, {
         method: 'DELETE'
@@ -201,7 +217,11 @@ export async function deleteKeysByPattern(pattern, environment) {
  * @returns {Promise<Object>} - Operation result
  */
 export async function setKeyExpiry(key, seconds, environment) {
-    const url = createApiUrl(`/api/keys/${encodeURIComponent(key)}/expire`, {}, environment);
+    const url = createApiUrl(
+        `/api/keys/${encodeURIComponent(key)}/expire`,
+        {},
+        environment
+    );
     const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -227,7 +247,11 @@ export async function setKeyExpiry(key, seconds, environment) {
  * @returns {Promise<Object>} - Operation result
  */
 export async function renameKey(key, newKey, environment) {
-    const url = createApiUrl(`/api/keys/${encodeURIComponent(key)}/rename`, {}, environment);
+    const url = createApiUrl(
+        `/api/keys/${encodeURIComponent(key)}/rename`,
+        {},
+        environment
+    );
     const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -254,7 +278,11 @@ export async function renameKey(key, newKey, environment) {
  * @returns {Promise<Object>} - Operation result
  */
 export async function copyKey(key, targetKey, targetEnv, environment) {
-    const url = createApiUrl(`/api/keys/${encodeURIComponent(key)}/copy`, {}, environment);
+    const url = createApiUrl(
+        `/api/keys/${encodeURIComponent(key)}/copy`,
+        {},
+        environment
+    );
     const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -322,7 +350,11 @@ export async function flushDatabase(environment) {
  * @returns {Promise<Object>} - Operation result
  */
 export async function addToSortedSet(key, members, expiry, environment) {
-    const url = createApiUrl(`/api/keys/${encodeURIComponent(key)}/zadd`, {}, environment);
+    const url = createApiUrl(
+        `/api/keys/${encodeURIComponent(key)}/zadd`,
+        {},
+        environment
+    );
     const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -348,7 +380,11 @@ export async function addToSortedSet(key, members, expiry, environment) {
  * @returns {Promise<boolean>} - True if the key exists, false otherwise
  */
 export async function keyExists(key, environment) {
-    const url = createApiUrl(`/api/keys/${encodeURIComponent(key)}/exists`, {}, environment);
+    const url = createApiUrl(
+        `/api/keys/${encodeURIComponent(key)}/exists`,
+        {},
+        environment
+    );
     try {
         const response = await fetch(url);
 
