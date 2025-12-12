@@ -224,8 +224,36 @@ router.delete('/keys/:key', async (req, res) => {
         const env = req.query.env;
         const key = req.params.key;
 
-        // Delete the key
-        const result = await execRedisCommand(`DEL "${key}"`, env);
+        // Delete the key with cluster handling
+        let result;
+        let targetNode = null;
+
+        try {
+            result = await execRedisCommand(`DEL "${key}"`, env);
+
+            // Check for MOVED response
+            if (result.includes('MOVED')) {
+                // Parse the MOVED response: "MOVED slot target-host:target-port"
+                const movedMatch = result.match(/MOVED\s+\d+\s+([^:]+):(\d+)/);
+                if (movedMatch) {
+                    const targetHost = movedMatch[1];
+                    const targetPort = parseInt(movedMatch[2]);
+
+                    targetNode = {
+                        id: `${targetHost}:${targetPort}`,
+                        host: targetHost,
+                        port: targetPort
+                    };
+
+                    // Retry DEL on the correct node
+                    result = await execRedisCommand(`DEL "${key}"`, env, targetNode);
+                }
+            }
+        } catch (error) {
+            console.error('Error executing DEL:', error);
+            throw error;
+        }
+
         const deletedCount = parseInt(result.trim());
 
         res.json({
@@ -270,7 +298,27 @@ router.delete('/allkeys', async (req, res) => {
         let deletedCount = 0;
         for (const key of keys) {
             try {
-                const delResult = await execRedisCommand(`DEL "${key}"`, env);
+                let delResult;
+                try {
+                    delResult = await execRedisCommand(`DEL "${key}"`, env);
+                    // Check for MOVED response
+                    if (delResult.includes('MOVED')) {
+                        const movedMatch = delResult.match(/MOVED\s+\d+\s+([^:]+):(\d+)/);
+                        if (movedMatch) {
+                            const targetHost = movedMatch[1];
+                            const targetPort = parseInt(movedMatch[2]);
+                            const targetNode = {
+                                id: `${targetHost}:${targetPort}`,
+                                host: targetHost,
+                                port: targetPort
+                            };
+                            delResult = await execRedisCommand(`DEL "${key}"`, env, targetNode);
+                        }
+                    }
+                } catch (delError) {
+                    console.error(`Error executing DEL for "${key}":`, delError);
+                    continue;
+                }
                 deletedCount += parseInt(delResult.trim()) || 0;
             } catch (e) {
                 console.error(`Error deleting key "${key}":`, e);
