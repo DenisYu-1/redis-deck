@@ -1,0 +1,4 @@
+---
+description: This is a project to customise workflow in working with redis functionality. User can add connections and add plugins. This is a side-project for me, so it is very important that all changes works. If something is not clear – ask. It is better to produce smaller-scope files/modules. It is better to put all logic to the backend. Do not commit anything, just add new files to git.
+alwaysApply: true
+---

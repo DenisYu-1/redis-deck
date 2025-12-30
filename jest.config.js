@@ -1,13 +1,35 @@
-module.exports = {
-    testEnvironment: 'node',
-    testMatch: ['**/__tests__/**/*.test.js'],
-    collectCoverageFrom: [
-        'services/**/*.js',
-        'routes/**/*.js',
-        '!node_modules/**'
+export default {
+    preset: 'ts-jest',
+    testEnvironment: 'jsdom',
+    roots: ['<rootDir>/__tests__', '<rootDir>/client'],
+    testMatch: [
+        '**/__tests__/**/*.test.ts',
+        '**/__tests__/**/*.test.tsx',
+        '**/*.test.ts',
+        '**/*.test.tsx'
     ],
-    coverageDirectory: 'coverage',
-    testTimeout: 30000,
+    moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/client/$1',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
+    },
+    transform: {
+        '^.+\\.tsx?$': [
+            'ts-jest',
+            {
+                tsconfig: {
+                    jsx: 'react-jsx',
+                    esModuleInterop: true,
+                    allowSyntheticDefaultImports: true
+                }
+            }
+        ]
+    },
     setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
-    maxWorkers: 1
+    collectCoverageFrom: [
+        'client/**/*.{ts,tsx}',
+        '!client/**/*.d.ts',
+        '!client/vite-env.d.ts',
+        '!client/**/*.test.{ts,tsx}'
+    ],
+    moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json']
 };

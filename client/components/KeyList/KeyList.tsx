@@ -1,0 +1,92 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useAppStore } from '@/store/useAppStore';
+import { searchKeys } from '@/services/apiService';
+import { useToast } from '@/hooks/useToast';
+
+interface KeyListProps {
+    searchPattern: string;
+    onKeySelect: (key: string) => void;
+}
+
+export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
+    const [keys, setKeys] = useState<string[]>([]);
+    const [cursor, setCursor] = useState('0');
+    const [hasMore, setHasMore] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const { currentEnvironment, selectedKey } = useAppStore();
+    const { showToast } = useToast();
+
+    const loadKeys = useCallback(
+        async (resetList = false) => {
+            if (!currentEnvironment || isLoading) return;
+
+            setIsLoading(true);
+            try {
+                const currentCursor = resetList ? '0' : cursor;
+                const result = await searchKeys(
+                    searchPattern,
+                    currentCursor,
+                    100,
+                    currentEnvironment
+                );
+
+                if (resetList) {
+                    setKeys(result.keys);
+                } else {
+                    setKeys((prev) => [...prev, ...result.keys]);
+                }
+
+                setCursor(result.cursor);
+                setHasMore(result.cursor !== '0');
+            } catch (error) {
+                showToast('Error loading keys', 'error');
+                console.error('Error loading keys:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [currentEnvironment, cursor, searchPattern, isLoading, showToast]
+    );
+
+    useEffect(() => {
+        if (currentEnvironment) {
+            void loadKeys(true);
+        }
+    }, [currentEnvironment, searchPattern]);
+
+    const handleLoadMore = () => {
+        void loadKeys(false);
+    };
+
+    return (
+        <div className="keys-list">
+            <h3>
+                Keys <span id="keys-count">({keys.length})</span>
+            </h3>
+            <ul id="keys-results">
+                {keys.map((key) => (
+                    <li
+                        key={key}
+                        className={selectedKey === key ? 'selected' : ''}
+                        onClick={() => onKeySelect(key)}
+                    >
+                        {key}
+                    </li>
+                ))}
+            </ul>
+            <div className="pagination-controls">
+                <div className="pagination-status">
+                    <span id="pagination-info">Showing {keys.length} keys</span>
+                </div>
+                <button
+                    id="load-more-btn"
+                    className="secondary-btn"
+                    disabled={!hasMore || isLoading}
+                    onClick={handleLoadMore}
+                >
+                    {isLoading ? 'Loading...' : 'Load More'}
+                </button>
+            </div>
+        </div>
+    );
+}

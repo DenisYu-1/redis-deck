@@ -1,0 +1,20 @@
+services:
+  redis:
+    networks:
+      - traefik_proxy
+
+  redis-ui:
+    networks:
+      - traefik_proxy
+
+networks:
+  traefik_proxy:
+    external: true
+
+
+
+
+
+
+
+

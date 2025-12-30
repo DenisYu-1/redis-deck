@@ -51,7 +51,12 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Plu
     ```bash
     yarn dev
     ```
-4. Open http://localhost:3000
+   This will start:
+   - Vite dev server at http://localhost:5173 (frontend)
+   - Node.js backend at http://localhost:3000 (API)
+   - Vite proxies API calls to the backend automatically
+
+4. Open http://localhost:5173
 5. Go to Settings (⚙️) to add your Redis connections
 
 ## Key Features in Detail
@@ -162,14 +167,19 @@ Comprehensive monitoring and analytics available at `/statistics.html`:
 
 ## Technical Details
 
-- Built with Node.js and Express
-- Frontend uses vanilla JavaScript
+- **Frontend**: React 18 with TypeScript
+- **Build Tool**: Vite for fast development and optimized production builds
+- **State Management**: Zustand for lightweight, hook-based state management
+- **Backend**: Node.js with Express
+- **Type Safety**: Strict TypeScript configuration with comprehensive type checking
+- **Code Quality**: ESLint with TypeScript and React plugins, Prettier for formatting
+- **Testing**: Jest with React Testing Library
 - Redis commands are executed using redis-cli under the hood
 - Credentials passed via environment variables for security
 
 ## Plugin System
 
-RedisDeck includes a flexible plugin system that allows you to extend the UI with custom functionality. Plugins can add new sections to the interface with custom forms, buttons, and workflows.
+RedisDeck includes a flexible plugin system that allows you to extend the UI with custom functionality. The plugin system is built with React and TypeScript, allowing you to create type-safe, reusable components.
 
 ### Setup
 
