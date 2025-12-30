@@ -10,7 +10,7 @@ interface KeyListProps {
 
 export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
     const [keys, setKeys] = useState<string[]>([]);
-    const [cursor, setCursor] = useState('0');
+    const [cursors, setCursors] = useState<string[]>(['0']);
     const [hasMore, setHasMore] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { currentEnvironment, selectedKey } = useAppStore();
@@ -22,10 +22,10 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
 
             setIsLoading(true);
             try {
-                const currentCursor = resetList ? '0' : cursor;
+                const currentCursors = resetList ? ['0'] : cursors;
                 const result = await searchKeys(
                     searchPattern,
-                    currentCursor,
+                    currentCursors,
                     100,
                     currentEnvironment
                 );
@@ -36,8 +36,8 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
                     setKeys((prev) => [...prev, ...result.keys]);
                 }
 
-                setCursor(result.cursor);
-                setHasMore(result.cursor !== '0');
+                setCursors(result.cursors);
+                setHasMore(result.hasMore);
             } catch (error) {
                 showToast('Error loading keys', 'error');
                 console.error('Error loading keys:', error);
@@ -45,7 +45,7 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
                 setIsLoading(false);
             }
         },
-        [currentEnvironment, cursor, searchPattern, isLoading, showToast]
+        [currentEnvironment, cursors, searchPattern, isLoading, showToast]
     );
 
     useEffect(() => {

@@ -30,25 +30,10 @@ export function MetricsGrid({ stats }: MetricsGridProps) {
                 <div className="metric-subtitle" id="metric-memory-subtitle">
                     Peak: {formatBytes(stats.memory.peak)}
                 </div>
-                <div
-                    className="memory-progress-bar"
-                    style={{
-                        marginTop: '10px',
-                        background: 'var(--bg-tertiary)',
-                        height: '6px',
-                        borderRadius: '3px',
-                        overflow: 'hidden'
-                    }}
-                >
+                <div className="memory-progress-bar">
                     <div
                         id="memory-progress"
-                        style={{
-                            height: '100%',
-                            background:
-                                'linear-gradient(90deg, #3498db, #2980b9)',
-                            transition: 'width 0.3s ease',
-                            width: `${Math.min(memoryPercent, 100)}%`
-                        }}
+                        style={{ width: `${Math.min(memoryPercent, 100)}%` }}
                     />
                 </div>
             </div>

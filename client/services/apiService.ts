@@ -22,7 +22,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export async function loadEnvironments(): Promise<RedisConnection[]> {
     const response = await fetch(`${API_BASE}/connections`);
-    return handleResponse<RedisConnection[]>(response);
+    const result = await handleResponse<{ connections: RedisConnection[] }>(
+        response
+    );
+    return result.connections;
 }
 
 export async function testConnection(environmentId: string): Promise<boolean> {
@@ -35,17 +38,18 @@ export async function testConnection(environmentId: string): Promise<boolean> {
 
 export async function searchKeys(
     pattern: string,
-    cursor: string,
+    cursors: string[],
     count: number,
     environment: string
 ): Promise<SearchKeysResponse> {
     const params = new URLSearchParams({
         pattern,
-        cursor,
-        count: count.toString()
+        cursors: JSON.stringify(cursors),
+        count: count.toString(),
+        env: environment
     });
     const response = await fetch(
-        `${API_BASE}/keys/search/${environment}?${params}`
+        `${API_BASE}/keys?${params}`
     );
     return handleResponse<SearchKeysResponse>(response);
 }
@@ -62,7 +66,7 @@ export async function getKeyDetails(
     environment: string
 ): Promise<KeyDetails> {
     const response = await fetch(
-        `${API_BASE}/keys/details/${environment}?key=${encodeURIComponent(key)}`
+        `${API_BASE}/keys/${encodeURIComponent(key)}?env=${environment}`
     );
     return handleResponse<KeyDetails>(response);
 }

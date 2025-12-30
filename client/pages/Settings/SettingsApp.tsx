@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { Header } from '@/components/layout/Header';
 import { Toast } from '@/components/common/Toast';
 import { setTheme, getTheme } from '@/utils/theme';
@@ -11,6 +12,281 @@ import {
     testConnection
 } from '@/services/apiService';
 import type { RedisConnection } from '@/types';
+
+// Styled Components
+const ConnectionsManager = styled.main`
+    margin-top: 30px;
+`;
+
+const SettingsSection = styled.section`
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 20px;
+`;
+
+const SettingItem = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+`;
+
+const SettingInfo = styled.div`
+    flex: 1;
+    margin-right: 20px;
+
+    label {
+        display: block;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 5px;
+    }
+
+    .description {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin: 0;
+    }
+`;
+
+const SettingControl = styled.div`
+    flex-shrink: 0;
+`;
+
+const ThemeSelector = styled.div`
+    display: flex;
+    gap: 10px;
+`;
+
+const ThemeOption = styled.button<{ $active?: boolean }>`
+    padding: 10px 16px;
+    border: 2px solid var(--border-secondary);
+    border-radius: 6px;
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &:hover {
+        border-color: var(--accent-primary);
+        background-color: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+    ${({ $active }) =>
+        $active &&
+        `
+        border-color: var(--accent-primary);
+        background-color: var(--bg-active);
+        color: var(--accent-primary);
+        font-weight: 600;
+    `}
+`;
+
+const ConnectionsList = styled.section`
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 20px;
+`;
+
+const ConnectionCard = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    background-color: var(--bg-tertiary);
+    transition: all 0.2s ease;
+
+    &:hover {
+        border-color: var(--accent-primary);
+        background-color: var(--bg-hover);
+    }
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+`;
+
+const ConnectionDetails = styled.div`
+    flex: 1;
+
+    strong {
+        display: block;
+        font-size: 16px;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+
+    div {
+        font-size: 0.9em;
+        color: var(--text-secondary);
+    }
+`;
+
+const ConnectionActions = styled.div`
+    display: flex;
+    gap: 8px;
+`;
+
+const AddConnectionButton = styled.button`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background-color: var(--button-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 15px;
+
+    &:hover {
+        background-color: var(--button-primary-hover);
+    }
+`;
+
+const StyledConnectionForm = styled.section`
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-top: 20px;
+`;
+
+const EditModeHeader = styled.div`
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-primary);
+
+    h3 {
+        margin: 0;
+        font-size: 18px;
+        color: var(--text-heading);
+    }
+`;
+
+const FormRow = styled.div`
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 0;
+    }
+`;
+
+const FormGroup = styled.div`
+    flex: 1;
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+
+    input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--border-secondary);
+        border-radius: 4px;
+        font-size: 14px;
+        background-color: var(--bg-input);
+        color: var(--text-primary);
+
+        &:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+    }
+`;
+
+const CheckboxGroup = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+
+    input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent-primary);
+    }
+
+    label {
+        font-size: 14px;
+        color: var(--text-primary);
+        cursor: pointer;
+    }
+`;
+
+const FormActions = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-tertiary);
+`;
+
+const SecondaryButton = styled.button`
+    padding: 8px 16px;
+    background-color: var(--button-secondary);
+    color: var(--button-secondary-text);
+    border: 1px solid var(--button-secondary-border);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background-color: var(--button-secondary-hover);
+        border-color: var(--button-secondary-border-hover);
+    }
+`;
+
+const DangerButton = styled.button`
+    padding: 8px 16px;
+    background-color: var(--button-danger);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background-color: var(--button-danger-hover);
+    }
+`;
 
 export function SettingsApp() {
     const [connections, setConnections] = useState<RedisConnection[]>([]);
@@ -131,98 +407,74 @@ export function SettingsApp() {
                 </div>
             </Header>
 
-            <main className="connections-manager">
+            <ConnectionsManager>
                 <h2>Settings</h2>
 
-                <section className="settings-section">
+                <SettingsSection>
                     <h3>Appearance</h3>
-                    <div className="setting-item">
-                        <div className="setting-info">
+                    <SettingItem>
+                        <SettingInfo>
                             <label>Theme</label>
                             <span className="description">
                                 Choose your preferred color theme
                             </span>
-                        </div>
-                        <div className="setting-control">
-                            <div className="theme-selector">
-                                <button
-                                    className={`theme-option ${currentTheme === 'light' ? 'active' : ''}`}
+                        </SettingInfo>
+                        <SettingControl>
+                            <ThemeSelector>
+                                <ThemeOption
+                                    $active={currentTheme === 'light'}
                                     onClick={() => handleThemeChange('light')}
                                 >
                                     ☀️ Light
-                                </button>
-                                <button
-                                    className={`theme-option ${currentTheme === 'dark' ? 'active' : ''}`}
+                                </ThemeOption>
+                                <ThemeOption
+                                    $active={currentTheme === 'dark'}
                                     onClick={() => handleThemeChange('dark')}
                                 >
                                     🌙 Dark
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                                </ThemeOption>
+                            </ThemeSelector>
+                        </SettingControl>
+                    </SettingItem>
+                </SettingsSection>
 
                 <h2>Redis Connections Manager</h2>
 
-                <section
-                    className="connections-list"
-                    id="connections-container"
-                >
+                <ConnectionsList id="connections-container">
                     <h3>Available Connections</h3>
                     <div id="connections-list">
                         {connections.length === 0 ? (
                             <p>No connections configured.</p>
                         ) : (
                             connections.map((conn) => (
-                                <div key={conn.id} className="connection-card">
-                                    <div className="connection-details">
+                                <ConnectionCard key={conn.id}>
+                                    <ConnectionDetails>
                                         <strong>{conn.id}</strong>
-                                        <div
-                                            style={{
-                                                fontSize: '0.9em',
-                                                color: 'var(--text-secondary)'
-                                            }}
-                                        >
+                                        <div>
                                             {conn.host}:{conn.port}
                                             {conn.tls ? ' (TLS)' : ''}
                                             {conn.cluster ? ' (Cluster)' : ''}
                                         </div>
-                                    </div>
-                                    <div className="connection-actions">
-                                        <button
-                                            onClick={() => handleEdit(conn)}
-                                            className="secondary-btn"
-                                        >
+                                    </ConnectionDetails>
+                                    <ConnectionActions>
+                                        <SecondaryButton onClick={() => handleEdit(conn)}>
                                             Edit
-                                        </button>
-                                        <button
-                                            onClick={() =>
-                                                handleDelete(conn.id)
-                                            }
-                                            className="danger-btn"
-                                        >
+                                        </SecondaryButton>
+                                        <DangerButton onClick={() => handleDelete(conn.id)}>
                                             Delete
-                                        </button>
-                                    </div>
-                                </div>
+                                        </DangerButton>
+                                    </ConnectionActions>
+                                </ConnectionCard>
                             ))
                         )}
                     </div>
-                    <div
-                        style={{
-                            display: 'flex',
-                            gap: '10px',
-                            marginTop: '15px'
-                        }}
-                    >
-                        <button onClick={handleAddNew}>
-                            Add New Connection
-                        </button>
-                    </div>
-                </section>
+                    <AddConnectionButton onClick={handleAddNew}>
+                        Add New Connection
+                    </AddConnectionButton>
+                </ConnectionsList>
 
                 {isEditing && editingConnection && (
-                    <ConnectionForm
+                    <ConnectionFormComponent
                         connection={editingConnection}
                         onSave={handleSave}
                         onTest={handleTest}
@@ -232,7 +484,7 @@ export function SettingsApp() {
                         }}
                     />
                 )}
-            </main>
+            </ConnectionsManager>
 
             <Toast />
         </div>
@@ -246,7 +498,7 @@ interface ConnectionFormProps {
     onCancel: () => void;
 }
 
-function ConnectionForm({
+function ConnectionFormComponent({
     connection,
     onSave,
     onTest,
@@ -260,16 +512,16 @@ function ConnectionForm({
     };
 
     return (
-        <section className="connection-form" id="connection-form-container">
-            <div className="edit-mode-header">
+        <StyledConnectionForm id="connection-form-container">
+            <EditModeHeader>
                 <h3>
                     {connection.id ? 'Edit Connection' : 'Add New Connection'}
                 </h3>
-            </div>
+            </EditModeHeader>
 
             <form id="connection-form" onSubmit={handleSubmit}>
-                <div className="form-row">
-                    <div className="form-group">
+                <FormRow>
+                    <FormGroup>
                         <label htmlFor="connection-id">
                             Connection ID (alphanumeric, no spaces):
                         </label>
@@ -284,11 +536,11 @@ function ConnectionForm({
                             }
                             disabled={!!connection.id}
                         />
-                    </div>
-                </div>
+                    </FormGroup>
+                </FormRow>
 
-                <div className="form-row">
-                    <div className="form-group">
+                <FormRow>
+                    <FormGroup>
                         <label htmlFor="connection-host">Host:</label>
                         <input
                             type="text"
@@ -303,8 +555,8 @@ function ConnectionForm({
                                 })
                             }
                         />
-                    </div>
-                    <div className="form-group">
+                    </FormGroup>
+                    <FormGroup>
                         <label htmlFor="connection-port">Port:</label>
                         <input
                             type="number"
@@ -319,11 +571,11 @@ function ConnectionForm({
                                 })
                             }
                         />
-                    </div>
-                </div>
+                    </FormGroup>
+                </FormRow>
 
-                <div className="form-row">
-                    <div className="form-group">
+                <FormRow>
+                    <FormGroup>
                         <label htmlFor="connection-username">
                             Username (optional):
                         </label>
@@ -340,8 +592,8 @@ function ConnectionForm({
                                 } as RedisConnection);
                             }}
                         />
-                    </div>
-                    <div className="form-group">
+                    </FormGroup>
+                    <FormGroup>
                         <label htmlFor="connection-password">
                             Password (optional):
                         </label>
@@ -358,10 +610,10 @@ function ConnectionForm({
                                 } as RedisConnection);
                             }}
                         />
-                    </div>
-                </div>
+                    </FormGroup>
+                </FormRow>
 
-                <div className="tls-checkbox">
+                <CheckboxGroup>
                     <input
                         type="checkbox"
                         id="connection-tls"
@@ -371,8 +623,8 @@ function ConnectionForm({
                         }
                     />
                     <label htmlFor="connection-tls">Use TLS/SSL</label>
-                </div>
-                <div className="tls-checkbox">
+                </CheckboxGroup>
+                <CheckboxGroup>
                     <input
                         type="checkbox"
                         id="connection-cluster"
@@ -387,26 +639,24 @@ function ConnectionForm({
                     <label htmlFor="connection-cluster">
                         Redis Cluster (enable redirects)
                     </label>
-                </div>
+                </CheckboxGroup>
 
-                <div className="form-actions">
+                <FormActions>
                     <button type="submit">Save Connection</button>
-                    <button
+                    <SecondaryButton
                         type="button"
                         onClick={() => onTest(formData)}
-                        className="secondary-btn"
                     >
                         Test Connection
-                    </button>
-                    <button
+                    </SecondaryButton>
+                    <SecondaryButton
                         type="button"
                         onClick={onCancel}
-                        className="secondary-btn"
                     >
                         Cancel
-                    </button>
-                </div>
+                    </SecondaryButton>
+                </FormActions>
             </form>
-        </section>
+        </StyledConnectionForm>
     );
 }

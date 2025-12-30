@@ -143,26 +143,11 @@ export function MemoryPatternAnalysis() {
         : 'Not analyzed yet';
 
     return (
-        <div className="charts-section">
-            <div className="chart-header">
+        <div className="pattern-analysis-container">
+            <div className="pattern-analysis-header">
                 <h3>Memory Usage by Key Pattern</h3>
-                <div
-                    style={{
-                        display: 'flex',
-                        gap: '15px',
-                        alignItems: 'center',
-                        flexWrap: 'wrap'
-                    }}
-                >
-                    <label
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            fontSize: '0.9em',
-                            color: 'var(--text-secondary)'
-                        }}
-                    >
+                <div className="pattern-controls">
+                    <label className="sample-size-control">
                         <span>Sample:</span>
                         <select
                             id="sample-size-select"
@@ -170,13 +155,6 @@ export function MemoryPatternAnalysis() {
                             onChange={(e) =>
                                 setSampleSize(parseInt(e.target.value, 10))
                             }
-                            style={{
-                                padding: '4px 8px',
-                                border: '1px solid var(--border-secondary)',
-                                borderRadius: '4px',
-                                backgroundColor: 'var(--bg-input)',
-                                color: 'var(--text-primary)'
-                            }}
                         >
                             <option value="100">100 keys</option>
                             <option value="200">200 keys</option>
@@ -184,13 +162,7 @@ export function MemoryPatternAnalysis() {
                             <option value="1000">1000 keys</option>
                         </select>
                     </label>
-                    <span
-                        style={{
-                            fontSize: '0.9em',
-                            color: 'var(--text-secondary)'
-                        }}
-                        id="pattern-analysis-info"
-                    >
+                    <span className="pattern-analysis-info" id="pattern-analysis-info">
                         {infoText}
                     </span>
                     <button
@@ -211,74 +183,27 @@ export function MemoryPatternAnalysis() {
             </div>
 
             {data && data.patterns.length > 0 ? (
-                <div
-                    id="pattern-analysis-results"
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '30px',
-                        marginBottom: '20px'
-                    }}
-                >
-                    <div>
-                        <h4
-                            style={{
-                                marginBottom: '15px',
-                                color: 'var(--text-heading)'
-                            }}
-                        >
-                            Distribution
-                        </h4>
-                        <div style={{ position: 'relative', height: '300px' }}>
+                <div id="pattern-analysis-results" className="pattern-results">
+                    <div className="pattern-distribution">
+                        <h4>Distribution</h4>
+                        <div className="pattern-pie-container">
                             <canvas id="patternPieChart"></canvas>
                         </div>
                     </div>
-                    <div>
-                        <h4
-                            style={{
-                                marginBottom: '15px',
-                                color: 'var(--text-heading)'
-                            }}
-                        >
-                            Top Patterns by {fastMode ? 'Count' : 'Memory'}
-                        </h4>
-                        <div
-                            id="pattern-summary"
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '10px'
-                            }}
-                        >
+                    <div className="pattern-top-keys">
+                        <h4>Top Patterns by {fastMode ? 'Count' : 'Memory'}</h4>
+                        <div id="pattern-summary" className="pattern-summary">
                             {data.patterns
                                 .slice(0, 10)
                                 .map((pattern, index) => (
-                                    <div
-                                        key={index}
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            padding: '8px 12px',
-                                            backgroundColor:
-                                                'var(--bg-tertiary)',
-                                            borderRadius: '4px'
-                                        }}
-                                    >
-                                        <span style={{ fontWeight: '500' }}>
+                                    <div key={index} className="pattern-summary-item">
+                                        <span className="pattern-name">
                                             {pattern.pattern}
                                         </span>
-                                        <span
-                                            style={{
-                                                fontSize: '0.9em',
-                                                color: 'var(--text-secondary)'
-                                            }}
-                                        >
+                                        <span className="pattern-memory">
                                             {fastMode
                                                 ? `${formatNumber(pattern.count)} keys`
-                                                : formatBytes(
-                                                      pattern.total_memory
-                                                  )}
+                                                : formatBytes(pattern.total_memory)}
                                         </span>
                                     </div>
                                 ))}
@@ -288,154 +213,37 @@ export function MemoryPatternAnalysis() {
             ) : null}
 
             {data && data.patterns.length > 0 ? (
-                <div style={{ overflowX: 'auto', marginTop: '20px' }}>
-                    <table
-                        style={{
-                            width: '100%',
-                            borderCollapse: 'collapse',
-                            backgroundColor: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            overflow: 'hidden'
-                        }}
-                    >
+                <div className="pattern-table-container">
+                    <table className="pattern-table">
                         <thead>
-                            <tr
-                                style={{
-                                    backgroundColor: 'var(--bg-tertiary)',
-                                    textAlign: 'left'
-                                }}
-                            >
-                                <th
-                                    style={{
-                                        padding: '12px',
-                                        borderBottom:
-                                            '2px solid var(--border-primary)'
-                                    }}
-                                >
-                                    Pattern
-                                </th>
-                                <th
-                                    style={{
-                                        padding: '12px',
-                                        borderBottom:
-                                            '2px solid var(--border-primary)'
-                                    }}
-                                >
-                                    Key Count
-                                </th>
-                                {!fastMode && (
-                                    <th
-                                        style={{
-                                            padding: '12px',
-                                            borderBottom:
-                                                '2px solid var(--border-primary)'
-                                        }}
-                                    >
-                                        Total Memory
-                                    </th>
-                                )}
-                                {!fastMode && (
-                                    <th
-                                        style={{
-                                            padding: '12px',
-                                            borderBottom:
-                                                '2px solid var(--border-primary)'
-                                        }}
-                                    >
-                                        Avg per Key
-                                    </th>
-                                )}
-                                {!fastMode && (
-                                    <th
-                                        style={{
-                                            padding: '12px',
-                                            borderBottom:
-                                                '2px solid var(--border-primary)'
-                                        }}
-                                    >
-                                        % of Total
-                                    </th>
-                                )}
-                                <th
-                                    style={{
-                                        padding: '12px',
-                                        borderBottom:
-                                            '2px solid var(--border-primary)'
-                                    }}
-                                >
-                                    Sample Keys
-                                </th>
+                            <tr>
+                                <th>Pattern</th>
+                                <th>Key Count</th>
+                                {!fastMode && <th>Total Memory</th>}
+                                {!fastMode && <th>Avg per Key</th>}
+                                {!fastMode && <th>% of Total</th>}
+                                <th>Sample Keys</th>
                             </tr>
                         </thead>
                         <tbody id="pattern-table">
                             {data.patterns.map((pattern, index) => (
-                                <tr
-                                    key={index}
-                                    style={{
-                                        borderBottom:
-                                            index < data.patterns.length - 1
-                                                ? '1px solid var(--border-secondary)'
-                                                : 'none'
-                                    }}
-                                >
-                                    <td style={{ padding: '12px' }}>
-                                        <code
-                                            style={{
-                                                backgroundColor:
-                                                    'var(--bg-tertiary)',
-                                                padding: '2px 6px',
-                                                borderRadius: '3px',
-                                                fontFamily: 'monospace',
-                                                fontSize: '0.9em'
-                                            }}
-                                        >
-                                            {pattern.pattern}
-                                        </code>
-                                    </td>
-                                    <td style={{ padding: '12px' }}>
-                                        {formatNumber(pattern.count)}
-                                    </td>
+                                <tr key={index}>
+                                    <td><code>{pattern.pattern}</code></td>
+                                    <td>{formatNumber(pattern.count)}</td>
                                     {!fastMode && (
-                                        <td style={{ padding: '12px' }}>
-                                            {formatBytes(pattern.total_memory)}
-                                        </td>
+                                        <td>{formatBytes(pattern.total_memory)}</td>
                                     )}
                                     {!fastMode && (
-                                        <td style={{ padding: '12px' }}>
-                                            {formatBytes(pattern.avg_memory)}
-                                        </td>
+                                        <td>{formatBytes(pattern.avg_memory)}</td>
                                     )}
                                     {!fastMode && (
-                                        <td style={{ padding: '12px' }}>
-                                            {pattern.percentage}%
-                                        </td>
+                                        <td>{pattern.percentage}%</td>
                                     )}
-                                    <td style={{ padding: '12px' }}>
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                flexWrap: 'wrap',
-                                                gap: '4px'
-                                            }}
-                                        >
+                                    <td>
+                                        <div>
                                             {pattern.sample_keys.map(
                                                 (key, keyIndex) => (
-                                                    <code
-                                                        key={keyIndex}
-                                                        style={{
-                                                            backgroundColor:
-                                                                'var(--bg-tertiary)',
-                                                            padding: '1px 4px',
-                                                            borderRadius: '2px',
-                                                            fontFamily:
-                                                                'monospace',
-                                                            fontSize: '0.8em',
-                                                            maxWidth: '120px',
-                                                            overflow: 'hidden',
-                                                            textOverflow:
-                                                                'ellipsis'
-                                                        }}
-                                                    >
+                                                    <code key={keyIndex}>
                                                         {key}
                                                     </code>
                                                 )
@@ -450,49 +258,20 @@ export function MemoryPatternAnalysis() {
             ) : null}
 
             {isLoading && (
-                <div
-                    id="pattern-analysis-loading"
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '40px',
-                        color: 'var(--text-secondary)',
-                        textAlign: 'center'
-                    }}
-                >
-                    <div style={{ fontSize: '2em', marginBottom: '10px' }}>
-                        ⏳
-                    </div>
-                    <div id="analysis-status">
+                <div id="pattern-analysis-loading" className="pattern-analysis-loading">
+                    <div className="analysis-status">
                         {fastMode
                             ? 'Analyzing key patterns...'
                             : 'Analyzing memory usage...'}
                     </div>
-                    <div style={{ fontSize: '0.9em', marginTop: '10px' }}>
+                    <div className="analysis-substatus">
                         This may take a moment for large datasets
                     </div>
-                    <div style={{ marginTop: '20px' }}>
+                    <div className="analysis-progress-container">
                         <div
-                            style={{
-                                width: '300px',
-                                height: '6px',
-                                background: 'var(--bg-tertiary)',
-                                borderRadius: '3px',
-                                overflow: 'hidden'
-                            }}
-                        >
-                            <div
-                                id="analysis-progress-bar"
-                                style={{
-                                    height: '100%',
-                                    background: 'var(--accent-primary)',
-                                    width: isLoading ? '50%' : '0%',
-                                    transition: 'width 0.3s ease'
-                                }}
-                            />
-                        </div>
+                            id="analysis-progress-bar"
+                            className="analysis-progress-bar"
+                        />
                     </div>
                 </div>
             )}

@@ -24,8 +24,9 @@ export interface KeyDetails {
 
 export interface SearchKeysResponse {
     keys: string[];
-    cursor: string;
-    count: number;
+    cursors: string[];
+    hasMore: boolean;
+    total: string;
 }
 
 export interface KeyCountResponse {

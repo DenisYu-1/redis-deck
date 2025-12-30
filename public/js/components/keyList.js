@@ -16,15 +16,6 @@ let isLoading = false;
 let currentKey = null;
 let onKeySelectedCallback = null;
 
-// Virtual list configuration
-let virtualListConfig = {
-    itemHeight: 30, // estimated height of each key item in pixels
-    visibleItems: 50, // approximate number of items to render at once
-    bufferItems: 20, // extra items to render above/below viewport for smooth scrolling
-    scrollTop: 0, // current scroll position
-    containerHeight: 400, // default height of the visible container
-    maxKeyDisplayLength: 100 // maximum number of characters to display for key names
-};
 
 /**
  * Initialize the key list component
@@ -46,8 +37,6 @@ export function init(onKeySelected) {
         document.getElementById('next-page-btn') ||
         document.createElement('button'); // Fallback if not in DOM
 
-    // Set up virtual list container styles
-    setupVirtualListContainer();
 
     // Event listeners
     searchBtn.addEventListener('click', () =>
@@ -73,8 +62,6 @@ export function init(onKeySelected) {
         );
     }
 
-    // Add scroll event handler for virtual list
-    keysResults.addEventListener('scroll', handleListScroll);
 
     // Handle window resize to adjust virtual list container
     window.addEventListener('resize', () => {
@@ -93,15 +80,6 @@ export function init(onKeySelected) {
     adjustContainerHeight();
 }
 
-/**
- * Setup the virtual list container styles
- */
-function setupVirtualListContainer() {
-    const keysResults = document.getElementById('keys-results');
-    keysResults.style.height = `${virtualListConfig.containerHeight}px`;
-    keysResults.style.overflowY = 'auto';
-    keysResults.style.position = 'relative';
-}
 
 /**
  * Adjust container height based on available space
@@ -112,20 +90,10 @@ function adjustContainerHeight() {
     const availableHeight =
         window.innerHeight - container.getBoundingClientRect().top - 100; // 100px buffer for bottom
 
-    virtualListConfig.containerHeight = Math.max(300, availableHeight); // Minimum 300px height
-    keysResults.style.height = `${virtualListConfig.containerHeight}px`;
+    const containerHeight = Math.max(300, availableHeight); // Minimum 300px height
+    keysResults.style.height = `${containerHeight}px`;
 }
 
-/**
- * Handle scroll events for virtual list
- */
-function handleListScroll() {
-    const keysResults = document.getElementById('keys-results');
-    virtualListConfig.scrollTop = keysResults.scrollTop;
-
-    // Use requestAnimationFrame for better performance
-    requestAnimationFrame(renderVisibleItems);
-}
 
 /**
  * Search for keys with the current pattern
@@ -367,7 +335,6 @@ export function resetPagination() {
     currentKey = null;
 
     // Reset scroll position
-    virtualListConfig.scrollTop = 0;
     if (keysResults) {
         keysResults.scrollTop = 0;
     }
@@ -436,97 +403,22 @@ function displayKeys(keys, resetList) {
         return;
     }
 
-    // Create virtual list container if needed
+    // Render keys directly
     const keysResults = document.getElementById('keys-results');
-    if (!keysResults.querySelector('.virtual-list-container')) {
-        const container = document.createElement('div');
-        container.className = 'virtual-list-container';
-        container.style.position = 'relative';
-        keysResults.appendChild(container);
-    }
+    keysResults.innerHTML = '';
 
-    // Render only the visible items
-    renderVisibleItems();
-}
-
-/**
- * Render only the visible items in the virtual list
- */
-function renderVisibleItems() {
-    const keysResults = document.getElementById('keys-results');
-    const container =
-        keysResults.querySelector('.virtual-list-container') || keysResults;
-
-    // If no keys or still loading, don't render
-    if (allKeys.length === 0) {
-        return;
-    }
-
-    // Calculate visible range
-    const scrollTop = virtualListConfig.scrollTop;
-    const startIndex = Math.max(
-        0,
-        Math.floor(scrollTop / virtualListConfig.itemHeight) -
-            virtualListConfig.bufferItems
-    );
-    const endIndex = Math.min(
-        allKeys.length,
-        startIndex +
-            Math.ceil(
-                virtualListConfig.containerHeight / virtualListConfig.itemHeight
-            ) +
-            virtualListConfig.bufferItems
-    );
-
-    // Set container height to accommodate all items
-    container.style.height = `${allKeys.length * virtualListConfig.itemHeight}px`;
-
-    // Clear existing items - we'll re-render everything in the visible range
-    container.innerHTML = '';
-
-    // Render only the visible items
-    for (let i = startIndex; i < endIndex; i++) {
-        const key = allKeys[i];
+    allKeys.forEach((key) => {
         const li = document.createElement('li');
-
-        // Truncate long key names
-        if (key.length > virtualListConfig.maxKeyDisplayLength) {
-            // Truncate the middle part of the key
-            const halfLength = Math.floor(
-                virtualListConfig.maxKeyDisplayLength / 2
-            );
-            const firstPart = key.substring(0, halfLength);
-            const lastPart = key.substring(key.length - halfLength);
-            li.textContent = `${firstPart}…${lastPart}`;
-            li.classList.add('truncated-key');
-        } else {
-            li.textContent = key;
-        }
-
-        // Store full key in data attribute
+        li.textContent = key;
         li.dataset.key = key;
-        li.dataset.index = i;
-
-        // Add title attribute for tooltip on hover
         li.title = key;
-
-        // Position absolutely
-        li.style.position = 'absolute';
-        li.style.top = `${i * virtualListConfig.itemHeight}px`;
-        li.style.width = '100%';
-        li.style.height = `${virtualListConfig.itemHeight}px`;
-        li.style.overflow = 'hidden';
-        li.style.textOverflow = 'ellipsis';
-        li.style.whiteSpace = 'nowrap';
-
-        // Add active class if this is the currently selected key
         if (key === currentKey) {
             li.classList.add('active');
         }
-
-        container.appendChild(li);
-    }
+        keysResults.appendChild(li);
+    });
 }
+
 
 /**
  * Scroll to a specific key in the list
@@ -536,7 +428,10 @@ export function scrollToKey(key) {
     const index = allKeys.indexOf(key);
     if (index !== -1) {
         const keysResults = document.getElementById('keys-results');
-        keysResults.scrollTop = index * virtualListConfig.itemHeight;
+        const li = keysResults.children[index];
+        if (li) {
+            li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }
 }
 

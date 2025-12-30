@@ -22,6 +22,14 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
     const [showTTLModal, setShowTTLModal] = useState(false);
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [showCopyModal, setShowCopyModal] = useState(false);
+    const [showValueModal, setShowValueModal] = useState(false);
+    const [valueModalData, setValueModalData] = useState<{
+        raw: string;
+        formatted: string;
+        jsonData: any;
+        hasJson: boolean;
+        activeTab: string;
+    } | null>(null);
     const [ttlValue, setTtlValue] = useState('');
     const [newKeyName, setNewKeyName] = useState('');
     const [targetKeyName, setTargetKeyName] = useState('');
@@ -129,6 +137,111 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
         }
     };
 
+    const handleViewValue = (value: any, type: string) => {
+        try {
+            let raw = '';
+            let formatted = '';
+            let jsonData = null;
+            let hasJson = false;
+
+            if (type === 'zset' && typeof value === 'string') {
+                const result = parseZsetForViewer(value);
+                formatted = result.formatted;
+                raw = result.formatted;
+                if (result.hasJson) {
+                    jsonData = result.jsonMap;
+                    hasJson = true;
+                }
+            } else if (typeof value === 'string') {
+                try {
+                    jsonData = JSON.parse(value);
+                    hasJson = true;
+                    raw = JSON.stringify(jsonData, null, 2);
+                    formatted = raw;
+                } catch {
+                    raw = value;
+                    formatted = value;
+                }
+            } else if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+                jsonData = value;
+                hasJson = true;
+                raw = JSON.stringify(value, null, 2);
+                formatted = raw;
+            } else {
+                raw = String(value);
+                formatted = String(value);
+            }
+
+            setValueModalData({
+                raw,
+                formatted,
+                jsonData,
+                hasJson,
+                activeTab: hasJson ? 'tree' : 'formatted'
+            });
+            setShowValueModal(true);
+        } catch (error) {
+            showToast('Failed to display value', 'error');
+            console.error('Error displaying value:', error);
+        }
+    };
+
+    const handleCopyValue = async (value: any) => {
+        try {
+            let textToCopy = '';
+
+            if (typeof value === 'string') {
+                textToCopy = value;
+            } else if (Array.isArray(value)) {
+                textToCopy = JSON.stringify(value, null, 2);
+            } else if (typeof value === 'object' && value !== null) {
+                textToCopy = JSON.stringify(value, null, 2);
+            } else {
+                textToCopy = String(value);
+            }
+
+            await navigator.clipboard.writeText(textToCopy);
+            showToast('Value copied to clipboard', 'success');
+        } catch (error) {
+            showToast('Failed to copy value', 'error');
+            console.error('Error copying value:', error);
+        }
+    };
+
+    const parseZsetForViewer = (value: string) => {
+        const lines = value.split('\n').filter(line => line.trim());
+        const formattedLines: string[] = [];
+        const jsonMap: Record<string, any> = {};
+        let hasJson = false;
+
+        for (let i = 0; i < lines.length; i += 2) {
+            if (i + 1 < lines.length) {
+                const member = lines[i]!.trim();
+                const score = lines[i + 1]!.trim();
+
+                try {
+                    const parsed = JSON.parse(member);
+                    formattedLines.push(`• ${JSON.stringify(parsed, null, 2)} → ${score}`);
+                    jsonMap[score] = parsed;
+                    hasJson = true;
+                } catch {
+                    formattedLines.push(`• ${member} → ${score}`);
+                }
+            }
+        }
+
+        return {
+            formatted: formattedLines.join('\n\n'),
+            jsonMap,
+            hasJson
+        };
+    };
+
+    const handleTabChange = (tab: string) => {
+        if (!valueModalData) return;
+        setValueModalData(prev => prev ? { ...prev, activeTab: tab } : null);
+    };
+
     if (!selectedKey) {
         return (
             <div className="key-details">
@@ -166,6 +279,28 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                             </p>
                             <p>
                                 <strong>Value:</strong>
+                                <div className="value-actions">
+                                    <button
+                                        className="value-action-btn"
+                                        onClick={() => handleViewValue(details.value, details.type)}
+                                        title="View formatted value"
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </button>
+                                    <button
+                                        className="value-action-btn"
+                                        onClick={() => handleCopyValue(details.value)}
+                                        title="Copy value"
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                </div>
                             </p>
                             <pre>{JSON.stringify(details.value, null, 2)}</pre>
                         </>
@@ -330,6 +465,60 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                             >
                                 Cancel
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showValueModal && valueModalData && (
+                <div className="modal">
+                    <div className="modal-content value-viewer-modal">
+                        <span
+                            className="close-modal"
+                            onClick={() => setShowValueModal(false)}
+                        >
+                            &times;
+                        </span>
+                        <h3>View Value</h3>
+
+                        <div className="value-tabs">
+                            <button
+                                className={`value-tab-btn ${valueModalData.activeTab === 'formatted' ? 'active' : ''}`}
+                                onClick={() => handleTabChange('formatted')}
+                                data-tab="formatted"
+                            >
+                                Formatted
+                            </button>
+                            <button
+                                className={`value-tab-btn ${valueModalData.activeTab === 'raw' ? 'active' : ''}`}
+                                onClick={() => handleTabChange('raw')}
+                                data-tab="raw"
+                            >
+                                Raw
+                            </button>
+                            {valueModalData.hasJson && (
+                                <button
+                                    className={`value-tab-btn ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
+                                    onClick={() => handleTabChange('tree')}
+                                    data-tab="tree"
+                                >
+                                    Tree
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="value-tab-content">
+                            {valueModalData.activeTab === 'formatted' && (
+                                <pre className="value-viewer-formatted">{valueModalData.formatted}</pre>
+                            )}
+                            {valueModalData.activeTab === 'raw' && (
+                                <pre className="value-viewer-raw">{valueModalData.raw}</pre>
+                            )}
+                            {valueModalData.activeTab === 'tree' && valueModalData.hasJson && (
+                                <div className="value-viewer-tree">
+                                    <pre>{JSON.stringify(valueModalData.jsonData, null, 2)}</pre>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

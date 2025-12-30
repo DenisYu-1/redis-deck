@@ -1,35 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { loadEnvironments, testConnection } from '@/services/apiService';
+import { testConnection } from '@/services/apiService';
 import { useToast } from '@/hooks/useToast';
 import type { RedisConnection } from '@/types';
 
 export function EnvironmentSelector() {
-    const {
-        connections,
-        currentEnvironment,
-        setConnections,
-        setCurrentEnvironment
-    } = useAppStore();
+    const { connections, currentEnvironment, setCurrentEnvironment } =
+        useAppStore();
     const [totalKeys, setTotalKeys] = useState<string>('Loading...');
     const { showToast } = useToast();
-
-    useEffect(() => {
-        const fetchConnections = async () => {
-            try {
-                const conns = await loadEnvironments();
-                setConnections(conns);
-                if (conns.length > 0 && !currentEnvironment) {
-                    setCurrentEnvironment(conns[0]?.id ?? '');
-                }
-            } catch (error) {
-                showToast('Failed to load connections', 'error');
-                console.error('Error loading connections:', error);
-            }
-        };
-
-        void fetchConnections();
-    }, [currentEnvironment, setConnections, setCurrentEnvironment, showToast]);
 
     const handleEnvironmentChange = async (
         event: React.ChangeEvent<HTMLSelectElement>

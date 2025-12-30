@@ -4,16 +4,20 @@
             "id": "key-operations",
             "name": "Key Operations",
             "enabled": true,
-            "path": "./keyOperations/keyOperations.js",
+            "path": "./keyOperations/keyOperations.tsx",
             "priority": 100,
+            "position": "after",
+            "target": "key-list",
             "config": {}
         },
         {
             "id": "batch-delete",
             "name": "Batch Delete Keys",
             "enabled": true,
-            "path": "./batchDelete/batchDelete.js",
+            "path": "./batchDelete/batchDelete.tsx",
             "priority": 50,
+            "position": "after",
+            "target": "key-list",
             "config": {}
         }
     ]

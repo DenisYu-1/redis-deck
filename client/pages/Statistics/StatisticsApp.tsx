@@ -11,6 +11,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useToast } from '@/hooks/useToast';
 import { getRealtimeStats } from '@/services/apiService';
 import type { RealtimeStats } from '@/types';
+import './statistics.css';
 
 export function StatisticsApp() {
     const [stats, setStats] = useState<RealtimeStats | null>(null);

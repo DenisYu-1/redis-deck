@@ -45,121 +45,34 @@ export function SlowLogTable() {
                 <h3>Recent Slow Queries</h3>
             </div>
             <div style={{ overflowX: 'auto' }}>
-                <table
-                    style={{
-                        width: '100%',
-                        borderCollapse: 'collapse',
-                        backgroundColor: 'var(--bg-secondary)',
-                        borderRadius: '8px',
-                        overflow: 'hidden'
-                    }}
-                >
+                <table className="slow-log-table">
                     <thead>
-                        <tr
-                            style={{
-                                backgroundColor: 'var(--bg-tertiary)',
-                                textAlign: 'left'
-                            }}
-                        >
-                            <th
-                                style={{
-                                    padding: '12px',
-                                    borderBottom:
-                                        '2px solid var(--border-primary)'
-                                }}
-                            >
-                                ID
-                            </th>
-                            <th
-                                style={{
-                                    padding: '12px',
-                                    borderBottom:
-                                        '2px solid var(--border-primary)'
-                                }}
-                            >
-                                Time
-                            </th>
-                            <th
-                                style={{
-                                    padding: '12px',
-                                    borderBottom:
-                                        '2px solid var(--border-primary)'
-                                }}
-                            >
-                                Duration
-                            </th>
-                            <th
-                                style={{
-                                    padding: '12px',
-                                    borderBottom:
-                                        '2px solid var(--border-primary)'
-                                }}
-                            >
-                                Command
-                            </th>
+                        <tr>
+                            <th>ID</th>
+                            <th>Time</th>
+                            <th>Duration</th>
+                            <th>Command</th>
                         </tr>
                     </thead>
                     <tbody id="slowlog-table">
                         {isLoading ? (
                             <tr>
-                                <td
-                                    colSpan={4}
-                                    style={{
-                                        padding: '20px',
-                                        textAlign: 'center',
-                                        color: 'var(--text-secondary)'
-                                    }}
-                                >
-                                    Loading...
-                                </td>
+                                <td colSpan={4}>Loading...</td>
                             </tr>
                         ) : slowLog?.slowlog.length ? (
                             slowLog.slowlog.map((entry) => (
-                                <tr
-                                    key={entry.id}
-                                    style={{
-                                        borderBottom:
-                                            '1px solid var(--border-secondary)'
-                                    }}
-                                >
-                                    <td style={{ padding: '12px' }}>
-                                        {entry.id}
-                                    </td>
-                                    <td style={{ padding: '12px' }}>
-                                        {formatTimestamp(entry.timestamp)}
-                                    </td>
-                                    <td style={{ padding: '12px' }}>
-                                        {formatDuration(entry.duration_us)}
-                                    </td>
-                                    <td style={{ padding: '12px' }}>
-                                        <code
-                                            style={{
-                                                backgroundColor:
-                                                    'var(--bg-tertiary)',
-                                                padding: '2px 6px',
-                                                borderRadius: '3px',
-                                                fontFamily: 'monospace',
-                                                fontSize: '0.9em',
-                                                wordBreak: 'break-all'
-                                            }}
-                                        >
-                                            {entry.command}
-                                        </code>
+                                <tr key={entry.id}>
+                                    <td>{entry.id}</td>
+                                    <td>{formatTimestamp(entry.timestamp)}</td>
+                                    <td>{formatDuration(entry.duration_us)}</td>
+                                    <td>
+                                        <code>{entry.command}</code>
                                     </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td
-                                    colSpan={4}
-                                    style={{
-                                        padding: '20px',
-                                        textAlign: 'center',
-                                        color: 'var(--text-secondary)'
-                                    }}
-                                >
-                                    No slow queries found
-                                </td>
+                                <td colSpan={4}>No slow queries found</td>
                             </tr>
                         )}
                     </tbody>

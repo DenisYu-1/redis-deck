@@ -207,6 +207,36 @@ a.secondary-btn {
     text-align: center;
 }
 
+/* Value action buttons */
+.value-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 8px;
+}
+
+.value-action-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.value-action-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.value-action-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
 .nav-buttons {
     margin-bottom: 20px;
     display: flex;
@@ -675,6 +705,63 @@ html.dark-theme json-viewer {
     overflow-y: auto;
     font-size: 14px;
     line-height: 1.6;
+}
+
+/* Value viewer modal */
+.value-viewer-modal {
+    width: 800px;
+    max-width: 95%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.value-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-tertiary);
+}
+
+.value-tab-btn {
+    background: none;
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.value-tab-btn.active {
+    color: var(--accent-primary);
+    border-bottom-color: var(--accent-primary);
+}
+
+.value-tab-btn:hover:not(.active) {
+    color: var(--text-primary);
+    background-color: var(--bg-hover);
+}
+
+.value-tab-content {
+    flex: 1;
+    min-height: 300px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.value-viewer-formatted,
+.value-viewer-raw,
+.value-viewer-tree {
+    background-color: var(--bg-code);
+    padding: 15px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid var(--border-secondary);
 }
 
 .info-section {
