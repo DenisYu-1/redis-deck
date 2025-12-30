@@ -83,6 +83,12 @@ yarn lint:fix      # Auto-fix issues
 yarn format        # Format all files
 ```
 
+### Module System
+
+- **Frontend**: ES modules via Vite (client/ directory)
+- **Backend**: CommonJS via Node.js default (server/, services/, routes/)
+- Clean separation - frontend uses modern ES modules, backend stays with proven CommonJS
+
 ### Docker Changes
 
 The Dockerfile now uses multi-stage build:
