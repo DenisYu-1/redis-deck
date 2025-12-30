@@ -7,7 +7,9 @@ export type PluginEventType =
     | 'environment:changed'
     | 'operation:completed'
     | 'toast:show'
-    | 'plugin:initialized';
+    | 'plugin:initialized'
+    | 'bookings:add'
+    | 'news-feed:add';
 
 export interface PluginEvent {
     type: PluginEventType;
@@ -24,8 +26,6 @@ export interface PluginDefinition {
     enabled: boolean;
     path: string;
     priority: number;
-    position?: 'before' | 'after' | 'replace';
-    target?: string; // Target component/area to render in
     config?: Record<string, unknown>;
 }
 
@@ -34,8 +34,6 @@ export interface Plugin {
     id: string;
     name: string;
     priority: number;
-    position: 'before' | 'after' | 'replace';
-    target: string;
     config: Record<string, unknown>;
     Component: React.ComponentType<PluginComponentProps>;
     eventHandlers: Map<PluginEventType, PluginEventHandler>;
@@ -53,5 +51,4 @@ export interface PluginHookResult {
     plugins: Plugin[];
     isLoading: boolean;
     emit: (event: PluginEvent) => void;
-    getPluginsForTarget: (target: string) => Plugin[];
 }

@@ -11,3 +11,4 @@ client/plugins/config/config.override.json
 client/plugins/extensions
 dist/
 .vite/
+.idea

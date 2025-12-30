@@ -251,3 +251,19 @@ export async function deleteConnection(id: string): Promise<void> {
     });
     await handleResponse<void>(response);
 }
+
+export async function addToSortedSet(
+    key: string,
+    members: Array<{ score: number; value: string }>,
+    expiry: number | null,
+    environment: string
+): Promise<{ success: boolean }> {
+    const response = await fetch(`${API_BASE}/keys/${encodeURIComponent(key)}/zadd?env=${environment}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ members, expiry })
+    });
+    return handleResponse<{ success: boolean }>(response);
+}

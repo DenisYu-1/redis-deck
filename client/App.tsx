@@ -7,6 +7,7 @@ import { KeyList } from '@/components/KeyList/KeyList';
 import { KeyDetails } from '@/components/KeyDetails/KeyDetails';
 import { Toast } from '@/components/common/Toast';
 import { PluginContainer } from '@/plugins/PluginContainer';
+import { usePlugins } from '@/plugins/usePlugins';
 import { useAppStore } from '@/store/useAppStore';
 import { loadEnvironments } from '@/services/apiService';
 import { useToast } from '@/hooks/useToast';
@@ -57,10 +58,6 @@ export function App() {
         setRefreshTrigger((prev) => prev + 1);
     };
 
-    const handleKeySelect = (key: string) => {
-        setSelectedKey(key);
-    };
-
     const handleOperationComplete = () => {
         setRefreshTrigger((prev) => prev + 1);
     };
@@ -71,6 +68,18 @@ export function App() {
         showToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
             showToast(message, type);
         }
+    };
+
+    const { emit } = usePlugins(pluginContext);
+
+    const handleKeySelect = (key: string) => {
+        setSelectedKey(key);
+        // Emit event so plugins know a key was selected
+        emit({
+            type: 'keys:selected',
+            payload: { keys: [key] },
+            source: 'app'
+        });
     };
 
     if (!hasConnections) {
@@ -98,12 +107,14 @@ export function App() {
             <main>
                 <KeySearch onSearch={handleSearch} onShowAll={handleShowAll} />
                 <div className="results-area">
-                    <KeyList
-                        key={refreshTrigger}
-                        searchPattern={searchPattern}
-                        onKeySelect={handleKeySelect}
-                    />
-                    <KeyDetails onOperationComplete={handleOperationComplete} />
+                    <div className="key-row">
+                        <KeyList
+                            key={refreshTrigger}
+                            searchPattern={searchPattern}
+                            onKeySelect={handleKeySelect}
+                        />
+                        <KeyDetails onOperationComplete={handleOperationComplete} />
+                    </div>
                     <PluginContainer context={pluginContext} />
                 </div>
             </main>

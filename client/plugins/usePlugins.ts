@@ -4,6 +4,15 @@ import type { PluginContext } from '@/types';
 import { eventBus } from './eventBus';
 import { pluginRegistry } from './pluginRegistry';
 
+// Plugin imports registry - maps plugin paths to their imported modules
+const pluginImports: Record<string, () => Promise<any>> = {
+    'keyOperations/keyOperations.tsx': () => import('./plugins/keyOperations/keyOperations.tsx'),
+    'batchDelete/batchDelete.tsx': () => import('./plugins/batchDelete/batchDelete.tsx'),
+    'extensions/customSearches/customSearches.tsx': () => import('./plugins/extensions/customSearches/customSearches.tsx'),
+    'extensions/bookings/bookings.tsx': () => import('./plugins/extensions/bookings/bookings.tsx'),
+    'extensions/newsFeed/newsFeed.tsx': () => import('./plugins/extensions/newsFeed/newsFeed.tsx'),
+};
+
 export function usePlugins(context: PluginContext): PluginHookResult {
     const [plugins, setPlugins] = useState<Plugin[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -13,42 +22,33 @@ export function usePlugins(context: PluginContext): PluginHookResult {
         eventBus.emit(event);
     }, []);
 
-    // Get plugins for a specific target/area
-    const getPluginsForTarget = useCallback((target: string): Plugin[] => {
-        return plugins
-            .filter(plugin => plugin.target === target)
-            .sort((a, b) => b.priority - a.priority);
-    }, [plugins]);
-
     useEffect(() => {
         const loadPlugins = async () => {
             try {
-                const baseResponse = await fetch('/public/plugins/config/config.json');
-                if (!baseResponse.ok) {
-                    throw new Error('Failed to load plugin config');
-                }
-                const baseConfig = await baseResponse.json();
-
+                // Import config files directly since they're part of the build
+                const baseConfig = await import('./config/config.json');
                 let overrideConfig = null;
+
                 try {
-                    const overrideResponse = await fetch('/public/plugins/config/config.override.json');
-                    if (overrideResponse.ok) {
-                        overrideConfig = await overrideResponse.json();
-                    }
+                    const overrideModule = await import('./config/config.override.json');
+                    overrideConfig = overrideModule.default;
                 } catch {
                     console.log('No override config found');
                 }
 
-                const mergedConfig = mergeConfigs(baseConfig, overrideConfig);
+                const mergedConfig = mergeConfigs(baseConfig.default as { plugins: PluginDefinition[] }, overrideConfig as { plugins: PluginDefinition[] } | null);
                 const loadedPlugins = await Promise.all(
                     mergedConfig.plugins
                         .filter((p: PluginDefinition) => p.enabled)
                         .sort((a: PluginDefinition, b: PluginDefinition) => (b.priority || 0) - (a.priority || 0))
                         .map(async (pluginDef: PluginDefinition) => {
                             try {
-                                // Import the plugin module (now expecting React components)
-                                const basePath = '/public/plugins/plugins/';
-                                const module = await import(basePath + pluginDef.path);
+                                // Import the plugin module using the registry
+                                const importFn = pluginImports[pluginDef.path];
+                                if (!importFn) {
+                                    throw new Error(`Plugin ${pluginDef.id} not found in import registry. Path: ${pluginDef.path}`);
+                                }
+                                const module = await importFn();
                                 const PluginComponent = module.default;
 
                                 if (!PluginComponent || typeof PluginComponent !== 'function') {
@@ -59,8 +59,6 @@ export function usePlugins(context: PluginContext): PluginHookResult {
                                     id: pluginDef.id,
                                     name: pluginDef.name,
                                     priority: pluginDef.priority || 0,
-                                    position: pluginDef.position || 'after',
-                                    target: pluginDef.target || 'main',
                                     config: pluginDef.config || {},
                                     Component: PluginComponent,
                                     eventHandlers: new Map()
@@ -128,8 +126,7 @@ export function usePlugins(context: PluginContext): PluginHookResult {
     return {
         plugins,
         isLoading,
-        emit,
-        getPluginsForTarget
+        emit
     };
 }
 
@@ -144,11 +141,7 @@ function mergeConfigs(
     const pluginMap = new Map<string, PluginDefinition>();
 
     baseConfig.plugins.forEach((plugin) => {
-        pluginMap.set(plugin.id, {
-            ...plugin,
-            position: plugin.position || 'after',
-            target: plugin.target || 'main'
-        });
+        pluginMap.set(plugin.id, { ...plugin });
     });
 
     overrideConfig.plugins.forEach((plugin) => {
@@ -158,11 +151,7 @@ function mergeConfigs(
                 ...plugin
             });
         } else {
-            pluginMap.set(plugin.id, {
-                ...plugin,
-                position: plugin.position || 'after',
-                target: plugin.target || 'main'
-            });
+            pluginMap.set(plugin.id, { ...plugin });
         }
     });
 

@@ -403,6 +403,12 @@ button:disabled {
 }
 
 .results-area {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.key-row {
     display: grid;
     grid-template-columns: 1fr 2fr;
     gap: 20px;
@@ -411,6 +417,11 @@ button:disabled {
 .keys-list {
     max-height: 400px;
     overflow-y: auto;
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 20px;
 }
 
 .keys-list ul {
@@ -472,9 +483,11 @@ button:disabled {
 }
 
 .key-details {
-    background-color: var(--bg-tertiary);
-    padding: 15px;
-    border-radius: 4px;
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 20px;
     max-height: 400px;
     overflow-y: auto;
 }
