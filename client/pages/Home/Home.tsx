@@ -93,7 +93,7 @@ export function Home() {
     if (!hasConnections) {
         return (
             <div className="container">
-                <Header showNavigation={true}>
+                <Header showNavigation={true} showBackButton={false}>
                     <div
                         className="connection-info"
                         style={{ display: 'none' }}
@@ -109,7 +109,7 @@ export function Home() {
 
     return (
         <div className="container">
-            <Header showNavigation={true}>
+            <Header showNavigation={true} showBackButton={false}>
                 <EnvironmentSelector />
             </Header>
             <main>

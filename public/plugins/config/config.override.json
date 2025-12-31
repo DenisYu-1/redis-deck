@@ -1,0 +1,40 @@
+{
+    "plugins": [
+        {
+            "id": "custom-searches",
+            "name": "Custom Searches",
+            "enabled": false,
+            "path": "extensions/customSearches/customSearches.tsx",
+            "priority": 1,
+            "position": "after",
+            "target": "key-list",
+            "config": {
+                "searchLimit": 100
+            }
+        },
+        {
+            "id": "bookings",
+            "name": "Booking Manager",
+            "enabled": false,
+            "path": "extensions/bookings/bookings.tsx",
+            "priority": 0,
+            "position": "after",
+            "target": "main",
+            "config": {
+                "maxRetries": 3,
+                "timeframeStart": -14,
+                "timeframeEnd": 90
+            }
+        },
+        {
+            "id": "news-feed",
+            "name": "News Feed",
+            "enabled": false,
+            "path": "extensions/newsFeed/newsFeed.tsx",
+            "priority": 2,
+            "position": "after",
+            "target": "main",
+            "config": {}
+        }
+    ]
+}

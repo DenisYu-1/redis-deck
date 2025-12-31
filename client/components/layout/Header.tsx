@@ -4,9 +4,10 @@ import { Logo } from '@/components/common/Logo';
 interface HeaderProps {
     children?: React.ReactNode;
     showNavigation?: boolean;
+    showBackButton?: boolean;
 }
 
-export function Header({ children, showNavigation = true }: HeaderProps) {
+export function Header({ children, showNavigation = true, showBackButton = false }: HeaderProps) {
     return (
         <header>
             <div className="logo-container">
@@ -15,24 +16,35 @@ export function Header({ children, showNavigation = true }: HeaderProps) {
                 </Link>
             </div>
             {children}
-            {showNavigation && (
-                <div className="redis-info-button">
+            <div className="redis-info-button">
+                {showBackButton && (
                     <Link
-                        to="/statistics"
+                        to="/"
                         className="secondary-btn"
-                        title="Statistics"
+                        title="Back to Main"
                     >
-                        📊
+                        ↩️
                     </Link>
-                    <Link
-                        to="/settings"
-                        className="secondary-btn"
-                        title="Settings"
-                    >
-                        ⚙️
-                    </Link>
-                </div>
-            )}
+                )}
+                {showNavigation && (
+                    <>
+                        <Link
+                            to="/statistics"
+                            className="secondary-btn"
+                            title="Statistics"
+                        >
+                            📊
+                        </Link>
+                        <Link
+                            to="/settings"
+                            className="secondary-btn"
+                            title="Settings"
+                        >
+                            ⚙️
+                        </Link>
+                    </>
+                )}
+            </div>
         </header>
     );
 }

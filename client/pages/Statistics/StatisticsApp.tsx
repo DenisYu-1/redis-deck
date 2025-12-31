@@ -56,7 +56,7 @@ export function StatisticsApp() {
 
     return (
         <div className="container">
-            <Header showNavigation={true}>
+            <Header showNavigation={true} showBackButton={true}>
                 <EnvironmentSelector />
             </Header>
 
