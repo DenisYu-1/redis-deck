@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { testConnection } from '@/services/apiService';
+import { testConnection, getKeyCount } from '@/services/apiService';
 import { useToast } from '@/hooks/useToast';
 import type { RedisConnection } from '@/types';
 
@@ -9,6 +9,25 @@ export function EnvironmentSelector() {
         useAppStore();
     const [totalKeys, setTotalKeys] = useState<string>('Loading...');
     const { showToast } = useToast();
+
+    useEffect(() => {
+        const fetchKeyCount = async () => {
+            if (!currentEnvironment) {
+                setTotalKeys('N/A');
+                return;
+            }
+
+            try {
+                const result = await getKeyCount(currentEnvironment);
+                setTotalKeys(result.count.toLocaleString());
+            } catch (error) {
+                console.error('Error fetching key count:', error);
+                setTotalKeys('N/A');
+            }
+        };
+
+        void fetchKeyCount();
+    }, [currentEnvironment]);
 
     const handleEnvironmentChange = async (
         event: React.ChangeEvent<HTMLSelectElement>

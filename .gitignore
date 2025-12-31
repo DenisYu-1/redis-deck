@@ -7,8 +7,10 @@ data/*.db
 *.log
 public/js/plugins/config.override.json
 client/plugins/config/config.override.json
-!client/plugins/extensions/.gitkeep
-client/plugins/extensions
+client/plugins/plugins/extensions/*
+public/js/plugins/extensions/*
+!client/plugins/plugins/extensions/.gitkeep
+!public/js/plugins/extensions/.gitkeep
 dist/
 .vite/
 .idea

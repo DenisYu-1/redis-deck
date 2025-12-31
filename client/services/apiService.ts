@@ -55,7 +55,7 @@ export async function searchKeys(
 export async function getKeyCount(
     environment: string
 ): Promise<KeyCountResponse> {
-    const response = await fetch(`${API_BASE}/keys/count/${environment}`);
+    const response = await fetch(`${API_BASE}/keycount?env=${environment}`);
     return handleResponse<KeyCountResponse>(response);
 }
 
