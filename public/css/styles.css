@@ -127,9 +127,18 @@ header {
 .logo {
     height: 50px;
     width: auto;
+    display: block;
 }
 
-html.dark-theme .logo .dark-accent {
+.logo .logo-primary-red {
+    fill: #DC382D;
+}
+
+.logo .logo-dark-accent {
+    fill: #1A1A1A;
+}
+
+html.dark-theme .logo .logo-dark-accent {
     fill: #f0f0f0;
 }
 

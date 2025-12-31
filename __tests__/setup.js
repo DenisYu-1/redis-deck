@@ -2,6 +2,8 @@ const dotenv = require('dotenv');
 const { db } = require('../services/database');
 const { execRedisCommand } = require('../services/redis');
 
+require('@testing-library/jest-dom');
+
 dotenv.config();
 
 const TEST_CONNECTION_ID = 'test-connection';
