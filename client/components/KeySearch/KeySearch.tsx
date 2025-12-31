@@ -11,9 +11,7 @@ export function KeySearch({ onSearch, onShowAll }: KeySearchProps) {
     const currentEnvironment = useAppStore((state) => state.currentEnvironment);
 
     const handleSearch = () => {
-        if (currentEnvironment) {
-            onSearch(pattern);
-        }
+        onSearch(pattern);
     };
 
     const handleShowAll = () => {
@@ -39,7 +37,7 @@ export function KeySearch({ onSearch, onShowAll }: KeySearchProps) {
                     onChange={(e) => setPattern(e.target.value)}
                     onKeyDown={handleKeyDown}
                 />
-                <button onClick={handleSearch}>Search</button>
+                <button type="button" onClick={handleSearch} disabled={!currentEnvironment}>Search</button>
                 <button onClick={handleShowAll} className="secondary-btn">
                     Show All Keys
                 </button>

@@ -18,7 +18,8 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
 
     const loadKeys = useCallback(
         async (resetList = false) => {
-            if (!currentEnvironment || isLoading) return;
+            const envToUse = currentEnvironment || 'production';
+            if (isLoading) return;
 
             setIsLoading(true);
             try {
@@ -27,7 +28,7 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
                     searchPattern,
                     currentCursors,
                     100,
-                    currentEnvironment
+                    envToUse
                 );
 
                 if (resetList) {
@@ -49,9 +50,7 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
     );
 
     useEffect(() => {
-        if (currentEnvironment) {
-            void loadKeys(true);
-        }
+        void loadKeys(true);
     }, [currentEnvironment, searchPattern]);
 
     const handleLoadMore = () => {
