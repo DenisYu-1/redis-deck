@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { PluginComponentProps } from '../../types';
+import { deleteKeysByPattern } from '@/services/apiService';
 
 const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
     context,
@@ -44,21 +45,13 @@ const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
         try {
             const environment = context.getCurrentEnvironment();
 
-            // Emit event for the main app to handle the deletion
-            emit({
-                type: 'keys:deleted',
-                payload: {
-                    pattern,
-                    environment
-                },
-                source: 'batch-delete'
-            });
+            const result = await deleteKeysByPattern(pattern, environment);
 
             emit({
                 type: 'toast:show',
                 payload: {
-                    message: `Requested deletion of keys matching: ${pattern}`,
-                    type: 'info'
+                    message: result.message,
+                    type: 'success'
                 },
                 source: 'batch-delete'
             });
@@ -66,14 +59,16 @@ const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
             setPattern('');
 
             // Notify that operation is complete
-            emit({
-                type: 'operation:completed',
-                source: 'batch-delete'
-            });
+            if (context.onOperationComplete) {
+                context.onOperationComplete();
+            }
         } catch (error: any) {
             emit({
                 type: 'toast:show',
-                payload: { message: error.message, type: 'error' },
+                payload: {
+                    message: error.message || 'Failed to delete keys',
+                    type: 'error'
+                },
                 source: 'batch-delete'
             });
             console.error('Error deleting keys:', error);

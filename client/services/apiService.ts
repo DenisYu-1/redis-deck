@@ -243,6 +243,20 @@ export async function updateConnection(
     await handleResponse<void>(response);
 }
 
+export async function deleteKeysByPattern(
+    pattern: string,
+    environment: string
+): Promise<{ count: number; message: string }> {
+    const params = new URLSearchParams({
+        env: environment,
+        pattern
+    });
+    const response = await fetch(`${API_BASE}/allkeys?${params}`, {
+        method: 'DELETE'
+    });
+    return handleResponse<{ count: number; message: string }>(response);
+}
+
 export async function deleteConnection(id: string): Promise<void> {
     const response = await fetch(`${API_BASE}/connections/${id}`, {
         method: 'DELETE'
