@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { searchKeys } from '@/services/apiService';
 import { useToast } from '@/hooks/useToast';
@@ -16,11 +16,21 @@ export function KeyList({ searchPattern, searchTrigger, onKeySelect }: KeyListPr
     const [isLoading, setIsLoading] = useState(false);
     const { currentEnvironment, selectedKey } = useAppStore();
     const { showToast } = useToast();
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const loadKeys = useCallback(
         async (resetList = false) => {
             const envToUse = currentEnvironment || 'production';
             if (isLoading) return;
+
+            // Cancel any previous request
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+
+            // Create new AbortController for this request
+            abortControllerRef.current = new AbortController();
+            const signal = abortControllerRef.current.signal;
 
             setIsLoading(true);
 
@@ -37,7 +47,8 @@ export function KeyList({ searchPattern, searchTrigger, onKeySelect }: KeyListPr
                     searchPattern,
                     currentCursors,
                     100,
-                    envToUse
+                    envToUse,
+                    signal
                 );
 
                 if (resetList) {
@@ -49,6 +60,10 @@ export function KeyList({ searchPattern, searchTrigger, onKeySelect }: KeyListPr
                 setCursors(result.cursors);
                 setHasMore(result.hasMore);
             } catch (error) {
+                // Don't show error if request was aborted
+                if (error instanceof Error && error.name === 'AbortError') {
+                    return;
+                }
                 showToast('Error loading keys', 'error');
                 console.error('Error loading keys:', error);
             } finally {
@@ -61,6 +76,15 @@ export function KeyList({ searchPattern, searchTrigger, onKeySelect }: KeyListPr
     useEffect(() => {
         void loadKeys(true);
     }, [currentEnvironment, searchPattern, searchTrigger]);
+
+    // Cleanup effect to cancel any ongoing requests when component unmounts
+    useEffect(() => {
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, []);
 
     const handleLoadMore = () => {
         void loadKeys(false);

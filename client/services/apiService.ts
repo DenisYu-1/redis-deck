@@ -43,7 +43,8 @@ export async function searchKeys(
     pattern: string,
     cursors: string[],
     count: number,
-    environment: string
+    environment: string,
+    signal?: AbortSignal
 ): Promise<SearchKeysResponse> {
     const params = new URLSearchParams({
         pattern,
@@ -51,7 +52,7 @@ export async function searchKeys(
         count: count.toString(),
         env: environment
     });
-    const response = await fetch(`${API_BASE}/keys?${params}`);
+    const response = await fetch(`${API_BASE}/keys?${params}`, signal ? { signal } : undefined);
     return handleResponse<SearchKeysResponse>(response);
 }
 
