@@ -10,6 +10,18 @@ import {
 import { useToast } from '@/hooks/useToast';
 import type { KeyDetails as KeyDetailsType } from '@/types';
 
+// Import the JSON viewer web component
+import '@alenaksu/json-viewer';
+
+// Declare the json-viewer custom element for TypeScript
+declare global {
+    namespace JSX {
+        interface IntrinsicElements {
+            'json-viewer': any;
+        }
+    }
+}
+
 interface KeyDetailsProps {
     onOperationComplete: () => void;
 }
@@ -24,7 +36,6 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
     const [showCopyModal, setShowCopyModal] = useState(false);
     const [showValueModal, setShowValueModal] = useState(false);
     const [valueModalData, setValueModalData] = useState<{
-        raw: string;
         formatted: string;
         jsonData: any;
         hasJson: boolean;
@@ -139,7 +150,6 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
 
     const handleViewValue = (value: any, type: string) => {
         try {
-            let raw = '';
             let formatted = '';
             let jsonData = null;
             let hasJson = false;
@@ -147,7 +157,7 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
             if (type === 'zset' && typeof value === 'string') {
                 const result = parseZsetForViewer(value);
                 formatted = result.formatted;
-                raw = result.formatted;
+
                 if (result.hasJson) {
                     jsonData = result.jsonMap;
                     hasJson = true;
@@ -156,10 +166,8 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                 try {
                     jsonData = JSON.parse(value);
                     hasJson = true;
-                    raw = JSON.stringify(jsonData, null, 2);
-                    formatted = raw;
+                    formatted = JSON.stringify(jsonData, null, 2);
                 } catch {
-                    raw = value;
                     formatted = value;
                 }
             } else if (
@@ -168,15 +176,12 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
             ) {
                 jsonData = value;
                 hasJson = true;
-                raw = JSON.stringify(value, null, 2);
-                formatted = raw;
+                formatted = JSON.stringify(value, null, 2);
             } else {
-                raw = String(value);
                 formatted = String(value);
             }
 
             setValueModalData({
-                raw,
                 formatted,
                 jsonData,
                 hasJson,
@@ -514,8 +519,14 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
             )}
 
             {showValueModal && valueModalData && (
-                <div className="modal">
-                    <div className="modal-content value-viewer-modal">
+                <div
+                    className="modal"
+                    onClick={() => setShowValueModal(false)}
+                >
+                    <div
+                        className="modal-content value-viewer-modal"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <span
                             className="close-modal"
                             onClick={() => setShowValueModal(false)}
@@ -532,47 +543,41 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                             >
                                 Formatted
                             </button>
-                            <button
-                                className={`value-tab-btn ${valueModalData.activeTab === 'raw' ? 'active' : ''}`}
-                                onClick={() => handleTabChange('raw')}
-                                data-tab="raw"
-                            >
-                                Raw
-                            </button>
                             {valueModalData.hasJson && (
                                 <button
                                     className={`value-tab-btn ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
                                     onClick={() => handleTabChange('tree')}
                                     data-tab="tree"
                                 >
-                                    Tree
+                                    Tree View
                                 </button>
                             )}
                         </div>
 
-                        <div className="value-tab-content">
-                            {valueModalData.activeTab === 'formatted' && (
-                                <pre className="value-viewer-formatted">
-                                    {valueModalData.formatted}
-                                </pre>
+                        <div className="value-viewer-container">
+                            <pre
+                                className={`value-viewer-raw value-tab-content ${valueModalData.activeTab === 'formatted' ? 'active' : ''}`}
+                                data-content="formatted"
+                            >
+                                {valueModalData.formatted}
+                            </pre>
+                            {valueModalData.hasJson && (
+                                <json-viewer
+                                    className={`value-tab-content ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
+                                    data-content="tree"
+                                    ref={(el: any) => {
+                                        if (el && valueModalData.jsonData) {
+                                            el.data = valueModalData.jsonData;
+                                            // Expand all nodes after a short delay
+                                            setTimeout(() => {
+                                                if (el.expandAll) {
+                                                    el.expandAll();
+                                                }
+                                            }, 100);
+                                        }
+                                    }}
+                                />
                             )}
-                            {valueModalData.activeTab === 'raw' && (
-                                <pre className="value-viewer-raw">
-                                    {valueModalData.raw}
-                                </pre>
-                            )}
-                            {valueModalData.activeTab === 'tree' &&
-                                valueModalData.hasJson && (
-                                    <div className="value-viewer-tree">
-                                        <pre>
-                                            {JSON.stringify(
-                                                valueModalData.jsonData,
-                                                null,
-                                                2
-                                            )}
-                                        </pre>
-                                    </div>
-                                )}
                         </div>
                     </div>
                 </div>

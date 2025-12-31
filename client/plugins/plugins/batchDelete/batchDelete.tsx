@@ -4,7 +4,7 @@ import { deleteKeysByPattern } from '@/services/apiService';
 
 const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
     context,
-    emit,
+    emit: _emit,
     on
 }) => {
     const [pattern, setPattern] = useState('');
@@ -25,11 +25,7 @@ const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
 
     const handleBatchDelete = async () => {
         if (!pattern.trim()) {
-            emit({
-                type: 'toast:show',
-                payload: { message: 'Pattern is required', type: 'error' },
-                source: 'batch-delete'
-            });
+            context.showToast('Pattern is required', 'error');
             return;
         }
 
@@ -47,14 +43,7 @@ const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
 
             const result = await deleteKeysByPattern(pattern, environment);
 
-            emit({
-                type: 'toast:show',
-                payload: {
-                    message: result.message,
-                    type: 'success'
-                },
-                source: 'batch-delete'
-            });
+            context.showToast(result.message, 'success');
 
             setPattern('');
 
@@ -63,14 +52,7 @@ const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
                 context.onOperationComplete();
             }
         } catch (error: any) {
-            emit({
-                type: 'toast:show',
-                payload: {
-                    message: error.message || 'Failed to delete keys',
-                    type: 'error'
-                },
-                source: 'batch-delete'
-            });
+            context.showToast(error.message || 'Failed to delete keys', 'error');
             console.error('Error deleting keys:', error);
         } finally {
             setIsDeleting(false);

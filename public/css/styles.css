@@ -840,6 +840,12 @@ html.dark-theme json-viewer {
     border-color: var(--accent-danger);
 }
 
+.toast.warning {
+    background-color: #f39c12;
+    color: white;
+    border-color: #f39c12;
+}
+
 .hidden {
     display: none !important;
 }

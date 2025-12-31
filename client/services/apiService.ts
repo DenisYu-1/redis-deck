@@ -30,7 +30,10 @@ export async function loadEnvironments(): Promise<RedisConnection[]> {
 
 export async function testConnection(environmentId: string): Promise<boolean> {
     const response = await fetch(
-        `${API_BASE}/connections/${environmentId}/test`
+        `${API_BASE}/connections/${environmentId}/test`,
+        {
+            method: 'POST'
+        }
     );
     const result = await handleResponse<{ success: boolean }>(response);
     return result.success;

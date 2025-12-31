@@ -323,19 +323,24 @@ export function Home() {
         }
     };
 
-    // Listen for bookings:add event
+    // Listen for plugin events
     useEffect(() => {
-        const handleBookingsEvent = (event: any) => {
+        const handlePluginEvents = (event: any) => {
             if (event.type === 'bookings:add') {
                 void handleBookingsAdd(event);
+            } else if (event.type === 'toast:show') {
+                const { message, type } = event.payload;
+                showToast(message, type);
             }
         };
 
-        // Subscribe to the event bus directly since usePlugins doesn't handle this
-        const unsubscribe = eventBus.on('bookings:add', handleBookingsEvent);
+        // Subscribe to the event bus for plugin events
+        const unsubscribeBookings = eventBus.on('bookings:add', handlePluginEvents);
+        const unsubscribeToast = eventBus.on('toast:show', handlePluginEvents);
 
         return () => {
-            unsubscribe?.();
+            unsubscribeBookings?.();
+            unsubscribeToast?.();
         };
     }, [currentEnvironment, showToast]);
 
