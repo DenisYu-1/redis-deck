@@ -162,7 +162,10 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                     raw = value;
                     formatted = value;
                 }
-            } else if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+            } else if (
+                Array.isArray(value) ||
+                (typeof value === 'object' && value !== null)
+            ) {
                 jsonData = value;
                 hasJson = true;
                 raw = JSON.stringify(value, null, 2);
@@ -209,7 +212,7 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
     };
 
     const parseZsetForViewer = (value: string) => {
-        const lines = value.split('\n').filter(line => line.trim());
+        const lines = value.split('\n').filter((line) => line.trim());
         const formattedLines: string[] = [];
         const jsonMap: Record<string, any> = {};
         let hasJson = false;
@@ -221,7 +224,9 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
 
                 try {
                     const parsed = JSON.parse(member);
-                    formattedLines.push(`• ${JSON.stringify(parsed, null, 2)} → ${score}`);
+                    formattedLines.push(
+                        `• ${JSON.stringify(parsed, null, 2)} → ${score}`
+                    );
                     jsonMap[score] = parsed;
                     hasJson = true;
                 } catch {
@@ -239,7 +244,9 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
 
     const handleTabChange = (tab: string) => {
         if (!valueModalData) return;
-        setValueModalData(prev => prev ? { ...prev, activeTab: tab } : null);
+        setValueModalData((prev) =>
+            prev ? { ...prev, activeTab: tab } : null
+        );
     };
 
     if (!selectedKey) {
@@ -282,21 +289,57 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                                 <div className="value-actions">
                                     <button
                                         className="value-action-btn"
-                                        onClick={() => handleViewValue(details.value, details.type)}
+                                        onClick={() =>
+                                            handleViewValue(
+                                                details.value,
+                                                details.type
+                                            )
+                                        }
                                         title="View formatted value"
                                     >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
                                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                            <circle cx="12" cy="12" r="3"></circle>
+                                            <circle
+                                                cx="12"
+                                                cy="12"
+                                                r="3"
+                                            ></circle>
                                         </svg>
                                     </button>
                                     <button
                                         className="value-action-btn"
-                                        onClick={() => handleCopyValue(details.value)}
+                                        onClick={() =>
+                                            handleCopyValue(details.value)
+                                        }
                                         title="Copy value"
                                     >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <rect
+                                                x="9"
+                                                y="9"
+                                                width="13"
+                                                height="13"
+                                                rx="2"
+                                                ry="2"
+                                            ></rect>
                                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                         </svg>
                                     </button>
@@ -509,16 +552,27 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
 
                         <div className="value-tab-content">
                             {valueModalData.activeTab === 'formatted' && (
-                                <pre className="value-viewer-formatted">{valueModalData.formatted}</pre>
+                                <pre className="value-viewer-formatted">
+                                    {valueModalData.formatted}
+                                </pre>
                             )}
                             {valueModalData.activeTab === 'raw' && (
-                                <pre className="value-viewer-raw">{valueModalData.raw}</pre>
+                                <pre className="value-viewer-raw">
+                                    {valueModalData.raw}
+                                </pre>
                             )}
-                            {valueModalData.activeTab === 'tree' && valueModalData.hasJson && (
-                                <div className="value-viewer-tree">
-                                    <pre>{JSON.stringify(valueModalData.jsonData, null, 2)}</pre>
-                                </div>
-                            )}
+                            {valueModalData.activeTab === 'tree' &&
+                                valueModalData.hasJson && (
+                                    <div className="value-viewer-tree">
+                                        <pre>
+                                            {JSON.stringify(
+                                                valueModalData.jsonData,
+                                                null,
+                                                2
+                                            )}
+                                        </pre>
+                                    </div>
+                                )}
                         </div>
                     </div>
                 </div>

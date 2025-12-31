@@ -35,7 +35,10 @@ export function CommandStatsTable() {
         <div className="charts-section">
             <div className="chart-header">
                 <h3>Top Commands (by calls)</h3>
-                <div className="command-stats-timeframe" id="command-stats-timeframe">
+                <div
+                    className="command-stats-timeframe"
+                    id="command-stats-timeframe"
+                >
                     {commandStats
                         ? `Uptime: ${commandStats.uptime_days} days`
                         : 'Loading...'}
@@ -65,13 +68,19 @@ export function CommandStatsTable() {
                                     </td>
                                     <td>{formatNumber(cmd.calls)}</td>
                                     <td>{cmd.calls_per_sec.toFixed(2)}</td>
-                                    <td>{formatNumber(Math.round(cmd.usec / 1000))}</td>
+                                    <td>
+                                        {formatNumber(
+                                            Math.round(cmd.usec / 1000)
+                                        )}
+                                    </td>
                                     <td>{cmd.usec_per_call.toFixed(2)}</td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={5}>No command statistics available</td>
+                                <td colSpan={5}>
+                                    No command statistics available
+                                </td>
                             </tr>
                         )}
                     </tbody>

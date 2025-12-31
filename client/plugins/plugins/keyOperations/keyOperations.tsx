@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import type { PluginComponentProps } from '../../types';
 import { saveKey, addToSortedSet } from '@/services/apiService';
 
-
 interface ZSetMember {
     score: number;
     value: string;
@@ -10,14 +9,19 @@ interface ZSetMember {
 
 type KeyType = 'string' | 'zset' | 'hash' | 'list' | 'set';
 
-const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) => {
+const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({
+    context,
+    emit
+}) => {
     const [isAddFormExpanded, setIsAddFormExpanded] = useState(false);
 
     // Form state
     const [keyName, setKeyName] = useState('');
     const [keyType, setKeyType] = useState<KeyType>('string');
     const [stringValue, setStringValue] = useState('');
-    const [zsetMembers, setZsetMembers] = useState<ZSetMember[]>([{ score: 0, value: '' }]);
+    const [zsetMembers, setZsetMembers] = useState<ZSetMember[]>([
+        { score: 0, value: '' }
+    ]);
     const [expiry, setExpiry] = useState('');
 
     const handleKeyTypeChange = (newType: KeyType) => {
@@ -25,19 +29,25 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
     };
 
     const handleAddZsetMember = () => {
-        setZsetMembers(prev => [...prev, { score: 0, value: '' }]);
+        setZsetMembers((prev) => [...prev, { score: 0, value: '' }]);
     };
 
     const handleRemoveZsetMember = (index: number) => {
         if (zsetMembers.length > 1) {
-            setZsetMembers(prev => prev.filter((_, i) => i !== index));
+            setZsetMembers((prev) => prev.filter((_, i) => i !== index));
         }
     };
 
-    const updateZsetMember = (index: number, field: keyof ZSetMember, value: string | number) => {
-        setZsetMembers(prev => prev.map((member, i) =>
-            i === index ? { ...member, [field]: value } : member
-        ));
+    const updateZsetMember = (
+        index: number,
+        field: keyof ZSetMember,
+        value: string | number
+    ) => {
+        setZsetMembers((prev) =>
+            prev.map((member, i) =>
+                i === index ? { ...member, [field]: value } : member
+            )
+        );
     };
 
     const handleSaveKey = async () => {
@@ -58,7 +68,10 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
                 if (!stringValue.trim()) {
                     emit({
                         type: 'toast:show',
-                        payload: { message: 'Value is required', type: 'error' },
+                        payload: {
+                            message: 'Value is required',
+                            type: 'error'
+                        },
                         source: 'key-operations'
                     });
                     return;
@@ -67,16 +80,17 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
                 await saveKey(keyName, stringValue, expiryValue, environment);
                 setStringValue('');
             } else if (keyType === 'zset') {
-                const validMembers = zsetMembers.filter(member =>
-                    member.score !== undefined &&
-                    member.value.trim() !== ''
+                const validMembers = zsetMembers.filter(
+                    (member) =>
+                        member.score !== undefined && member.value.trim() !== ''
                 );
 
                 if (validMembers.length === 0) {
                     emit({
                         type: 'toast:show',
                         payload: {
-                            message: 'At least one member is required for a sorted set',
+                            message:
+                                'At least one member is required for a sorted set',
                             type: 'error'
                         },
                         source: 'key-operations'
@@ -84,7 +98,12 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
                     return;
                 }
 
-                await addToSortedSet(keyName, validMembers, expiryValue, environment);
+                await addToSortedSet(
+                    keyName,
+                    validMembers,
+                    expiryValue,
+                    environment
+                );
                 setZsetMembers([{ score: 0, value: '' }]);
             } else {
                 emit({
@@ -100,7 +119,10 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
 
             emit({
                 type: 'toast:show',
-                payload: { message: `Key "${keyName}" saved successfully`, type: 'success' },
+                payload: {
+                    message: `Key "${keyName}" saved successfully`,
+                    type: 'success'
+                },
                 source: 'key-operations'
             });
 
@@ -114,7 +136,6 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
                 type: 'operation:completed',
                 source: 'key-operations'
             });
-
         } catch (error: any) {
             emit({
                 type: 'toast:show',
@@ -135,13 +156,16 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
     return (
         <div className="key-operations-plugin">
             {/* Add/Update Key Section */}
-            <section className="add-key-section" style={{
-                margin: '1rem 0',
-                padding: '1rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                backgroundColor: '#f9f9f9'
-            }}>
+            <section
+                className="add-key-section"
+                style={{
+                    margin: '1rem 0',
+                    padding: '1rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    backgroundColor: '#f9f9f9'
+                }}
+            >
                 <div
                     style={{
                         display: 'flex',
@@ -152,20 +176,36 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
                     }}
                     onClick={() => setIsAddFormExpanded(!isAddFormExpanded)}
                 >
-                    <h2 style={{ margin: '0', fontSize: '18px' }}>Add/Update Key</h2>
-                    <span style={{
-                        transform: isAddFormExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s',
-                        fontSize: '12px'
-                    }}>
+                    <h2 style={{ margin: '0', fontSize: '18px' }}>
+                        Add/Update Key
+                    </h2>
+                    <span
+                        style={{
+                            transform: isAddFormExpanded
+                                ? 'rotate(180deg)'
+                                : 'rotate(0deg)',
+                            transition: 'transform 0.2s',
+                            fontSize: '12px'
+                        }}
+                    >
                         ▼
                     </span>
                 </div>
 
                 {isAddFormExpanded && (
                     <div>
-                        <div className="form-group" style={{ marginBottom: '1rem' }}>
-                            <label htmlFor="new-key" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                        <div
+                            className="form-group"
+                            style={{ marginBottom: '1rem' }}
+                        >
+                            <label
+                                htmlFor="new-key"
+                                style={{
+                                    display: 'block',
+                                    marginBottom: '0.5rem',
+                                    fontWeight: 'bold'
+                                }}
+                            >
                                 Key:
                             </label>
                             <input
@@ -184,14 +224,28 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
                             />
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: '1rem' }}>
-                            <label htmlFor="key-type" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                        <div
+                            className="form-group"
+                            style={{ marginBottom: '1rem' }}
+                        >
+                            <label
+                                htmlFor="key-type"
+                                style={{
+                                    display: 'block',
+                                    marginBottom: '0.5rem',
+                                    fontWeight: 'bold'
+                                }}
+                            >
                                 Type:
                             </label>
                             <select
                                 id="key-type"
                                 value={keyType}
-                                onChange={(e) => handleKeyTypeChange(e.target.value as KeyType)}
+                                onChange={(e) =>
+                                    handleKeyTypeChange(
+                                        e.target.value as KeyType
+                                    )
+                                }
                                 style={{
                                     width: '100%',
                                     padding: '0.5rem',
@@ -210,15 +264,28 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
 
                         {/* String type fields */}
                         {keyType === 'string' && (
-                            <div id="string-fields" className="type-fields" style={{ marginBottom: '1rem' }}>
+                            <div
+                                id="string-fields"
+                                className="type-fields"
+                                style={{ marginBottom: '1rem' }}
+                            >
                                 <div className="form-group">
-                                    <label htmlFor="new-value" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                    <label
+                                        htmlFor="new-value"
+                                        style={{
+                                            display: 'block',
+                                            marginBottom: '0.5rem',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
                                         Value:
                                     </label>
                                     <textarea
                                         id="new-value"
                                         value={stringValue}
-                                        onChange={(e) => setStringValue(e.target.value)}
+                                        onChange={(e) =>
+                                            setStringValue(e.target.value)
+                                        }
                                         placeholder="Enter value"
                                         style={{
                                             width: '100%',
@@ -236,24 +303,49 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
 
                         {/* ZSet type fields */}
                         {keyType === 'zset' && (
-                            <div id="zset-fields" className="type-fields" style={{ marginBottom: '1rem' }}>
+                            <div
+                                id="zset-fields"
+                                className="type-fields"
+                                style={{ marginBottom: '1rem' }}
+                            >
                                 <div className="form-group">
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                    <label
+                                        style={{
+                                            display: 'block',
+                                            marginBottom: '0.5rem',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
                                         Members (Score-Value pairs):
                                     </label>
-                                    <div id="zset-members" style={{ marginBottom: '1rem' }}>
+                                    <div
+                                        id="zset-members"
+                                        style={{ marginBottom: '1rem' }}
+                                    >
                                         {zsetMembers.map((member, index) => (
-                                            <div key={index} className="zset-member" style={{
-                                                display: 'flex',
-                                                gap: '0.5rem',
-                                                alignItems: 'center',
-                                                marginBottom: '0.5rem'
-                                            }}>
+                                            <div
+                                                key={index}
+                                                className="zset-member"
+                                                style={{
+                                                    display: 'flex',
+                                                    gap: '0.5rem',
+                                                    alignItems: 'center',
+                                                    marginBottom: '0.5rem'
+                                                }}
+                                            >
                                                 <input
                                                     type="number"
                                                     className="zset-score"
                                                     value={member.score}
-                                                    onChange={(e) => updateZsetMember(index, 'score', parseFloat(e.target.value) || 0)}
+                                                    onChange={(e) =>
+                                                        updateZsetMember(
+                                                            index,
+                                                            'score',
+                                                            parseFloat(
+                                                                e.target.value
+                                                            ) || 0
+                                                        )
+                                                    }
                                                     placeholder="Score"
                                                     step="any"
                                                     style={{
@@ -268,7 +360,13 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
                                                     type="text"
                                                     className="zset-value"
                                                     value={member.value}
-                                                    onChange={(e) => updateZsetMember(index, 'value', e.target.value)}
+                                                    onChange={(e) =>
+                                                        updateZsetMember(
+                                                            index,
+                                                            'value',
+                                                            e.target.value
+                                                        )
+                                                    }
                                                     placeholder="Value"
                                                     style={{
                                                         flex: '2',
@@ -281,15 +379,29 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
                                                 <button
                                                     type="button"
                                                     className="remove-member-btn"
-                                                    onClick={() => handleRemoveZsetMember(index)}
-                                                    disabled={zsetMembers.length <= 1}
+                                                    onClick={() =>
+                                                        handleRemoveZsetMember(
+                                                            index
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        zsetMembers.length <= 1
+                                                    }
                                                     style={{
                                                         padding: '0.5rem',
-                                                        backgroundColor: zsetMembers.length <= 1 ? '#ccc' : '#dc3545',
+                                                        backgroundColor:
+                                                            zsetMembers.length <=
+                                                            1
+                                                                ? '#ccc'
+                                                                : '#dc3545',
                                                         color: 'white',
                                                         border: 'none',
                                                         borderRadius: '4px',
-                                                        cursor: zsetMembers.length <= 1 ? 'not-allowed' : 'pointer',
+                                                        cursor:
+                                                            zsetMembers.length <=
+                                                            1
+                                                                ? 'not-allowed'
+                                                                : 'pointer',
                                                         fontSize: '14px',
                                                         width: '40px'
                                                     }}
@@ -321,8 +433,18 @@ const KeyOperationsPlugin: React.FC<PluginComponentProps> = ({ context, emit }) 
                         )}
 
                         {/* Common fields */}
-                        <div className="form-group" style={{ marginBottom: '1rem' }}>
-                            <label htmlFor="expiry" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                        <div
+                            className="form-group"
+                            style={{ marginBottom: '1rem' }}
+                        >
+                            <label
+                                htmlFor="expiry"
+                                style={{
+                                    display: 'block',
+                                    marginBottom: '0.5rem',
+                                    fontWeight: 'bold'
+                                }}
+                            >
                                 Expiry (seconds, optional):
                             </label>
                             <input

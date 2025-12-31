@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { Header } from '@/components/layout/Header';
 import { Toast } from '@/components/common/Toast';
@@ -233,7 +234,7 @@ const CheckboxGroup = styled.div`
     gap: 8px;
     margin-bottom: 15px;
 
-    input[type="checkbox"] {
+    input[type='checkbox'] {
         width: 16px;
         height: 16px;
         accent-color: var(--accent-primary);
@@ -397,13 +398,13 @@ export function SettingsApp() {
                     </span>
                 </div>
                 <div className="redis-info-button">
-                    <a
-                        href="/"
+                    <Link
+                        to="/"
                         className="secondary-btn"
                         title="Back to Main UI"
                     >
                         ↩️
-                    </a>
+                    </Link>
                 </div>
             </Header>
 
@@ -457,10 +458,16 @@ export function SettingsApp() {
                                         </div>
                                     </ConnectionDetails>
                                     <ConnectionActions>
-                                        <SecondaryButton onClick={() => handleEdit(conn)}>
+                                        <SecondaryButton
+                                            onClick={() => handleEdit(conn)}
+                                        >
                                             Edit
                                         </SecondaryButton>
-                                        <DangerButton onClick={() => handleDelete(conn.id)}>
+                                        <DangerButton
+                                            onClick={() =>
+                                                handleDelete(conn.id)
+                                            }
+                                        >
                                             Delete
                                         </DangerButton>
                                     </ConnectionActions>
@@ -649,10 +656,7 @@ function ConnectionFormComponent({
                     >
                         Test Connection
                     </SecondaryButton>
-                    <SecondaryButton
-                        type="button"
-                        onClick={onCancel}
-                    >
+                    <SecondaryButton type="button" onClick={onCancel}>
                         Cancel
                     </SecondaryButton>
                 </FormActions>

@@ -162,7 +162,10 @@ export function MemoryPatternAnalysis() {
                             <option value="1000">1000 keys</option>
                         </select>
                     </label>
-                    <span className="pattern-analysis-info" id="pattern-analysis-info">
+                    <span
+                        className="pattern-analysis-info"
+                        id="pattern-analysis-info"
+                    >
                         {infoText}
                     </span>
                     <button
@@ -196,14 +199,19 @@ export function MemoryPatternAnalysis() {
                             {data.patterns
                                 .slice(0, 10)
                                 .map((pattern, index) => (
-                                    <div key={index} className="pattern-summary-item">
+                                    <div
+                                        key={index}
+                                        className="pattern-summary-item"
+                                    >
                                         <span className="pattern-name">
                                             {pattern.pattern}
                                         </span>
                                         <span className="pattern-memory">
                                             {fastMode
                                                 ? `${formatNumber(pattern.count)} keys`
-                                                : formatBytes(pattern.total_memory)}
+                                                : formatBytes(
+                                                      pattern.total_memory
+                                                  )}
                                         </span>
                                     </div>
                                 ))}
@@ -228,13 +236,19 @@ export function MemoryPatternAnalysis() {
                         <tbody id="pattern-table">
                             {data.patterns.map((pattern, index) => (
                                 <tr key={index}>
-                                    <td><code>{pattern.pattern}</code></td>
+                                    <td>
+                                        <code>{pattern.pattern}</code>
+                                    </td>
                                     <td>{formatNumber(pattern.count)}</td>
                                     {!fastMode && (
-                                        <td>{formatBytes(pattern.total_memory)}</td>
+                                        <td>
+                                            {formatBytes(pattern.total_memory)}
+                                        </td>
                                     )}
                                     {!fastMode && (
-                                        <td>{formatBytes(pattern.avg_memory)}</td>
+                                        <td>
+                                            {formatBytes(pattern.avg_memory)}
+                                        </td>
                                     )}
                                     {!fastMode && (
                                         <td>{pattern.percentage}%</td>
@@ -258,7 +272,10 @@ export function MemoryPatternAnalysis() {
             ) : null}
 
             {isLoading && (
-                <div id="pattern-analysis-loading" className="pattern-analysis-loading">
+                <div
+                    id="pattern-analysis-loading"
+                    className="pattern-analysis-loading"
+                >
                     <div className="analysis-status">
                         {fastMode
                             ? 'Analyzing key patterns...'

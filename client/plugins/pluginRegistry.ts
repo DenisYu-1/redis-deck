@@ -16,7 +16,9 @@ class PluginRegistry {
     }
 
     getAllPlugins(): Plugin[] {
-        return Array.from(this.plugins.values()).sort((a, b) => b.priority - a.priority);
+        return Array.from(this.plugins.values()).sort(
+            (a, b) => b.priority - a.priority
+        );
     }
 
     getPluginCount(): number {
@@ -25,10 +27,10 @@ class PluginRegistry {
 
     // Debug method to inspect current state
     debug(): {
-        plugins: Array<{ id: string; name: string; priority: number }>;
+        plugins: { id: string; name: string; priority: number }[];
         stats: { totalPlugins: number };
     } {
-        const plugins = this.getAllPlugins().map(p => ({
+        const plugins = this.getAllPlugins().map((p) => ({
             id: p.id,
             name: p.name,
             priority: p.priority

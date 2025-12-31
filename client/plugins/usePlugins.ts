@@ -1,16 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Plugin, PluginDefinition, PluginEvent, PluginHookResult } from './types';
+import type {
+    Plugin,
+    PluginDefinition,
+    PluginEvent,
+    PluginHookResult
+} from './types';
 import type { PluginContext } from '@/types';
 import { eventBus } from './eventBus';
 import { pluginRegistry } from './pluginRegistry';
 
 // Plugin imports registry - maps plugin paths to their imported modules
 const pluginImports: Record<string, () => Promise<any>> = {
-    'keyOperations/keyOperations.tsx': () => import('./plugins/keyOperations/keyOperations.tsx'),
-    'batchDelete/batchDelete.tsx': () => import('./plugins/batchDelete/batchDelete.tsx'),
-    'extensions/customSearches/customSearches.tsx': () => import('./plugins/extensions/customSearches/customSearches.tsx'),
-    'extensions/bookings/bookings.tsx': () => import('./plugins/extensions/bookings/bookings.tsx'),
-    'extensions/newsFeed/newsFeed.tsx': () => import('./plugins/extensions/newsFeed/newsFeed.tsx'),
+    'keyOperations/keyOperations.tsx': () =>
+        import('./plugins/keyOperations/keyOperations.tsx'),
+    'batchDelete/batchDelete.tsx': () =>
+        import('./plugins/batchDelete/batchDelete.tsx'),
+    'extensions/customSearches/customSearches.tsx': () =>
+        import('./plugins/extensions/customSearches/customSearches.tsx'),
+    'extensions/bookings/bookings.tsx': () =>
+        import('./plugins/extensions/bookings/bookings.tsx'),
+    'extensions/newsFeed/newsFeed.tsx': () =>
+        import('./plugins/extensions/newsFeed/newsFeed.tsx')
 };
 
 export function usePlugins(context: PluginContext): PluginHookResult {
@@ -30,29 +40,43 @@ export function usePlugins(context: PluginContext): PluginHookResult {
                 let overrideConfig = null;
 
                 try {
-                    const overrideModule = await import('./config/config.override.json');
+                    const overrideModule =
+                        await import('./config/config.override.json');
                     overrideConfig = overrideModule.default;
                 } catch {
                     console.log('No override config found');
                 }
 
-                const mergedConfig = mergeConfigs(baseConfig.default as { plugins: PluginDefinition[] }, overrideConfig as { plugins: PluginDefinition[] } | null);
+                const mergedConfig = mergeConfigs(
+                    baseConfig.default as { plugins: PluginDefinition[] },
+                    overrideConfig as { plugins: PluginDefinition[] } | null
+                );
                 const loadedPlugins = await Promise.all(
                     mergedConfig.plugins
                         .filter((p: PluginDefinition) => p.enabled)
-                        .sort((a: PluginDefinition, b: PluginDefinition) => (b.priority || 0) - (a.priority || 0))
+                        .sort(
+                            (a: PluginDefinition, b: PluginDefinition) =>
+                                (b.priority || 0) - (a.priority || 0)
+                        )
                         .map(async (pluginDef: PluginDefinition) => {
                             try {
                                 // Import the plugin module using the registry
                                 const importFn = pluginImports[pluginDef.path];
                                 if (!importFn) {
-                                    throw new Error(`Plugin ${pluginDef.id} not found in import registry. Path: ${pluginDef.path}`);
+                                    throw new Error(
+                                        `Plugin ${pluginDef.id} not found in import registry. Path: ${pluginDef.path}`
+                                    );
                                 }
                                 const module = await importFn();
                                 const PluginComponent = module.default;
 
-                                if (!PluginComponent || typeof PluginComponent !== 'function') {
-                                    throw new Error(`Plugin ${pluginDef.id} must export a default React component`);
+                                if (
+                                    !PluginComponent ||
+                                    typeof PluginComponent !== 'function'
+                                ) {
+                                    throw new Error(
+                                        `Plugin ${pluginDef.id} must export a default React component`
+                                    );
                                 }
 
                                 const plugin: Plugin = {
@@ -66,16 +90,21 @@ export function usePlugins(context: PluginContext): PluginHookResult {
 
                                 return plugin;
                             } catch (error) {
-                                console.error(`Failed to load plugin ${pluginDef.id}:`, error);
+                                console.error(
+                                    `Failed to load plugin ${pluginDef.id}:`,
+                                    error
+                                );
                                 return null;
                             }
                         })
                 );
 
-                const validPlugins = loadedPlugins.filter((p): p is Plugin => p !== null);
+                const validPlugins = loadedPlugins.filter(
+                    (p): p is Plugin => p !== null
+                );
 
                 // Register plugins in the registry
-                validPlugins.forEach(plugin => {
+                validPlugins.forEach((plugin) => {
                     pluginRegistry.register(plugin);
                 });
 

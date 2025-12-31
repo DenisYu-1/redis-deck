@@ -27,11 +27,14 @@ class EventBus {
     emit(event: PluginEvent): void {
         const handlers = this.handlers.get(event.type);
         if (handlers) {
-            handlers.forEach(handler => {
+            handlers.forEach((handler) => {
                 try {
                     handler(event);
                 } catch (error) {
-                    console.error(`Error in event handler for ${event.type}:`, error);
+                    console.error(
+                        `Error in event handler for ${event.type}:`,
+                        error
+                    );
                 }
             });
         }
@@ -52,7 +55,10 @@ class EventBus {
         if (eventType) {
             return this.handlers.get(eventType)?.size ?? 0;
         }
-        return Array.from(this.handlers.values()).reduce((total, handlers) => total + handlers.size, 0);
+        return Array.from(this.handlers.values()).reduce(
+            (total, handlers) => total + handlers.size,
+            0
+        );
     }
 }
 

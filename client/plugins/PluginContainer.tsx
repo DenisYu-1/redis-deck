@@ -33,16 +33,27 @@ export function PluginContainer({ context }: PluginContainerProps) {
             {sortedPlugins.map((plugin) => {
                 const Component = plugin.Component;
                 return (
-                    <div key={plugin.id} style={{ width: '100%', marginBottom: '1rem' }}>
+                    <div
+                        key={plugin.id}
+                        style={{ width: '100%', marginBottom: '1rem' }}
+                    >
                         <Component
                             context={context}
                             emit={emit}
-                            on={(eventType: string, handler: PluginEventHandler) => {
+                            on={(
+                                eventType: string,
+                                handler: PluginEventHandler
+                            ) => {
                                 // Plugin can register event handlers
-                                plugin.eventHandlers.set(eventType as any, handler);
+                                plugin.eventHandlers.set(
+                                    eventType as any,
+                                    handler
+                                );
                                 // Return unsubscribe function
                                 return () => {
-                                    plugin.eventHandlers.delete(eventType as any);
+                                    plugin.eventHandlers.delete(
+                                        eventType as any
+                                    );
                                 };
                             }}
                         />

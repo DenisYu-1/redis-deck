@@ -15,14 +15,14 @@ export default defineConfig({
                             name: 'preset-default',
                             params: {
                                 overrides: {
-                                    removeViewBox: false,
-                                },
-                            },
-                        },
-                    ],
-                },
-            },
-        }),
+                                    removeViewBox: false
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        })
     ],
     resolve: {
         alias: {
@@ -44,9 +44,7 @@ export default defineConfig({
         sourcemap: true,
         rollupOptions: {
             input: {
-                main: path.resolve(__dirname, 'index.html'),
-                settings: path.resolve(__dirname, 'settings.html'),
-                statistics: path.resolve(__dirname, 'statistics.html')
+                main: path.resolve(__dirname, 'index.html')
             }
         }
     }

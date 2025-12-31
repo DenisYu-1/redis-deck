@@ -42,7 +42,7 @@ export function StatisticsApp() {
     useEffect(() => {
         if (!autoRefresh || !currentEnvironment) return;
 
-        const interval = setInterval(fetchStats, 30000); // 30 seconds
+        const interval = setInterval(() => void fetchStats(), 30000); // 30 seconds
         return () => clearInterval(interval);
     }, [autoRefresh, currentEnvironment, fetchStats]);
 

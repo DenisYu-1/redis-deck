@@ -35,12 +35,9 @@ function createApp() {
         res.sendFile(path.join(distPath, 'index.html'));
     });
 
-    app.get('/settings.html', (req, res) => {
-        res.sendFile(path.join(distPath, 'settings.html'));
-    });
-
-    app.get('/statistics.html', (req, res) => {
-        res.sendFile(path.join(distPath, 'statistics.html'));
+    // React Router fallback - serve index.html for all routes
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
     });
 
     return app;
