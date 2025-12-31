@@ -22,6 +22,14 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
             if (isLoading) return;
 
             setIsLoading(true);
+
+            // Clear keys immediately when starting a new search
+            if (resetList) {
+                setKeys([]);
+                setCursors(['0']);
+                setHasMore(false);
+            }
+
             try {
                 const currentCursors = resetList ? ['0'] : cursors;
                 const result = await searchKeys(
@@ -61,8 +69,9 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
         <div className="keys-list">
             <h3>
                 Keys <span id="keys-count">({keys.length})</span>
+                {isLoading && <span> (Searching...)</span>}
             </h3>
-            <ul id="keys-results">
+            <ul id="keys-results" style={{ opacity: isLoading ? 0.5 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}>
                 {keys.map((key) => (
                     <li
                         key={key}
@@ -72,6 +81,11 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
                         {key}
                     </li>
                 ))}
+                {isLoading && keys.length === 0 && (
+                    <li style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                        Searching for keys...
+                    </li>
+                )}
             </ul>
             <div className="pagination-controls">
                 <div className="pagination-status">

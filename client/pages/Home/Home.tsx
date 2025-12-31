@@ -328,16 +328,23 @@ export function Home() {
             } else if (event.type === 'toast:show') {
                 const { message, type } = event.payload;
                 showToast(message, type);
+            } else if (event.type === 'keys:selected' && event.payload.action === 'search') {
+                // Handle quick search from plugins
+                const { pattern } = event.payload;
+                setSearchPattern(pattern);
+                handleSearch(pattern);
             }
         };
 
         // Subscribe to the event bus for plugin events
         const unsubscribeBookings = eventBus.on('bookings:add', handlePluginEvents);
         const unsubscribeToast = eventBus.on('toast:show', handlePluginEvents);
+        const unsubscribeKeysSelected = eventBus.on('keys:selected', handlePluginEvents);
 
         return () => {
             unsubscribeBookings?.();
             unsubscribeToast?.();
+            unsubscribeKeysSelected?.();
         };
     }, [currentEnvironment, showToast]);
 
@@ -378,7 +385,7 @@ export function Home() {
                 <EnvironmentSelector />
             </Header>
             <main>
-                <KeySearch onSearch={handleSearch} onShowAll={handleShowAll} />
+                <KeySearch searchPattern={searchPattern} onSearch={handleSearch} onShowAll={handleShowAll} />
                 <div className="results-area">
                     <div className="key-row">
                     <KeyList
