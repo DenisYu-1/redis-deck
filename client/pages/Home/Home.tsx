@@ -16,7 +16,6 @@ import type { PluginContext } from '@/types';
 
 export function Home() {
     const [searchPattern, setSearchPattern] = useState('*');
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const {
         connections,
         currentEnvironment,
@@ -52,16 +51,14 @@ export function Home() {
 
     const handleSearch = (pattern: string) => {
         setSearchPattern(pattern);
-        setRefreshTrigger((prev) => prev + 1);
     };
 
     const handleShowAll = () => {
         setSearchPattern('*');
-        setRefreshTrigger((prev) => prev + 1);
     };
 
     const handleOperationComplete = () => {
-        setRefreshTrigger((prev) => prev + 1);
+        // Operation completed - KeyList will automatically refresh if needed
     };
 
     const pluginContext: PluginContext = {
@@ -384,11 +381,10 @@ export function Home() {
                 <KeySearch onSearch={handleSearch} onShowAll={handleShowAll} />
                 <div className="results-area">
                     <div className="key-row">
-                        <KeyList
-                            key={refreshTrigger}
-                            searchPattern={searchPattern}
-                            onKeySelect={handleKeySelect}
-                        />
+                    <KeyList
+                        searchPattern={searchPattern}
+                        onKeySelect={handleKeySelect}
+                    />
                         <KeyDetails
                             onOperationComplete={handleOperationComplete}
                         />

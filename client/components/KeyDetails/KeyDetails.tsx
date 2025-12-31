@@ -216,6 +216,64 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
         }
     };
 
+    const formatValue = (type: string, value: any): string => {
+        if (type === 'hash') {
+            // Format hash values as key-value pairs
+            if (typeof value === 'object' && value !== null) {
+                // Already processed into object format
+                return Object.entries(value)
+                    .map(([key, val]) => `${key}: ${val}`)
+                    .join('\n');
+            } else if (typeof value === 'string') {
+                // Raw string format
+                const lines = value.split('\n');
+                let formatted = '';
+                for (let i = 0; i < lines.length; i += 2) {
+                    if (lines[i]?.trim() && i + 1 < lines.length) {
+                        formatted += `${lines[i]}: ${lines[i + 1]}\n`;
+                    }
+                }
+                return formatted;
+            }
+            return String(value);
+        } else if (type === 'list' || type === 'set') {
+            // Format list or set as numbered items
+            if (typeof value === 'string') {
+                const items = value.split('\n').filter((item) => item.trim());
+                return items
+                    .map((item, index) => `${index + 1}) ${item}`)
+                    .join('\n');
+            } else if (Array.isArray(value)) {
+                return value
+                    .map((item, index) => `${index + 1}) ${item}`)
+                    .join('\n');
+            }
+            return String(value);
+        } else if (type === 'zset') {
+            // Format sorted set with scores in a more readable way
+            if (typeof value === 'string') {
+                const lines = value.split('\n').filter((line) => line.trim() !== '');
+                if (lines.length === 0) {
+                    return 'Empty sorted set';
+                }
+
+                let formatted = '';
+                for (let i = 0; i < lines.length; i += 2) {
+                    if (lines[i]?.trim() && i + 1 < lines.length && lines[i + 1]) {
+                        const member = lines[i]!.trim();
+                        const score = lines[i + 1]!.trim();
+                        formatted += `• ${member} → ${score}\n`;
+                    }
+                }
+                return formatted || 'Empty sorted set';
+            }
+            return String(value);
+        }
+
+        // Default for string and other types
+        return String(value);
+    };
+
     const parseZsetForViewer = (value: string) => {
         const lines = value.split('\n').filter((line) => line.trim());
         const formattedLines: string[] = [];
@@ -350,7 +408,7 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                                     </button>
                                 </div>
                             </p>
-                            <pre>{JSON.stringify(details.value, null, 2)}</pre>
+                            <pre>{formatValue(details.type, details.value)}</pre>
                         </>
                     )}
                 </div>
@@ -543,15 +601,14 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                             >
                                 Formatted
                             </button>
-                            {valueModalData.hasJson && (
-                                <button
-                                    className={`value-tab-btn ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
-                                    onClick={() => handleTabChange('tree')}
-                                    data-tab="tree"
-                                >
-                                    Tree View
-                                </button>
-                            )}
+                            <button
+                                className={`value-tab-btn ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
+                                onClick={() => handleTabChange('tree')}
+                                data-tab="tree"
+                                style={{ display: valueModalData.hasJson ? 'inline-block' : 'none' }}
+                            >
+                                Tree View
+                            </button>
                         </div>
 
                         <div className="value-viewer-container">
@@ -561,23 +618,21 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                             >
                                 {valueModalData.formatted}
                             </pre>
-                            {valueModalData.hasJson && (
-                                <json-viewer
-                                    className={`value-tab-content ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
-                                    data-content="tree"
-                                    ref={(el: any) => {
-                                        if (el && valueModalData.jsonData) {
-                                            el.data = valueModalData.jsonData;
-                                            // Expand all nodes after a short delay
-                                            setTimeout(() => {
-                                                if (el.expandAll) {
-                                                    el.expandAll();
-                                                }
-                                            }, 100);
-                                        }
-                                    }}
-                                />
-                            )}
+                            <json-viewer
+                                className={`value-tab-content ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
+                                data-content="tree"
+                                ref={(el: any) => {
+                                    if (el && valueModalData.jsonData && valueModalData.activeTab === 'tree') {
+                                        el.data = valueModalData.jsonData;
+                                        // Expand all nodes after a short delay
+                                        setTimeout(() => {
+                                            if (el.expandAll) {
+                                                el.expandAll();
+                                            }
+                                        }, 100);
+                                    }
+                                }}
+                            />
                         </div>
                     </div>
                 </div>
