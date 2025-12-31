@@ -613,7 +613,6 @@ button:disabled {
 }
 
 json-viewer {
-    display: block;
     --background-color: transparent;
     --color: var(--text-primary);
     --string-color: #0d9488;

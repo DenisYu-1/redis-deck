@@ -621,6 +621,7 @@ export function KeyDetails({ onOperationComplete }: KeyDetailsProps) {
                             <json-viewer
                                 className={`value-tab-content ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
                                 data-content="tree"
+                                style={{ display: valueModalData.activeTab === 'tree' ? 'block' : 'none' }}
                                 ref={(el: any) => {
                                     if (el && valueModalData.jsonData && valueModalData.activeTab === 'tree') {
                                         el.data = valueModalData.jsonData;

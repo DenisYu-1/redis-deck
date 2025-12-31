@@ -5,10 +5,11 @@ import { useToast } from '@/hooks/useToast';
 
 interface KeyListProps {
     searchPattern: string;
+    searchTrigger: number;
     onKeySelect: (key: string) => void;
 }
 
-export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
+export function KeyList({ searchPattern, searchTrigger, onKeySelect }: KeyListProps) {
     const [keys, setKeys] = useState<string[]>([]);
     const [cursors, setCursors] = useState<string[]>(['0']);
     const [hasMore, setHasMore] = useState(false);
@@ -59,7 +60,7 @@ export function KeyList({ searchPattern, onKeySelect }: KeyListProps) {
 
     useEffect(() => {
         void loadKeys(true);
-    }, [currentEnvironment, searchPattern]);
+    }, [currentEnvironment, searchPattern, searchTrigger]);
 
     const handleLoadMore = () => {
         void loadKeys(false);

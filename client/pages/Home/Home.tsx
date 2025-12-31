@@ -16,6 +16,7 @@ import type { PluginContext } from '@/types';
 
 export function Home() {
     const [searchPattern, setSearchPattern] = useState('*');
+    const [searchTrigger, setSearchTrigger] = useState(0);
     const {
         connections,
         currentEnvironment,
@@ -51,10 +52,12 @@ export function Home() {
 
     const handleSearch = (pattern: string) => {
         setSearchPattern(pattern);
+        setSearchTrigger(prev => prev + 1);
     };
 
     const handleShowAll = () => {
         setSearchPattern('*');
+        setSearchTrigger(prev => prev + 1);
     };
 
     const handleOperationComplete = () => {
@@ -332,7 +335,7 @@ export function Home() {
                 // Handle quick search from plugins
                 const { pattern } = event.payload;
                 setSearchPattern(pattern);
-                handleSearch(pattern);
+                setSearchTrigger(prev => prev + 1);
             }
         };
 
@@ -390,6 +393,7 @@ export function Home() {
                     <div className="key-row">
                     <KeyList
                         searchPattern={searchPattern}
+                        searchTrigger={searchTrigger}
                         onKeySelect={handleKeySelect}
                     />
                         <KeyDetails
