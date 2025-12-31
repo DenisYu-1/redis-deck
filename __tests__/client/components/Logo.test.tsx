@@ -13,6 +13,12 @@ describe('Logo', () => {
         expect(svg).toHaveClass('logo');
     });
 
+    it('preserves viewBox from original SVG', () => {
+        const { container } = render(<Logo />);
+        const svg = container.querySelector('svg');
+        expect(svg).toHaveAttribute('viewBox', '0 0 465 100');
+    });
+
     it('renders Redis text with logo-primary-red class', () => {
         const { container } = render(<Logo />);
         const texts = container.querySelectorAll('text');
