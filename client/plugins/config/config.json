@@ -1,11 +1,19 @@
 {
     "plugins": [
         {
+            "id": "keys-manager",
+            "name": "Keys Manager",
+            "enabled": true,
+            "path": "keysManager/keysManager.tsx",
+            "priority": 100,
+            "config": {}
+        },
+        {
             "id": "key-operations",
             "name": "Key Operations",
-            "enabled": true,
+            "enabled": false,
             "path": "keyOperations/keyOperations.tsx",
-            "priority": 100,
+            "priority": 90,
             "config": {}
         },
         {

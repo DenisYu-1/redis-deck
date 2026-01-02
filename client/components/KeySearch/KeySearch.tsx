@@ -38,7 +38,7 @@ export function KeySearch({ searchPattern, onSearch, onShowAll }: KeySearchProps
     };
 
     return (
-        <section className="search-section" data-priority="0">
+        <div className="search-section" data-priority="0">
             <h2>Search Keys</h2>
             <div className="search-bar">
                 <input
@@ -55,6 +55,6 @@ export function KeySearch({ searchPattern, onSearch, onShowAll }: KeySearchProps
                     Show All Keys
                 </button>
             </div>
-        </section>
+        </div>
     );
 }

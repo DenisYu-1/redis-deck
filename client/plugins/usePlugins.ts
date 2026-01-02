@@ -15,6 +15,8 @@ const pluginImports: Record<string, () => Promise<any>> = {
         import('./plugins/keyOperations/keyOperations.tsx'),
     'batchDelete/batchDelete.tsx': () =>
         import('./plugins/batchDelete/batchDelete.tsx'),
+    'keysManager/keysManager.tsx': () =>
+        import('./plugins/keysManager/keysManager.tsx'),
     'extensions/customSearches/customSearches.tsx': () =>
         import('./plugins/extensions/customSearches/customSearches.tsx'),
     'extensions/bookings/bookings.tsx': () =>
