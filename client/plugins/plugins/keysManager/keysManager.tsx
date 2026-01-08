@@ -102,31 +102,62 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                 setHasMore(false);
             }
 
+            // Check if this is a direct key search (no wildcards)
+            const hasWildcards =
+                searchPattern.includes('*') ||
+                searchPattern.includes('?') ||
+                searchPattern.includes('[');
+
             try {
-                const currentCursors = resetList ? ['0'] : cursors;
-                const result = await searchKeys(
-                    searchPattern,
-                    currentCursors,
-                    100,
-                    envToUse,
-                    signal
-                );
+                if (!hasWildcards && searchPattern.trim() !== '' && resetList) {
+                    // This is a direct key lookup - check if key exists
+                    await getKeyDetails(searchPattern, envToUse);
+                    // Key exists - show it in the list
+                    setKeys([searchPattern]);
+                    setCursors(['0']);
+                    setHasMore(false);
+                    setSelectedKey(searchPattern); // Auto-select the found key
+                } else if (hasWildcards || searchPattern.trim() === '') {
+                    // This is a pattern search - use SCAN
+                    const currentCursors = resetList ? ['0'] : cursors;
+                    const result = await searchKeys(
+                        searchPattern,
+                        currentCursors,
+                        100,
+                        envToUse,
+                        signal
+                    );
 
-                if (resetList) {
-                    setKeys(result.keys);
+                    if (resetList) {
+                        setKeys(result.keys);
+                    } else {
+                        setKeys((prev) => [...prev, ...result.keys]);
+                    }
+
+                    setCursors(result.cursors);
+                    setHasMore(result.hasMore);
                 } else {
-                    setKeys((prev) => [...prev, ...result.keys]);
+                    // For non-reset loads with exact key search, do nothing (pagination not supported)
+                    setIsLoadingKeys(false);
+                    return;
                 }
-
-                setCursors(result.cursors);
-                setHasMore(result.hasMore);
             } catch (error) {
                 // Don't show error if request was aborted
                 if (error instanceof Error && error.name === 'AbortError') {
                     return;
                 }
-                showToast('Error loading keys', 'error');
-                console.error('Error loading keys:', error);
+
+                if (!hasWildcards && searchPattern.trim() !== '' && resetList) {
+                    // Key doesn't exist for exact search
+                    setKeys([]);
+                    setCursors(['0']);
+                    setHasMore(false);
+                    setSelectedKey(null);
+                    showToast('Key not found', 'warning');
+                } else {
+                    showToast('Error loading keys', 'error');
+                    console.error('Error loading keys:', error);
+                }
             } finally {
                 setIsLoadingKeys(false);
             }
