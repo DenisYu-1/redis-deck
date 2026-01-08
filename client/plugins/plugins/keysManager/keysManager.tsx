@@ -36,6 +36,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     emit
 }) => {
     const [searchPattern, setSearchPattern] = useState('*');
+    const [inputValue, setInputValue] = useState('*');
     const [searchTrigger, setSearchTrigger] = useState(0);
     const [keys, setKeys] = useState<string[]>([]);
     const [cursors, setCursors] = useState<string[]>(['0']);
@@ -167,7 +168,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
 
     useEffect(() => {
         void loadKeys(true);
-    }, [currentEnvironment, searchPattern, searchTrigger]);
+    }, [currentEnvironment, searchTrigger]);
 
     // Cleanup effect to cancel any ongoing requests when component unmounts
     useEffect(() => {
@@ -205,8 +206,11 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     }, [selectedKey, currentEnvironment, showToast]);
 
     const handleSearch = async () => {
-        // Get the current value from the input in case it was modified externally
-        const currentValue = searchInputRef.current?.value || searchPattern;
+        // Get the current value from the input
+        const currentValue = inputValue.trim();
+
+        // Update searchPattern with the current input value
+        setSearchPattern(currentValue);
 
         // Check if this is a direct key search (no wildcards)
         const hasWildcards =
@@ -214,7 +218,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
             currentValue.includes('?') ||
             currentValue.includes('[');
 
-        if (!hasWildcards && currentValue.trim() !== '') {
+        if (!hasWildcards && currentValue !== '') {
             // This is a direct key lookup - check if key exists
             const envToUse = currentEnvironment || 'production';
             setIsLoadingKeys(true);
@@ -236,15 +240,13 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                 setIsLoadingKeys(false);
             }
         } else {
-            // This is a pattern search - use SCAN
-            if (currentValue !== searchPattern) {
-                setSearchPattern(currentValue);
-            }
+            // This is a pattern search - trigger the useEffect to load keys
             setSearchTrigger(prev => prev + 1);
         }
     };
 
     const handleShowAll = () => {
+        setInputValue('*');
         setSearchPattern('*');
         setSearchTrigger(prev => prev + 1);
     };
@@ -675,8 +677,8 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                         type="text"
                         id="search-pattern"
                         placeholder="Key pattern (e.g., user:*, *name*)"
-                        value={searchPattern}
-                        onChange={(e) => setSearchPattern(e.target.value)}
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
                         onKeyDown={handleKeyDown}
                     />
                     <button type="button" onClick={handleSearch} disabled={!currentEnvironment}>Search</button>
