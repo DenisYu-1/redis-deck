@@ -36,6 +36,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     emit
 }) => {
     const [searchPattern, setSearchPattern] = useState('*');
+    const [inputValue, setInputValue] = useState('*');
     const [searchTrigger, setSearchTrigger] = useState(0);
     const [keys, setKeys] = useState<string[]>([]);
     const [cursors, setCursors] = useState<string[]>(['0']);
@@ -175,45 +176,30 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
 
     const handleSearch = async () => {
         // Get the current value from the input in case it was modified externally
-        const currentValue = searchInputRef.current?.value || searchPattern;
+        const currentValue = searchInputRef.current?.value || inputValue;
 
-        // Check if this is a direct key search (no wildcards)
+        // Always treat as pattern search - if no wildcards, add * at the end
         const hasWildcards =
             currentValue.includes('*') ||
             currentValue.includes('?') ||
             currentValue.includes('[');
 
+        let patternToUse = currentValue;
         if (!hasWildcards && currentValue.trim() !== '') {
-            // This is a direct key lookup - check if key exists
-            const envToUse = currentEnvironment || 'production';
-            setIsLoadingKeys(true);
-            try {
-                await getKeyDetails(currentValue, envToUse);
-                // Key exists - show it in the list
-                setKeys([currentValue]);
-                setCursors(['0']);
-                setHasMore(false);
-                setSelectedKey(currentValue); // Auto-select the found key
-            } catch (error) {
-                // Key doesn't exist
-                setKeys([]);
-                setCursors(['0']);
-                setHasMore(false);
-                setSelectedKey(null);
-                showToast('Key not found', 'warning');
-            } finally {
-                setIsLoadingKeys(false);
-            }
-        } else {
-            // This is a pattern search - use SCAN
-            if (currentValue !== searchPattern) {
-                setSearchPattern(currentValue);
-            }
-            setSearchTrigger(prev => prev + 1);
+            // Convert to pattern search by adding * at the end
+            patternToUse = currentValue + '*';
         }
+
+        // Update states
+        setInputValue(currentValue);
+        if (patternToUse !== searchPattern) {
+            setSearchPattern(patternToUse);
+        }
+        setSearchTrigger(prev => prev + 1);
     };
 
     const handleShowAll = () => {
+        setInputValue('*');
         setSearchPattern('*');
         setSearchTrigger(prev => prev + 1);
     };
@@ -644,8 +630,8 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                         type="text"
                         id="search-pattern"
                         placeholder="Key pattern (e.g., user:*, *name*)"
-                        value={searchPattern}
-                        onChange={(e) => setSearchPattern(e.target.value)}
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
                         onKeyDown={handleKeyDown}
                     />
                     <button type="button" onClick={handleSearch} disabled={!currentEnvironment}>Search</button>
