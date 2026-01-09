@@ -79,7 +79,7 @@ export async function saveKey(
     expiry: number | null,
     environment: string
 ): Promise<{ success: boolean }> {
-    const response = await fetch(`${API_BASE}/keys/save/${environment}`, {
+    const response = await fetch(`${API_BASE}/keys?env=${environment}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -93,13 +93,12 @@ export async function deleteKey(
     key: string,
     environment: string
 ): Promise<{ success: boolean; deletedCount: number }> {
-    const response = await fetch(`${API_BASE}/keys/delete/${environment}`, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ key })
-    });
+    const response = await fetch(
+        `${API_BASE}/keys/${encodeURIComponent(key)}?env=${environment}`,
+        {
+            method: 'DELETE'
+        }
+    );
     return handleResponse<{ success: boolean; deletedCount: number }>(response);
 }
 
@@ -108,13 +107,16 @@ export async function setTTL(
     seconds: number,
     environment: string
 ): Promise<{ success: boolean }> {
-    const response = await fetch(`${API_BASE}/keys/ttl/${environment}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ key, seconds })
-    });
+    const response = await fetch(
+        `${API_BASE}/keys/${encodeURIComponent(key)}/expire?env=${environment}`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ seconds })
+        }
+    );
     return handleResponse<{ success: boolean }>(response);
 }
 
@@ -123,13 +125,16 @@ export async function renameKey(
     newKey: string,
     environment: string
 ): Promise<{ success: boolean }> {
-    const response = await fetch(`${API_BASE}/keys/rename/${environment}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ oldKey, newKey })
-    });
+    const response = await fetch(
+        `${API_BASE}/keys/${encodeURIComponent(oldKey)}/rename?env=${environment}`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ newKey })
+        }
+    );
     return handleResponse<{ success: boolean }>(response);
 }
 

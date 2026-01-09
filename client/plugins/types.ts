@@ -8,7 +8,6 @@ export type PluginEventType =
     | 'operation:completed'
     | 'toast:show'
     | 'plugin:initialized'
-    | 'bookings:add'
     | 'news-feed:add';
 
 export interface PluginEvent {

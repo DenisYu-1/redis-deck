@@ -101,7 +101,6 @@ export default MyPlugin;
 - `operation:completed` - An operation finished
 - `toast:show` - Show a toast notification
 - `plugin:initialized` - Plugin system initialized
-- `bookings:add` - Add booking data for a user
 - `news-feed:add` - Add news feed item for a user
 
 ### Events Supported by Default Plugins
@@ -127,25 +126,6 @@ The default plugins emit and listen to the following events:
 **Listens:**
 - `keys:selected` - To update selected keys state
 - `operation:completed` - To refresh UI after operations
-
-#### Custom Searches Plugin (`custom-searches`)
-**Emits:**
-- `keys:selected` - When search patterns are selected
-- `toast:show` - For user feedback
-
-#### Bookings Plugin (`bookings`)
-**Emits:**
-- `bookings:add` - Request to add booking data for a user
-- `toast:show` - For user feedback and status messages
-
-#### News Feed Plugin (`news-feed`)
-**Emits:**
-- `news-feed:add` - Request to add news feed item for a user
-- `keys:selected` - To trigger search for news-feed keys
-- `toast:show` - For user feedback
-
-**Listens:**
-- `operation:completed` - To add news items when operations complete
 
 ### Custom Events
 

@@ -3,7 +3,13 @@ import { useAppStore } from '@/store/useAppStore';
 import { searchKeys } from '@/services/apiService';
 import { useToast } from '@/hooks/useToast';
 import type { PluginComponentProps } from '../../types';
-import { getKeyDetails, deleteKey, setTTL, renameKey, copyKey } from '@/services/apiService';
+import {
+    getKeyDetails,
+    deleteKey,
+    setTTL,
+    renameKey,
+    copyKey
+} from '@/services/apiService';
 
 // Import the JSON viewer web component
 import '@alenaksu/json-viewer';
@@ -33,7 +39,8 @@ interface KeyDetails {
 
 const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     context,
-    emit
+    emit,
+    on
 }) => {
     const [searchPattern, setSearchPattern] = useState('*');
     const [inputValue, setInputValue] = useState('*');
@@ -179,6 +186,39 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
         };
     }, []);
 
+    // Listen for keys:selected events from plugins
+    useEffect(() => {
+        if (!on) return;
+
+        const unsubscribe = on('keys:selected', (event) => {
+            const payload = event.payload as {
+                keys?: string[];
+                pattern?: string;
+            };
+
+            if (payload.keys && payload.keys.length > 0) {
+                // Handle individual key selection
+                const key = payload.keys[0];
+                if (key) {
+                    setSelectedKey(key);
+                    setInputValue(key);
+                    setSearchPattern(key);
+                    // Trigger search to show this specific key
+                    setSearchTrigger((prev) => prev + 1);
+                }
+            } else if (payload.pattern) {
+                // Handle pattern search
+                const pattern = payload.pattern;
+                setInputValue(pattern);
+                setSearchPattern(pattern);
+                // Trigger search with the pattern
+                setSearchTrigger((prev) => prev + 1);
+            }
+        });
+
+        return unsubscribe;
+    }, [on]);
+
     // Load key details when selected key changes
     useEffect(() => {
         const loadDetails = async () => {
@@ -241,14 +281,14 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
             }
         } else {
             // This is a pattern search - trigger the useEffect to load keys
-            setSearchTrigger(prev => prev + 1);
+            setSearchTrigger((prev) => prev + 1);
         }
     };
 
     const handleShowAll = () => {
         setInputValue('*');
         setSearchPattern('*');
-        setSearchTrigger(prev => prev + 1);
+        setSearchTrigger((prev) => prev + 1);
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -273,12 +313,15 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
 
     const handleOperationComplete = () => {
         // Refresh keys list and key details
-        setSearchTrigger(prev => prev + 1);
+        setSearchTrigger((prev) => prev + 1);
         if (selectedKey) {
             // Reload details for the selected key
             const loadDetails = async () => {
                 try {
-                    const details = await getKeyDetails(selectedKey, currentEnvironment!);
+                    const details = await getKeyDetails(
+                        selectedKey,
+                        currentEnvironment!
+                    );
                     setKeyDetails(details);
                 } catch (error) {
                     console.error('Error reloading key details:', error);
@@ -475,14 +518,20 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
         } else if (type === 'zset') {
             // Format sorted set with scores in a more readable way
             if (typeof value === 'string') {
-                const lines = value.split('\n').filter((line) => line.trim() !== '');
+                const lines = value
+                    .split('\n')
+                    .filter((line) => line.trim() !== '');
                 if (lines.length === 0) {
                     return 'Empty sorted set';
                 }
 
                 let formatted = '';
                 for (let i = 0; i < lines.length; i += 2) {
-                    if (lines[i]?.trim() && i + 1 < lines.length && lines[i + 1]) {
+                    if (
+                        lines[i]?.trim() &&
+                        i + 1 < lines.length &&
+                        lines[i + 1]
+                    ) {
                         const member = lines[i]!.trim();
                         const score = lines[i + 1]!.trim();
                         formatted += `• ${member} → ${score}\n`;
@@ -612,13 +661,14 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                     return;
                 }
 
-                await import('@/services/apiService').then(({ addToSortedSet }) =>
-                    addToSortedSet(
-                        keyName,
-                        validMembers,
-                        expiryValue,
-                        environment
-                    )
+                await import('@/services/apiService').then(
+                    ({ addToSortedSet }) =>
+                        addToSortedSet(
+                            keyName,
+                            validMembers,
+                            expiryValue,
+                            environment
+                        )
                 );
                 setZsetMembers([{ score: 0, value: '' }]);
             } else {
@@ -667,9 +717,20 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     };
 
     return (
-        <div className="keys-manager-plugin" style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px' }}>
+        <div
+            className="keys-manager-plugin"
+            style={{
+                backgroundColor: '#ffffff',
+                padding: '20px',
+                borderRadius: '8px'
+            }}
+        >
             {/* Search Keys Section */}
-            <div className="search-section" data-priority="0" style={{ marginBottom: '20px' }}>
+            <div
+                className="search-section"
+                data-priority="0"
+                style={{ marginBottom: '20px' }}
+            >
                 <h2>Search Keys</h2>
                 <div className="search-bar">
                     <input
@@ -681,7 +742,13 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyDown={handleKeyDown}
                     />
-                    <button type="button" onClick={handleSearch} disabled={!currentEnvironment}>Search</button>
+                    <button
+                        type="button"
+                        onClick={handleSearch}
+                        disabled={!currentEnvironment}
+                    >
+                        Search
+                    </button>
                     <button onClick={handleShowAll} className="secondary-btn">
                         Show All Keys
                     </button>
@@ -696,25 +763,41 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                         Keys <span id="keys-count">({keys.length})</span>
                         {isLoadingKeys && <span> (Searching...)</span>}
                     </h3>
-                    <ul id="keys-results" style={{ opacity: isLoadingKeys ? 0.5 : 1, pointerEvents: isLoadingKeys ? 'none' : 'auto' }}>
+                    <ul
+                        id="keys-results"
+                        style={{
+                            opacity: isLoadingKeys ? 0.5 : 1,
+                            pointerEvents: isLoadingKeys ? 'none' : 'auto'
+                        }}
+                    >
                         {keys.map((key) => (
                             <li
                                 key={key}
-                                className={selectedKey === key ? 'selected' : ''}
+                                className={
+                                    selectedKey === key ? 'selected' : ''
+                                }
                                 onClick={() => handleKeySelect(key)}
                             >
                                 {key}
                             </li>
                         ))}
                         {isLoadingKeys && keys.length === 0 && (
-                            <li style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                            <li
+                                style={{
+                                    textAlign: 'center',
+                                    padding: '20px',
+                                    color: '#666'
+                                }}
+                            >
                                 Searching for keys...
                             </li>
                         )}
                     </ul>
                     <div className="pagination-controls">
                         <div className="pagination-status">
-                            <span id="pagination-info">Showing {keys.length} keys</span>
+                            <span id="pagination-info">
+                                Showing {keys.length} keys
+                            </span>
                         </div>
                         <button
                             id="load-more-btn"
@@ -774,7 +857,9 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                                             <button
                                                 className="value-action-btn"
                                                 onClick={() =>
-                                                    handleCopyValue(keyDetails.value)
+                                                    handleCopyValue(
+                                                        keyDetails.value
+                                                    )
                                                 }
                                                 title="Copy value"
                                             >
@@ -801,7 +886,12 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                                             </button>
                                         </div>
                                     </p>
-                                    <pre>{formatValue(keyDetails.type, keyDetails.value)}</pre>
+                                    <pre>
+                                        {formatValue(
+                                            keyDetails.type,
+                                            keyDetails.value
+                                        )}
+                                    </pre>
                                 </>
                             ) : isLoadingDetails ? (
                                 <p>Loading...</p>
@@ -817,7 +907,9 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                             <div className="ttl-info">
                                 <span>
                                     TTL:{' '}
-                                    <span id="key-ttl">{keyDetails.ttl ?? 'N/A'}</span>
+                                    <span id="key-ttl">
+                                        {keyDetails.ttl ?? 'N/A'}
+                                    </span>
                                 </span>
                                 <button
                                     onClick={() => setShowTTLModal(true)}
@@ -827,7 +919,10 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                                 </button>
                             </div>
                             <div className="action-buttons">
-                                <button onClick={handleDelete} className="danger-btn">
+                                <button
+                                    onClick={handleDelete}
+                                    className="danger-btn"
+                                >
                                     Delete
                                 </button>
                                 <button
@@ -1326,10 +1421,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
             )}
 
             {showValueModal && valueModalData && (
-                <div
-                    className="modal"
-                    onClick={() => setShowValueModal(false)}
-                >
+                <div className="modal" onClick={() => setShowValueModal(false)}>
                     <div
                         className="modal-content value-viewer-modal"
                         onClick={(e) => e.stopPropagation()}
@@ -1354,7 +1446,11 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                                 className={`value-tab-btn ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
                                 onClick={() => handleTabChange('tree')}
                                 data-tab="tree"
-                                style={{ display: valueModalData.hasJson ? 'inline-block' : 'none' }}
+                                style={{
+                                    display: valueModalData.hasJson
+                                        ? 'inline-block'
+                                        : 'none'
+                                }}
                             >
                                 Tree View
                             </button>
@@ -1370,9 +1466,18 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                             <json-viewer
                                 className={`value-tab-content ${valueModalData.activeTab === 'tree' ? 'active' : ''}`}
                                 data-content="tree"
-                                style={{ display: valueModalData.activeTab === 'tree' ? 'block' : 'none' }}
+                                style={{
+                                    display:
+                                        valueModalData.activeTab === 'tree'
+                                            ? 'block'
+                                            : 'none'
+                                }}
                                 ref={(el: any) => {
-                                    if (el && valueModalData.jsonData && valueModalData.activeTab === 'tree') {
+                                    if (
+                                        el &&
+                                        valueModalData.jsonData &&
+                                        valueModalData.activeTab === 'tree'
+                                    ) {
                                         el.data = valueModalData.jsonData;
                                         // Expand all nodes after a short delay
                                         setTimeout(() => {

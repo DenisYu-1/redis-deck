@@ -3,6 +3,7 @@ import type {
     Plugin,
     PluginDefinition,
     PluginEvent,
+    PluginEventType,
     PluginHookResult
 } from './types';
 import type { PluginContext } from '@/types';
@@ -33,6 +34,43 @@ export function usePlugins(context: PluginContext): PluginHookResult {
     const emit = useCallback((event: PluginEvent) => {
         eventBus.emit(event);
     }, []);
+
+    // Forward events from event bus to plugins that have registered handlers
+    useEffect(() => {
+        const handleEventBusEvents = (event: PluginEvent) => {
+            // Forward the event to all plugins that have registered handlers for this event type
+            plugins.forEach((plugin) => {
+                const handler = plugin.eventHandlers.get(event.type);
+                if (handler) {
+                    try {
+                        handler(event);
+                    } catch (error) {
+                        console.error(
+                            `Error in plugin ${plugin.id} event handler for ${event.type}:`,
+                            error
+                        );
+                    }
+                }
+            });
+        };
+
+        // Subscribe to each event type that plugins have registered for
+        const unsubscribers: (() => void)[] = [];
+        const subscribedTypes = new Set<PluginEventType>();
+
+        plugins.forEach((plugin) => {
+            plugin.eventHandlers.forEach((_, eventType) => {
+                if (!subscribedTypes.has(eventType)) {
+                    subscribedTypes.add(eventType);
+                    unsubscribers.push(eventBus.on(eventType, handleEventBusEvents));
+                }
+            });
+        });
+
+        return () => {
+            unsubscribers.forEach(unsubscribe => unsubscribe());
+        };
+    }, [plugins]);
 
     useEffect(() => {
         const loadPlugins = async () => {
