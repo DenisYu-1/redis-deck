@@ -17,7 +17,7 @@ export interface UseKeyDetailsReturn {
 
 export const useKeyDetails = (
     currentEnvironment: string | null | undefined,
-    onKeysSelected?: (keys: string[], pattern?: string) => void
+    onKeySelected?: (key: string) => void
 ): UseKeyDetailsReturn => {
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const [keyDetails, setKeyDetails] = useState<KeyDetails | null>(null);
@@ -49,15 +49,14 @@ export const useKeyDetails = (
         };
 
         void loadDetails();
-    }, [selectedKey, currentEnvironment, showToast]);
+    }, [selectedKey, currentEnvironment]);
 
     const handleKeySelect = useCallback((key: string) => {
         setSelectedKey(key);
-        // Emit event so other plugins know a key was selected
-        if (onKeysSelected) {
-            onKeysSelected([key]);
+        if (onKeySelected) {
+            onKeySelected(key);
         }
-    }, [onKeysSelected]);
+    }, [onKeySelected]);
 
     return {
         // State

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { PluginComponentProps } from '../../types';
 
@@ -10,16 +10,15 @@ import { useAddKeyForm } from './hooks/useAddKeyForm';
 import { useModals } from './hooks/useModals';
 
 // Types
-
 // Components
 import { KeysSearchSection } from './components/KeysSearchSection';
 import { KeysList } from './components/KeysList';
 import { KeyDetails } from './components/KeyDetails';
 import { AddKeyForm } from './components/AddKeyForm';
 import {
-    TTLModal,
-    RenameModal,
     CopyModal,
+    RenameModal,
+    TTLModal,
     ValueViewerModal
 } from './components/modals';
 
@@ -33,42 +32,42 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
 }) => {
     const { currentEnvironment, connections } = useAppStore();
 
-    // Custom hooks
-    const keysSearch = useKeysSearch(currentEnvironment, (keys) => {
-        if (keys.length > 0) {
-            emit({
-                type: 'keys:selected',
-                payload: { keys },
-                source: 'keys-manager'
-            });
-        }
+    // Memoized callbacks to prevent infinite re-renders
+    useCallback(
+        (keys: string[]) => {
+            if (keys.length > 0) {
+                emit({
+                    type: 'keys:selected',
+                    payload: { keys },
+                    source: 'keys-manager'
+                });
+            }
+        },
+        [emit]
+    );
+    const keysSearch = useKeysSearch(currentEnvironment);
+
+    const keyDetails = useKeyDetails(currentEnvironment, (key) => {
+        // Emit event when key is selected from the list
+        emit({
+            type: 'keys:selected',
+            payload: { keys: [key] },
+            source: 'keys-manager'
+        });
     });
 
-    const keyDetails = useKeyDetails(currentEnvironment, (keys, pattern) => {
-        if (keys.length > 0) {
-            emit({
-                type: 'keys:selected',
-                payload: { keys },
-                source: 'keys-manager'
-            });
-        } else if (pattern) {
-            keysSearch.setInputValue(pattern);
-            keysSearch.setSearchPattern(pattern);
-            keysSearch.triggerSearch();
-        }
-    });
+    const operationCompleteCallback = useCallback(() => {
+        keysSearch.triggerSearch();
+        emit({
+            type: 'operation:completed',
+            source: 'keys-manager'
+        });
+    }, [keysSearch, emit]);
 
     const keyOperations = useKeyOperations(
         keyDetails.selectedKey,
         currentEnvironment,
-        () => {
-            // Operation complete callback
-            keysSearch.triggerSearch();
-            emit({
-                type: 'operation:completed',
-                source: 'keys-manager'
-            });
-        },
+        operationCompleteCallback,
         keyDetails.setSelectedKey,
         keyDetails.setKeyDetails
     );
@@ -82,6 +81,9 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     });
 
     const modals = useModals();
+
+    // Ref to store the unsubscribe function
+    const unsubscribeRef = useRef<(() => void) | null>(null);
 
     // Event handlers
     const handleViewValue = (value: unknown, type: string) => {
@@ -118,7 +120,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
 
     // Listen for keys:selected events from plugins
     useEffect(() => {
-        const unsubscribe = on('keys:selected', (event) => {
+        unsubscribeRef.current = on('keys:selected', (event) => {
             const payload = event.payload as {
                 keys?: string[];
                 pattern?: string;
@@ -144,10 +146,14 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
             }
         });
 
-        return unsubscribe;
-    }, [on, keyDetails, keysSearch]);
+        return () => {
+            if (unsubscribeRef.current) {
+                unsubscribeRef.current();
+                unsubscribeRef.current = null;
+            }
+        };
+    }, []);
 
-    // Toast helper
     const showToast = (message: string, type: 'success' | 'error') => {
         emit({
             type: 'toast:show',

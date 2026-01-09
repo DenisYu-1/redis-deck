@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { searchKeys, getKeyDetails } from '@/services/apiService';
-import { useToast } from '@/hooks/useToast';
-import type { SearchKeysResult } from '../utils/types';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {getKeyDetails, searchKeys} from '@/services/apiService';
+import {useToast} from '@/hooks/useToast';
+import type {SearchKeysResult} from '../utils/types';
 
 export interface UseKeysSearchReturn {
     // State
@@ -24,7 +24,6 @@ export interface UseKeysSearchReturn {
 
 export const useKeysSearch = (
     currentEnvironment: string | null | undefined,
-    onKeysSelected?: (keys: string[]) => void
 ): UseKeysSearchReturn => {
     const [searchPattern, setSearchPattern] = useState('*');
     const [inputValue, setInputValue] = useState('*');
@@ -75,10 +74,7 @@ export const useKeysSearch = (
                     setCursors(['0']);
                     setHasMore(false);
 
-                    // Auto-select the found key
-                    if (onKeysSelected) {
-                        onKeysSelected([searchPattern]);
-                    }
+                    // Don't call onKeysSelected here - this is for external key selections only
                 } else if (hasWildcards || searchPattern.trim() === '') {
                     // This is a pattern search - use SCAN
                     const currentCursors = resetList ? ['0'] : cursors;
@@ -114,9 +110,6 @@ export const useKeysSearch = (
                     setKeys([]);
                     setCursors(['0']);
                     setHasMore(false);
-                    if (onKeysSelected) {
-                        onKeysSelected([]);
-                    }
                     showToast('Key not found', 'warning');
                 } else {
                     showToast('Error loading keys', 'error');
@@ -126,12 +119,12 @@ export const useKeysSearch = (
                 setIsLoadingKeys(false);
             }
         },
-        [currentEnvironment, cursors, searchPattern, isLoadingKeys, showToast]
+        [currentEnvironment, cursors, searchPattern, isLoadingKeys]
     );
 
     useEffect(() => {
         void loadKeys(true);
-    }, [searchTrigger, loadKeys]);
+    }, [searchTrigger]); // Removed loadKeys to prevent infinite loops
 
     // Cleanup effect to cancel any ongoing requests when component unmounts
     useEffect(() => {
@@ -170,18 +163,13 @@ export const useKeysSearch = (
                 setCursors(['0']);
                 setHasMore(false);
 
-                // Auto-select the found key
-                if (onKeysSelected) {
-                    onKeysSelected([currentValue]);
-                }
+                // Auto-select the found key (don't call onKeysSelected here to avoid loops)
+                // The onKeysSelected callback is for external key selections, not internal ones
             } catch (error) {
                 // Key doesn't exist
                 setKeys([]);
                 setCursors(['0']);
                 setHasMore(false);
-                if (onKeysSelected) {
-                    onKeysSelected([]);
-                }
                 showToast('Key not found', 'warning');
             } finally {
                 setIsLoadingKeys(false);
