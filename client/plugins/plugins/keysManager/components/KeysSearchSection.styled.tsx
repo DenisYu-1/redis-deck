@@ -45,5 +45,15 @@ export const SearchBar = styled.div`
                 background-color: #5a6268;
             }
         }
+
+        &.search-btn {
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ccc;
+
+            &:hover:not(:disabled) {
+                background-color: #e9ecef;
+            }
+        }
     }
 `;

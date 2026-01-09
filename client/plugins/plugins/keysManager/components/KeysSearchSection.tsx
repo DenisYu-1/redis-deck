@@ -35,6 +35,7 @@ export const KeysSearchSection: React.FC<KeysSearchSectionProps> = ({
                 />
                 <button
                     type="button"
+                    className="search-btn"
                     onClick={onSearch}
                     disabled={!currentEnvironment}
                 >
