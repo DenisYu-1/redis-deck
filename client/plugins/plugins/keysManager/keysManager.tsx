@@ -23,7 +23,7 @@ import {
 } from './components/modals';
 
 // Styles
-import styled from 'styled-components';
+import { Container, KeysRow } from './styled';
 
 const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     context,
@@ -124,6 +124,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
             const payload = event.payload as {
                 keys?: string[];
                 pattern?: string;
+                action?: string;
             };
 
             if (payload.keys && payload.keys.length > 0) {
@@ -131,10 +132,17 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                 const key = payload.keys[0];
                 if (key) {
                     keyDetails.setSelectedKey(key);
-                    keysSearch.setInputValue(key);
-                    keysSearch.setSearchPattern(key);
-                    // Trigger search to show this specific key
-                    keysSearch.triggerSearch();
+                    // Only update search if this is an external search request
+                    // (not from internal key selection in the list)
+                    if (
+                        payload.action === 'search' ||
+                        event.source !== 'keys-manager'
+                    ) {
+                        keysSearch.setInputValue(key);
+                        keysSearch.setSearchPattern(key);
+                        // Trigger search to show this specific key
+                        keysSearch.triggerSearch();
+                    }
                 }
             } else if (payload.pattern) {
                 // Handle pattern search
@@ -166,17 +174,6 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     const handleSaveKey = () => {
         void addKeyForm.handleSaveKey(context, emit);
     };
-
-    const Container = styled.div`
-        background-color: #ffffff;
-        padding: 20px;
-        border-radius: 8px;
-    `;
-
-    const KeysRow = styled.div`
-        display: flex;
-        gap: 20px;
-    `;
 
     return (
         <Container className="keys-manager-plugin">
