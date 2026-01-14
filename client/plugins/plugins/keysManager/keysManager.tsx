@@ -208,6 +208,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                     isLoadingDetails={keyDetails.isLoadingDetails}
                     onViewValue={handleViewValue}
                     onCopyValue={handleCopyValue}
+                    onRefreshKey={keyDetails.refreshKey}
                     onSetTTL={() => modals.setShowTTLModal(true)}
                     onDelete={keyOperations.handleDelete}
                     onRename={() => modals.setShowRenameModal(true)}

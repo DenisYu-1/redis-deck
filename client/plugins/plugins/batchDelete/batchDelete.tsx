@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { PluginComponentProps } from '../../types';
-import { deleteKeysByPattern } from '@/services/apiService';
+import { deleteKeysByPattern, deleteKey } from '@/services/apiService';
 
 const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
     context,
@@ -25,23 +25,53 @@ const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
 
     const handleBatchDelete = async () => {
         if (!pattern.trim()) {
-            context.showToast('Pattern is required', 'error');
+            context.showToast('Key or pattern is required', 'error');
             return;
         }
 
-        if (
-            !confirm(
-                `Are you sure you want to delete all keys matching the pattern "${pattern}"?`
-            )
-        ) {
-            return;
+        // Check if this is a direct key or pattern (same logic as search)
+        const hasWildcards =
+            pattern.includes('*') ||
+            pattern.includes('?') ||
+            pattern.includes('[');
+
+        const isPattern = hasWildcards || pattern.trim() === '';
+
+        if (isPattern) {
+            if (
+                !confirm(
+                    `Are you sure you want to delete all keys matching the pattern "${pattern}"?`
+                )
+            ) {
+                return;
+            }
+        } else {
+            if (
+                !confirm(
+                    `Are you sure you want to delete the key "${pattern}"?`
+                )
+            ) {
+                return;
+            }
         }
 
         setIsDeleting(true);
         try {
             const environment = context.getCurrentEnvironment();
 
-            const result = await deleteKeysByPattern(pattern, environment);
+            let result;
+            if (isPattern) {
+                result = await deleteKeysByPattern(pattern, environment);
+            } else {
+                result = await deleteKey(pattern, environment);
+                // Normalize the result format to match deleteKeysByPattern
+                result = {
+                    count: result.deletedCount,
+                    message: result.success
+                        ? `Successfully deleted key "${pattern}"`
+                        : `Failed to delete key "${pattern}"`
+                };
+            }
 
             context.showToast(result.message, 'success');
 
@@ -79,7 +109,7 @@ const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
             <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input
                     type="text"
-                    placeholder="Pattern (e.g., user:*, cache:*, *)"
+                    placeholder="Key name or pattern (e.g., user:123, user:*, cache:*, *)"
                     value={pattern}
                     onChange={(e) => setPattern(e.target.value)}
                     onKeyPress={handleKeyPress}
@@ -115,8 +145,8 @@ const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
                     display: 'block'
                 }}
             >
-                Use patterns like: <code>user:*</code>, <code>cache:*</code>, or{' '}
-                <code>*</code> for all keys
+                Enter a specific key name (e.g., <code>user:123</code>) or pattern (e.g.,{' '}
+                <code>user:*</code>, <code>cache:*</code>, or <code>*</code> for all keys)
             </small>
         </div>
     );

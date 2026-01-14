@@ -13,6 +13,7 @@ export interface UseKeyDetailsReturn {
     setSelectedKey: (key: string | null) => void;
     setKeyDetails: (details: KeyDetails | null) => void;
     handleKeySelect: (key: string) => void;
+    refreshKey: () => void;
 }
 
 export const useKeyDetails = (
@@ -58,6 +59,25 @@ export const useKeyDetails = (
         }
     }, [onKeySelected]);
 
+    const refreshKey = useCallback(async () => {
+        if (!selectedKey || !currentEnvironment) return;
+
+        setIsLoadingDetails(true);
+        try {
+            const details = await fetchKeyDetails(
+                selectedKey,
+                currentEnvironment
+            );
+            setKeyDetails(details);
+            showToast('Key refreshed successfully', 'success');
+        } catch (error) {
+            showToast('Error refreshing key', 'error');
+            console.error('Error refreshing key:', error);
+        } finally {
+            setIsLoadingDetails(false);
+        }
+    }, [selectedKey, currentEnvironment, showToast]);
+
     return {
         // State
         selectedKey,
@@ -68,5 +88,6 @@ export const useKeyDetails = (
         setSelectedKey,
         setKeyDetails,
         handleKeySelect,
+        refreshKey,
     };
 };
