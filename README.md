@@ -8,6 +8,7 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Plu
 
 - 🔍 **Search & Browse**: Pattern-based key search with pagination
 - 📊 **Key Management**: View, edit, delete, rename, and copy keys across environments
+- 🔄 **Key Refresh**: Refresh individual key data without affecting search input
 - ⏱️ **TTL Management**: Set and modify time-to-live for keys
 - 🗑️ **Batch Operations**: Bulk delete keys by pattern
 - 🌐 **Multi-Environment**: Switch between multiple Redis connections
@@ -37,7 +38,7 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Plu
     ```bash
     docker compose up -d
     ```
-3. Access the UI at http://localhost:3000
+3. Access the UI at http://localhost:2222
 4. Go to Settings (⚙️) to add your Redis connections
 
 ### Running Locally (Development)
@@ -115,7 +116,7 @@ New users are greeted with a helpful empty state when no connections are configu
 
 ### Statistics Dashboard
 
-Comprehensive monitoring and analytics available at `/statistics.html`:
+Comprehensive monitoring and analytics available at `/statistics`:
 
 **Real-Time Metrics (12 KPIs)**:
 
@@ -167,31 +168,33 @@ Comprehensive monitoring and analytics available at `/statistics.html`:
 
 ## Technical Details
 
-- **Frontend**: React 18 with TypeScript
+- **Frontend**: React 18 with TypeScript and modern hooks
 - **Build Tool**: Vite for fast development and optimized production builds
 - **State Management**: Zustand for lightweight, hook-based state management
-- **Backend**: Node.js with Express
+- **Plugin System**: Extensible React-based plugin architecture
+- **Backend**: Node.js with Express and comprehensive REST API
 - **Type Safety**: Strict TypeScript configuration with comprehensive type checking
 - **Code Quality**: ESLint with TypeScript and React plugins, Prettier for formatting
-- **Testing**: Jest with React Testing Library
+- **Testing**: Jest with React Testing Library and functional database tests
+- **Database**: SQLite for connection management and statistics storage
 - Redis commands are executed using redis-cli under the hood
 - Credentials passed via environment variables for security
 
 ## Plugin System
 
-RedisDeck includes a flexible plugin system that allows you to extend the UI with custom functionality. The plugin system is built with React and TypeScript, allowing you to create type-safe, reusable components.
+RedisDeck includes a flexible plugin system that allows you to extend the UI with custom functionality. The plugin system is built with React and TypeScript, allowing you to create type-safe, reusable components that integrate seamlessly with the main application.
 
 ### Setup
 
 The plugin system uses a base configuration with optional overrides:
 
-- **`config.json`** (tracked in git): Base configuration with built-in plugins
-- **`config.override.json`** (gitignored): Optional file to add custom plugins or override base settings
+- **`client/plugins/config/config.json`** (tracked in git): Base configuration with built-in plugins
+- **`client/plugins/config/config.override.json`** (gitignored): Optional file to add custom plugins or override base settings
 
 To add your own plugins, create an override file:
 
 ```bash
-cp public/js/plugins/config.override.json.example public/js/plugins/config.override.json
+cp client/plugins/config/config.override.json.example client/plugins/config/config.override.json
 ```
 
 Then customize `config.override.json` to add your custom plugins. The override file can:
@@ -204,10 +207,11 @@ Then customize `config.override.json` to add your custom plugins. The override f
 
 The plugin system consists of:
 
-- **PluginManager**: Loads and initializes plugins from configuration
-- **PluginBase**: Base class that all plugins extend
-- **ComponentHelper**: Utility for injecting HTML into the UI
-- **config.json**: Configuration file where plugins are registered
+- **Plugin Registry**: Manages plugin loading and initialization
+- **Plugin Components**: React components that integrate with the main UI
+- **Event System**: Pub/sub system for inter-plugin communication
+- **Configuration**: JSON-based configuration for plugin registration
+- **TypeScript Types**: Comprehensive type definitions for plugin development
 
 ### Creating a New Plugin
 
@@ -218,49 +222,70 @@ Create a new directory for your plugin:
 **For custom/private plugins** (not tracked in git):
 
 ```
-public/js/plugins/extensions/your-plugin/
-├── yourPlugin.js
-└── view.html
+client/plugins/plugins/extensions/your-plugin/
+├── yourPlugin.tsx
+├── components/
+└── hooks/
 ```
 
 **For built-in plugins** (tracked in git):
 
 ```
-public/js/plugins/your-plugin/
-├── yourPlugin.js
-└── view.html
+client/plugins/plugins/your-plugin/
+├── yourPlugin.tsx
+├── components/
+├── hooks/
+└── utils/
 ```
 
-#### 2. Create the View HTML
+#### 2. Create Plugin Components
 
-Create `view.html` with your plugin's UI. This should contain a single `<section>` element:
+Create your plugin components using React and TypeScript. Create a main plugin file `yourPlugin.tsx`:
 
-```html
-<section class="your-plugin-section">
-    <h2>Your Plugin Title</h2>
-    <div class="form-group">
-        <label for="your-input">Input Label:</label>
-        <input type="text" id="your-input" placeholder="Enter value" />
-    </div>
-    <button id="your-action-btn">Execute Action</button>
-</section>
-```
+```tsx
+import React from 'react';
+import { PluginComponentProps } from '../../types';
 
-#### 3. Create the Plugin Class
+const YourPlugin: React.FC<PluginComponentProps> = ({
+    context,
+    emit,
+    on
+}) => {
+    const handleAction = () => {
+        // Your plugin logic here
+        emit({
+            type: 'toast:show',
+            payload: { message: 'Action completed!', type: 'success' }
+        });
+    };
 
-Create `yourPlugin.js` extending `PluginBase`
+    return (
+        <section className="your-plugin-section">
+            <h2>Your Plugin Title</h2>
+            <div className="form-group">
+                <label htmlFor="your-input">Input Label:</label>
+                <input
+                    type="text"
+                    id="your-input"
+                    placeholder="Enter value"
+                />
+            </div>
+            <button
+                className="secondary-btn"
+                onClick={handleAction}
+            >
+                Execute Action
+            </button>
+        </section>
+    );
+};
 
-```javascript
-import { PluginBase } from '../PluginBase.js';
-
-export default class YourPlugin extends PluginBase {
-    ...
-}
+export default YourPlugin;
 ```
 
 #### 4. Register the Plugin
 
-**For custom extension plugins**, add to `public/js/plugins/config.override.json`:
+**For custom extension plugins**, add to `client/plugins/config/config.override.json`:
 
 ```json
 {
@@ -269,7 +294,7 @@ export default class YourPlugin extends PluginBase {
             "id": "your-plugin",
             "name": "Your Plugin",
             "enabled": true,
-            "path": "./extensions/yourPlugin/yourPlugin.js",
+            "path": "extensions/yourPlugin/yourPlugin.tsx",
             "priority": 10,
             "config": {
                 "someSetting": "value"
@@ -279,7 +304,7 @@ export default class YourPlugin extends PluginBase {
 }
 ```
 
-**For built-in plugins**, add directly to `public/js/plugins/config.json`:
+**For built-in plugins**, add directly to `client/plugins/config/config.json`:
 
 ```json
 {
@@ -288,7 +313,7 @@ export default class YourPlugin extends PluginBase {
             "id": "your-plugin",
             "name": "Your Plugin",
             "enabled": true,
-            "path": "./yourPlugin/yourPlugin.js",
+            "path": "yourPlugin/yourPlugin.tsx",
             "priority": 10,
             "config": {
                 "someSetting": "value"
@@ -309,18 +334,15 @@ export default class YourPlugin extends PluginBase {
 
 ### Plugin Context
 
-The `context` object passed to `init()` provides access to:
+The `context` object passed to plugins provides access to:
 
-- `context.Environment`: Environment management component
-- `context.KeyList`: Key list component
-- `context.KeyDetails`: Key details component
 - `context.getCurrentEnvironment()`: Get the currently selected environment ID
 - `context.onOperationComplete()`: Callback to refresh the UI after operations
 - `context.showToast(message, type)`: Display toast notifications
 
 ### Available APIs
 
-**API Service** (`services/apiService.js`):
+**API Service** (`client/services/apiService.ts`):
 
 - `searchKeys(pattern, cursor, count, environment)` - Search for keys by pattern
 - `getKeyDetails(key, environment)` - Get details for a specific key
@@ -328,14 +350,14 @@ The `context` object passed to `init()` provides access to:
 - `deleteKey(key, environment)` - Delete a key
 - `addToSortedSet(key, members, expiry, environment)` - Add to sorted set
 
-**DOM Utils** (`utils/domUtils.js`):
+**Toast Service** (`client/hooks/useToast.ts`):
 
 - `showToast(message, type)` - Display toast notification (types: 'success', 'error', 'warning')
 - `escapeHTML(str)` - Escape HTML special characters
 
 ### Managing Plugins
 
-To customize built-in plugins or add your own, use `config.override.json`:
+To customize built-in plugins or add your own, use `client/plugins/config/config.override.json`:
 
 **Disable a Built-in Plugin:**
 
@@ -375,7 +397,7 @@ To customize built-in plugins or add your own, use `config.override.json`:
             "id": "your-plugin",
             "name": "Your Plugin",
             "enabled": true,
-            "path": "./extensions/yourPlugin/yourPlugin.js",
+            "path": "extensions/yourPlugin/yourPlugin.tsx",
             "priority": 10,
             "config": {}
         }
