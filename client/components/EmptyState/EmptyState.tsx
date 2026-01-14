@@ -15,7 +15,7 @@ export function EmptyState() {
                     To get started, please add a Redis connection in the
                     settings page.
                 </p>
-                <a href="/settings.html" className="button">
+                <a href="/settings" className="button">
                     ⚙️ Go to Settings
                 </a>
             </div>
