@@ -19,7 +19,7 @@ export const useAppStore = create<AppState>((set) => ({
     currentEnvironment: null,
     selectedKey: null,
     keyDetails: null,
-    isLoading: true,
+    isLoading: false,
     setConnections: (connections) => set({ connections }),
     setCurrentEnvironment: (environment) =>
         set({ currentEnvironment: environment }),

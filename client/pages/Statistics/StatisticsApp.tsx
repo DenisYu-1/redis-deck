@@ -36,8 +36,10 @@ export function StatisticsApp() {
     }, [currentEnvironment, showToast]);
 
     useEffect(() => {
-        fetchStats();
-    }, [fetchStats]);
+        if (currentEnvironment) {
+            fetchStats();
+        }
+    }, [fetchStats, currentEnvironment]);
 
     useEffect(() => {
         if (!autoRefresh || !currentEnvironment) return;

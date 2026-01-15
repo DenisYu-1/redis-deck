@@ -4,12 +4,7 @@ import { useToast } from '@/hooks/useToast';
 import { getHistoryStats, takeSnapshot } from '@/services/apiService';
 import { formatBytes } from '@/utils/formatter';
 import type { HistoryResponse } from '@/types';
-
-declare global {
-    interface Window {
-        Chart: any;
-    }
-}
+import Chart from 'chart.js/auto';
 
 export function ChartsSection() {
     const [timeRange, setTimeRange] = useState(24);
@@ -68,7 +63,7 @@ export function ChartsSection() {
             charts.memoryChart.destroy();
         }
 
-        charts.memoryChart = new window.Chart(ctx, {
+        charts.memoryChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels,
@@ -130,7 +125,7 @@ export function ChartsSection() {
             charts.keysChart.destroy();
         }
 
-        charts.keysChart = new window.Chart(ctx, {
+        charts.keysChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels,
@@ -170,7 +165,7 @@ export function ChartsSection() {
             charts.hitRateChart.destroy();
         }
 
-        charts.hitRateChart = new window.Chart(ctx, {
+        charts.hitRateChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels,
@@ -213,7 +208,7 @@ export function ChartsSection() {
             charts.opsChart.destroy();
         }
 
-        charts.opsChart = new window.Chart(ctx, {
+        charts.opsChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels,
@@ -253,7 +248,7 @@ export function ChartsSection() {
             charts.networkChart.destroy();
         }
 
-        charts.networkChart = new window.Chart(ctx, {
+        charts.networkChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels,

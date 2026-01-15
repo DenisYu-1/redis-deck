@@ -4,12 +4,7 @@ import { useToast } from '@/hooks/useToast';
 import { getMemoryByPattern } from '@/services/apiService';
 import { formatBytes, formatNumber } from '@/utils/formatter';
 import type { MemoryByPatternResponse } from '@/types';
-
-declare global {
-    interface Window {
-        Chart: any;
-    }
-}
+import Chart from 'chart.js/auto';
 
 export function MemoryPatternAnalysis() {
     const [data, setData] = useState<MemoryByPatternResponse | null>(null);
@@ -71,7 +66,7 @@ export function MemoryPatternAnalysis() {
             '#f1c40f'
         ];
 
-        const chart = new window.Chart(ctx, {
+        const chart = new Chart(ctx, {
             type: 'pie',
             data: {
                 labels: result.patterns.slice(0, 10).map((p) => p.pattern),

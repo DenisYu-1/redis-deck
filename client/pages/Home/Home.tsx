@@ -7,40 +7,12 @@ import { PluginContainer } from '@/plugins/PluginContainer';
 import { usePlugins } from '@/plugins/usePlugins';
 import { eventBus } from '@/plugins/eventBus';
 import { useAppStore } from '@/store/useAppStore';
-import { loadEnvironments } from '@/services/apiService';
 import { useToast } from '@/hooks/useToast';
 import type { PluginContext } from '@/types';
 
 export function Home() {
-    const {
-        connections,
-        currentEnvironment,
-        setConnections,
-        setCurrentEnvironment,
-        setIsLoading,
-        isLoading,
-    } = useAppStore();
+    const { connections, isLoading, currentEnvironment } = useAppStore();
     const { showToast } = useToast();
-
-    useEffect(() => {
-        const fetchConnections = async () => {
-            setIsLoading(true);
-            try {
-                const conns = await loadEnvironments();
-                setConnections(conns);
-                if (conns.length > 0) {
-                    setCurrentEnvironment(conns[0]?.id ?? '');
-                }
-            } catch (error) {
-                showToast('Failed to load connections', 'error');
-                console.error('Error loading connections:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        void fetchConnections();
-    }, [setConnections, setCurrentEnvironment, setIsLoading, showToast]);
 
     const hasConnections = connections.length > 0;
 
