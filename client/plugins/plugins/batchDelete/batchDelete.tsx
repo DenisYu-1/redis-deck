@@ -1,0 +1,155 @@
+import React, { useState, useEffect } from 'react';
+import type { PluginComponentProps } from '../../types';
+import { deleteKeysByPattern, deleteKey } from '@/services/apiService';
+
+const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
+    context,
+    emit: _emit,
+    on
+}) => {
+    const [pattern, setPattern] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    useEffect(() => {
+        // Listen for keys deleted events from other plugins
+        const unsubscribe = on('keys:deleted', (event: any) => {
+            console.log(
+                'Batch delete plugin received keys deleted event:',
+                event
+            );
+            // Could update UI or refresh data here
+        });
+
+        return unsubscribe;
+    }, [on]);
+
+    const handleBatchDelete = async () => {
+        if (!pattern.trim()) {
+            context.showToast('Key or pattern is required', 'error');
+            return;
+        }
+
+        // Check if this is a direct key or pattern (same logic as search)
+        const hasWildcards =
+            pattern.includes('*') ||
+            pattern.includes('?') ||
+            pattern.includes('[');
+
+        const isPattern = hasWildcards || pattern.trim() === '';
+
+        if (isPattern) {
+            if (
+                !confirm(
+                    `Are you sure you want to delete all keys matching the pattern "${pattern}"?`
+                )
+            ) {
+                return;
+            }
+        } else {
+            if (
+                !confirm(
+                    `Are you sure you want to delete the key "${pattern}"?`
+                )
+            ) {
+                return;
+            }
+        }
+
+        setIsDeleting(true);
+        try {
+            const environment = context.getCurrentEnvironment();
+
+            let result;
+            if (isPattern) {
+                result = await deleteKeysByPattern(pattern, environment);
+            } else {
+                result = await deleteKey(pattern, environment);
+                // Normalize the result format to match deleteKeysByPattern
+                result = {
+                    count: result.deletedCount,
+                    message: result.success
+                        ? `Successfully deleted key "${pattern}"`
+                        : `Failed to delete key "${pattern}"`
+                };
+            }
+
+            context.showToast(result.message, 'success');
+
+            setPattern('');
+
+            // Notify that operation is complete
+            if (context.onOperationComplete) {
+                context.onOperationComplete();
+            }
+        } catch (error: any) {
+            context.showToast(error.message || 'Failed to delete keys', 'error');
+            console.error('Error deleting keys:', error);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !isDeleting) {
+            handleBatchDelete();
+        }
+    };
+
+    return (
+        <div
+            className="batch-delete-plugin"
+            style={{
+                margin: '1rem 0',
+                padding: '1rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px'
+            }}
+        >
+            <h4 style={{ margin: '0 0 0.5rem 0' }}>Batch Delete Keys</h4>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                    type="text"
+                    placeholder="Key name or pattern (e.g., user:123, user:*, cache:*, *)"
+                    value={pattern}
+                    onChange={(e) => setPattern(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={isDeleting}
+                    style={{
+                        flex: 1,
+                        padding: '0.5rem',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                    }}
+                />
+                <button
+                    onClick={handleBatchDelete}
+                    disabled={isDeleting || !pattern.trim()}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: isDeleting ? '#ccc' : '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: isDeleting ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                    }}
+                >
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+            </div>
+            <small
+                style={{
+                    color: '#666',
+                    marginTop: '0.25rem',
+                    display: 'block'
+                }}
+            >
+                Enter a specific key name (e.g., <code>user:123</code>) or pattern (e.g.,{' '}
+                <code>user:*</code>, <code>cache:*</code>, or <code>*</code> for all keys)
+            </small>
+        </div>
+    );
+};
+
+export default BatchDeletePlugin;

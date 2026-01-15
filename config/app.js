@@ -14,11 +14,13 @@ function createApp() {
 
     // Middleware
     app.use(express.json());
-    app.use(express.static(path.join(__dirname, '..', 'public')));
-    app.use(
-        '/node_modules',
-        express.static(path.join(__dirname, '..', 'node_modules'))
-    );
+
+    // Serve static files from public directory (CSS, etc.)
+    app.use('/public', express.static(path.join(__dirname, '..', 'public')));
+
+    // Serve built React app from dist in production
+    const distPath = path.join(__dirname, '..', 'dist');
+    app.use(express.static(distPath));
 
     // API Routes
     app.use('/api', environmentRoutes);
@@ -28,9 +30,14 @@ function createApp() {
     app.use('/api/custom', customRoutes);
     app.use('/api/stats', statsRoutes);
 
-    // Main HTML route
+    // SPA fallback routes
     app.get('/', (req, res) => {
-        res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+        res.sendFile(path.join(distPath, 'index.html'));
+    });
+
+    // React Router fallback - serve index.html for all routes
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
     });
 
     return app;

@@ -1,26 +1,34 @@
-# Use Node.js as base image
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
-# Install redis-cli
-RUN apk add --no-cache redis
-
-# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
 COPY package*.json yarn.lock ./
 
-# Install dependencies
-RUN yarn install
+RUN yarn install --frozen-lockfile
 
-# Copy application code
 COPY . .
 
-# Create data directory for database persistence
+RUN yarn build
+
+FROM node:20-alpine
+
+RUN apk add --no-cache redis
+
+WORKDIR /app
+
+COPY package*.json yarn.lock ./
+
+RUN yarn install --production --frozen-lockfile
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/config ./config
+COPY --from=builder /app/routes ./routes
+COPY --from=builder /app/services ./services
+COPY --from=builder /app/server.js ./server.js
+
 RUN mkdir -p /app/data && chmod 777 /app/data
 
-# Expose the port the app runs on
 EXPOSE 3000
 
-# Start the application
-CMD ["node", "server.js"] 
+CMD ["node", "server.js"]
