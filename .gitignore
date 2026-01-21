@@ -1,80 +1,17 @@
-# Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Database files
 data/*.sqlite
-data/*.sqlite-journal
 data/*.db
-
-# IDE and editor files
-.idea/
-.vscode/
-.cursor/
-*.swp
-*.swo
-*~
+!data/.gitkeep
+.env
 .DS_Store
-
-# Logs
-logs/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output/
-
-# Build outputs
-dist/
-build/
-*.tsbuildinfo
-
-# Backup files
-*.bak
-*.bak2
-*.backup
-
-# OS files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Docker override files
-docker-compose.override.yml
-
-# Plugin configuration overrides
 public/js/plugins/config.override.json
-
-# Custom plugin extensions
+client/plugins/config/config.override.json
+client/plugins/plugins/extensions/*
 public/js/plugins/extensions/*
+!client/plugins/plugins/extensions/.gitkeep
 !public/js/plugins/extensions/.gitkeep
-
-
+dist/
+.vite/
+.idea
+.cursor/
