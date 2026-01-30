@@ -11,6 +11,8 @@ import {
     ZSetMemberItem,
     RemoveMemberButton,
     AddMemberButton,
+    ParseMembersButton,
+    ZSetPasteActions,
     FormActions
 } from './AddKeyForm.styled';
 import type { KeyType, ZSetMember } from '../utils/types';
@@ -25,9 +27,16 @@ interface AddKeyFormProps {
     stringValue: string;
     onStringValueChange: (value: string) => void;
     zsetMembers: ZSetMember[];
+    zsetRawValue: string;
     onAddZsetMember: () => void;
     onRemoveZsetMember: (index: number) => void;
-    onUpdateZsetMember: (index: number, field: keyof ZSetMember, value: string | number) => void;
+    onUpdateZsetMember: (
+        index: number,
+        field: keyof ZSetMember,
+        value: string | number
+    ) => void;
+    onZsetRawValueChange: (value: string) => void;
+    onParseZsetRawValue: () => void;
     expiry: string;
     onExpiryChange: (expiry: string) => void;
     onSave: () => void;
@@ -44,13 +53,16 @@ export const AddKeyForm: React.FC<AddKeyFormProps> = ({
     stringValue,
     onStringValueChange,
     zsetMembers,
+    zsetRawValue,
     onAddZsetMember,
     onRemoveZsetMember,
     onUpdateZsetMember,
+    onZsetRawValueChange,
+    onParseZsetRawValue,
     expiry,
     onExpiryChange,
     onSave,
-    onClear,
+    onClear
 }) => {
     return (
         <AddKeySection className="add-key-section">
@@ -78,9 +90,7 @@ export const AddKeyForm: React.FC<AddKeyFormProps> = ({
                             id="key-type"
                             value={keyType}
                             onChange={(e) =>
-                                onKeyTypeChange(
-                                    e.target.value as KeyType
-                                )
+                                onKeyTypeChange(e.target.value as KeyType)
                             }
                         >
                             <option value="string">String</option>
@@ -110,6 +120,22 @@ export const AddKeyForm: React.FC<AddKeyFormProps> = ({
                     {keyType === 'zset' && (
                         <FormGroup>
                             <label>Members (Score-Value pairs):</label>
+                            <Textarea
+                                id="zset-raw-value"
+                                value={zsetRawValue}
+                                onChange={(e) =>
+                                    onZsetRawValueChange(e.target.value)
+                                }
+                                placeholder="Paste zset value copied from the UI"
+                            />
+                            <ZSetPasteActions>
+                                <ParseMembersButton
+                                    type="button"
+                                    onClick={onParseZsetRawValue}
+                                >
+                                    Parse Pasted Value
+                                </ParseMembersButton>
+                            </ZSetPasteActions>
                             <ZSetMembersContainer id="zset-members">
                                 {zsetMembers.map((member, index) => (
                                     <ZSetMemberItem key={index}>
@@ -146,13 +172,9 @@ export const AddKeyForm: React.FC<AddKeyFormProps> = ({
                                             type="button"
                                             className="remove-member-btn"
                                             onClick={() =>
-                                                onRemoveZsetMember(
-                                                    index
-                                                )
+                                                onRemoveZsetMember(index)
                                             }
-                                            $disabled={
-                                                zsetMembers.length <= 1
-                                            }
+                                            $disabled={zsetMembers.length <= 1}
                                             title="Remove member"
                                         >
                                             ×

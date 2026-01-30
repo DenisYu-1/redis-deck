@@ -231,9 +231,14 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                 stringValue={addKeyForm.stringValue}
                 onStringValueChange={addKeyForm.setStringValue}
                 zsetMembers={addKeyForm.zsetMembers}
+                zsetRawValue={addKeyForm.zsetRawValue}
                 onAddZsetMember={addKeyForm.handleAddZsetMember}
                 onRemoveZsetMember={addKeyForm.handleRemoveZsetMember}
                 onUpdateZsetMember={addKeyForm.updateZsetMember}
+                onZsetRawValueChange={addKeyForm.setZsetRawValue}
+                onParseZsetRawValue={() =>
+                    void addKeyForm.handleParseZsetRawValue(emit)
+                }
                 expiry={addKeyForm.expiry}
                 onExpiryChange={addKeyForm.setExpiry}
                 onSave={handleSaveKey}

@@ -8,6 +8,7 @@ export interface UseAddKeyFormReturn {
     keyType: KeyType;
     stringValue: string;
     zsetMembers: ZSetMember[];
+    zsetRawValue: string;
     expiry: string;
 
     // Actions
@@ -15,12 +16,18 @@ export interface UseAddKeyFormReturn {
     setKeyName: (name: string) => void;
     setKeyType: (type: KeyType) => void;
     setStringValue: (value: string) => void;
+    setZsetRawValue: (value: string) => void;
     setExpiry: (expiry: string) => void;
 
     // ZSet member management
     handleAddZsetMember: () => void;
     handleRemoveZsetMember: (index: number) => void;
-    updateZsetMember: (index: number, field: keyof ZSetMember, value: string | number) => void;
+    updateZsetMember: (
+        index: number,
+        field: keyof ZSetMember,
+        value: string | number
+    ) => void;
+    handleParseZsetRawValue: (emit: any) => Promise<void>;
 
     // Form actions
     handleSaveKey: (context: any, emit: any) => Promise<void>;
@@ -38,6 +45,7 @@ export const useAddKeyForm = (
     const [zsetMembers, setZsetMembers] = useState<ZSetMember[]>([
         { score: 0, value: '' }
     ]);
+    const [zsetRawValue, setZsetRawValue] = useState('');
     const [expiry, setExpiry] = useState('');
 
     const handleAddZsetMember = () => {
@@ -60,6 +68,63 @@ export const useAddKeyForm = (
                 i === index ? { ...member, [field]: value } : member
             )
         );
+    };
+
+    const handleParseZsetRawValue = async (emit: any) => {
+        const rawValue = zsetRawValue.trim();
+        if (!rawValue) {
+            emit({
+                type: 'toast:show',
+                payload: {
+                    message: 'Paste a zset value to parse',
+                    type: 'error'
+                },
+                source: 'keys-manager'
+            });
+            return;
+        }
+
+        try {
+            const { parseZsetMembersFromText } =
+                await import('../utils/valueUtils');
+            const result = parseZsetMembersFromText(rawValue);
+
+            if (result.members.length === 0) {
+                emit({
+                    type: 'toast:show',
+                    payload: {
+                        message: 'No valid zset members found in pasted value',
+                        type: 'error'
+                    },
+                    source: 'keys-manager'
+                });
+                return;
+            }
+
+            setZsetMembers(result.members);
+            setZsetRawValue('');
+
+            if (result.invalidScores > 0 || result.hasDanglingMember) {
+                emit({
+                    type: 'toast:show',
+                    payload: {
+                        message:
+                            'Some entries were skipped due to invalid scores',
+                        type: 'error'
+                    },
+                    source: 'keys-manager'
+                });
+            }
+        } catch (error: any) {
+            emit({
+                type: 'toast:show',
+                payload: {
+                    message: error.message || 'Failed to parse zset value',
+                    type: 'error'
+                },
+                source: 'keys-manager'
+            });
+        }
     };
 
     const handleSaveKey = async (context: any, emit: any) => {
@@ -122,6 +187,7 @@ export const useAddKeyForm = (
                         )
                 );
                 setZsetMembers([{ score: 0, value: '' }]);
+                setZsetRawValue('');
             } else {
                 emit({
                     type: 'toast:show',
@@ -164,6 +230,7 @@ export const useAddKeyForm = (
         setKeyType('string');
         setStringValue('');
         setZsetMembers([{ score: 0, value: '' }]);
+        setZsetRawValue('');
         setExpiry('');
     };
 
@@ -174,6 +241,7 @@ export const useAddKeyForm = (
         keyType,
         stringValue,
         zsetMembers,
+        zsetRawValue,
         expiry,
 
         // Actions
@@ -181,15 +249,17 @@ export const useAddKeyForm = (
         setKeyName,
         setKeyType,
         setStringValue,
+        setZsetRawValue,
         setExpiry,
 
         // ZSet member management
         handleAddZsetMember,
         handleRemoveZsetMember,
         updateZsetMember,
+        handleParseZsetRawValue,
 
         // Form actions
         handleSaveKey,
-        clearForm,
+        clearForm
     };
 };

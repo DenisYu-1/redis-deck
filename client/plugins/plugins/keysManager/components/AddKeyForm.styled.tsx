@@ -13,7 +13,7 @@ export const SectionHeader = styled.div<{ $isExpanded: boolean }>`
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    margin-bottom: ${props => props.$isExpanded ? '1rem' : '0'};
+    margin-bottom: ${(props) => (props.$isExpanded ? '1rem' : '0')};
 
     h2 {
         margin: 0;
@@ -22,7 +22,8 @@ export const SectionHeader = styled.div<{ $isExpanded: boolean }>`
 `;
 
 export const ToggleIcon = styled.span<{ $isExpanded: boolean }>`
-    transform: ${props => props.$isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};
+    transform: ${(props) =>
+        props.$isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};
     transition: transform 0.2s;
     font-size: 12px;
 `;
@@ -92,11 +93,11 @@ export const ZSetMemberItem = styled.div`
 
 export const RemoveMemberButton = styled.button<{ $disabled: boolean }>`
     padding: 0.5rem;
-    background-color: ${props => props.$disabled ? '#ccc' : '#dc3545'};
+    background-color: ${(props) => (props.$disabled ? '#ccc' : '#dc3545')};
     color: white;
     border: none;
     border-radius: 4px;
-    cursor: ${props => props.$disabled ? 'not-allowed' : 'pointer'};
+    cursor: ${(props) => (props.$disabled ? 'not-allowed' : 'pointer')};
     font-size: 14px;
     width: 40px;
 `;
@@ -104,6 +105,22 @@ export const RemoveMemberButton = styled.button<{ $disabled: boolean }>`
 export const AddMemberButton = styled.button`
     padding: 0.5rem 1rem;
     background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+`;
+
+export const ZSetPasteActions = styled.div`
+    display: flex;
+    gap: 0.5rem;
+    margin: 0.5rem 0 1rem;
+`;
+
+export const ParseMembersButton = styled.button`
+    padding: 0.5rem 1rem;
+    background-color: #17a2b8;
     color: white;
     border: none;
     border-radius: 4px;

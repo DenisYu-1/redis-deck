@@ -1,12 +1,15 @@
-export interface ZSetMember {
-    score: number;
-    value: string;
-}
+import type { ZSetMember } from './types';
 
 export interface ZSetParseResult {
     formatted: string;
     jsonMap: Record<string, any>;
     hasJson: boolean;
+}
+
+export interface ZSetMembersParseResult {
+    members: ZSetMember[];
+    invalidScores: number;
+    hasDanglingMember: boolean;
 }
 
 export interface ValueModalData {
@@ -64,11 +67,7 @@ export const formatValue = (type: string, value: any): string => {
 
             let formatted = '';
             for (let i = 0; i < lines.length; i += 2) {
-                if (
-                    lines[i]?.trim() &&
-                    i + 1 < lines.length &&
-                    lines[i + 1]
-                ) {
+                if (lines[i]?.trim() && i + 1 < lines.length && lines[i + 1]) {
                     const member = lines[i]!.trim();
                     const score = lines[i + 1]!.trim();
                     formatted += `• ${member} → ${score}\n`;
@@ -117,10 +116,47 @@ export const parseZsetForViewer = (value: string): ZSetParseResult => {
     };
 };
 
+export const parseZsetMembersFromText = (
+    value: string
+): ZSetMembersParseResult => {
+    const lines = value
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line !== '');
+    const members: ZSetMember[] = [];
+    let invalidScores = 0;
+
+    for (let i = 0; i < lines.length; i += 2) {
+        const member = lines[i];
+        const scoreLine = lines[i + 1];
+
+        if (!member || scoreLine === undefined) {
+            continue;
+        }
+
+        const score = Number(scoreLine);
+        if (!Number.isFinite(score)) {
+            invalidScores += 1;
+            continue;
+        }
+
+        members.push({ score, value: member });
+    }
+
+    return {
+        members,
+        invalidScores,
+        hasDanglingMember: lines.length % 2 !== 0
+    };
+};
+
 /**
  * Prepare value data for the viewer modal
  */
-export const prepareValueForViewer = (value: any, type: string): ValueModalData => {
+export const prepareValueForViewer = (
+    value: any,
+    type: string
+): ValueModalData => {
     try {
         let formatted = '';
         let jsonData = null;
