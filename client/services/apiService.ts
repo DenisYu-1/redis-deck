@@ -39,6 +39,20 @@ export async function testConnection(environmentId: string): Promise<boolean> {
     return result.success;
 }
 
+export async function testConnectionConfig(
+    connection: RedisConnection
+): Promise<boolean> {
+    const response = await fetch(`${API_BASE}/connections/test`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(connection)
+    });
+    const result = await handleResponse<{ success: boolean }>(response);
+    return result.success;
+}
+
 export async function searchKeys(
     pattern: string,
     cursors: string[],
@@ -52,7 +66,10 @@ export async function searchKeys(
         count: count.toString(),
         env: environment
     });
-    const response = await fetch(`${API_BASE}/keys?${params}`, signal ? { signal } : undefined);
+    const response = await fetch(
+        `${API_BASE}/keys?${params}`,
+        signal ? { signal } : undefined
+    );
     return handleResponse<SearchKeysResponse>(response);
 }
 

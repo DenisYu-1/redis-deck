@@ -8,7 +8,10 @@ const {
     deleteConnection,
     updateConnectionOrder
 } = require('../services/database');
-const { execRedisCommand } = require('../services/redis');
+const {
+    execRedisCommand,
+    execRedisCommandWithConfig
+} = require('../services/redis');
 
 // Get all connections
 router.get('/connections', (req, res) => {
@@ -246,6 +249,44 @@ router.post('/connections/:id/test', async (req, res) => {
         });
     } catch (error) {
         console.error(`Error testing connection '${req.params.id}':`, error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to test connection'
+        });
+    }
+});
+
+// Test a connection without saving
+router.post('/connections/test', async (req, res) => {
+    try {
+        const connection = req.body;
+
+        if (!connection.host || !connection.port) {
+            return res
+                .status(400)
+                .json({ error: 'Connection host and port are required' });
+        }
+
+        const config = {
+            host: connection.host,
+            port: connection.port,
+            username: connection.username,
+            password: connection.password,
+            tls: Boolean(connection.tls)
+        };
+
+        const result = await execRedisCommandWithConfig('PING', config);
+
+        res.json({
+            success: result === 'PONG',
+            message:
+                result === 'PONG'
+                    ? 'Connection successful'
+                    : 'Connection failed',
+            result
+        });
+    } catch (error) {
+        console.error('Error testing connection config:', error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to test connection'

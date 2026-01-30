@@ -43,7 +43,7 @@ export function Header({ children, showNavigation = true, showBackButton = false
 
             void fetchConnections();
         }
-    }, [connections.length, currentEnvironment, setConnections, setCurrentEnvironment, setIsLoading, showToast]);
+    }, []);
     return (
         <header>
             <div className="logo-container">

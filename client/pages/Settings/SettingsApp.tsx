@@ -3,12 +3,13 @@ import { Header } from '@/components/layout/Header';
 import { Toast } from '@/components/common/Toast';
 import { setTheme, getTheme } from '@/utils/theme';
 import { useToast } from '@/hooks/useToast';
+import { useAppStore } from '@/store/useAppStore';
 import {
     loadEnvironments,
     addConnection,
     updateConnection,
     deleteConnection,
-    testConnection
+    testConnectionConfig
 } from '@/services/apiService';
 import type { RedisConnection } from '@/types';
 import {
@@ -40,19 +41,31 @@ export function SettingsApp() {
     const [isEditing, setIsEditing] = useState(false);
     const [editingConnection, setEditingConnection] =
         useState<RedisConnection | null>(null);
+    const {
+        setConnections: setGlobalConnections,
+        currentEnvironment,
+        setCurrentEnvironment
+    } = useAppStore();
     const { showToast } = useToast();
 
-    useEffect(() => {
-        const fetchConnections = async () => {
-            try {
-                const conns = await loadEnvironments();
-                setConnections(conns);
-            } catch (error) {
-                showToast('Error loading connections', 'error');
-                console.error('Error loading connections:', error);
+    const fetchConnections = async () => {
+        try {
+            const conns = await loadEnvironments();
+            setConnections(conns);
+            setGlobalConnections(conns);
+            if (
+                currentEnvironment &&
+                !conns.some((conn) => conn.id === currentEnvironment)
+            ) {
+                setCurrentEnvironment(conns[0]?.id ?? '');
             }
-        };
+        } catch (error) {
+            showToast('Error loading connections', 'error');
+            console.error('Error loading connections:', error);
+        }
+    };
 
+    useEffect(() => {
         void fetchConnections();
     }, [showToast]);
 
@@ -84,7 +97,7 @@ export function SettingsApp() {
 
         try {
             await deleteConnection(id);
-            setConnections((prev) => prev.filter((c) => c.id !== id));
+            await fetchConnections();
             showToast('Connection deleted successfully', 'success');
         } catch (error) {
             showToast('Error deleting connection', 'error');
@@ -118,7 +131,7 @@ export function SettingsApp() {
 
     const handleTest = async (connection: RedisConnection) => {
         try {
-            const result = await testConnection(connection.id);
+            const result = await testConnectionConfig(connection);
             if (result) {
                 showToast('Connection successful', 'success');
             } else {
@@ -248,6 +261,10 @@ function ConnectionFormComponent({
     onCancel
 }: ConnectionFormProps) {
     const [formData, setFormData] = useState(connection);
+
+    useEffect(() => {
+        setFormData(connection);
+    }, [connection]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

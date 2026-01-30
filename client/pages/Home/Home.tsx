@@ -48,34 +48,14 @@ export function Home() {
         };
     }, [showToast]);
 
-    if (isLoading) {
-        return <></>;
-    }
-
-    if (!hasConnections) {
-        return (
-            <div className="container">
-                <Header showNavigation={true} showBackButton={false}>
-                    <div
-                        className="connection-info"
-                        style={{ display: 'none' }}
-                    />
-                </Header>
-                <main>
-                    <EmptyState />
-                </main>
-                <Toast />
-            </div>
-        );
-    }
-
     return (
         <div className="container">
             <Header showNavigation={true} showBackButton={false}>
-                <EnvironmentSelector />
+                {!isLoading && hasConnections && <EnvironmentSelector />}
             </Header>
             <main>
-                <PluginContainer context={pluginContext} />
+                {!isLoading && !hasConnections && <EmptyState />}
+                {!isLoading && hasConnections && <PluginContainer context={pluginContext} />}
             </main>
             <Toast />
         </div>
