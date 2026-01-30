@@ -4,7 +4,7 @@
             "id": "custom-searches",
             "name": "Custom Searches",
             "enabled": true,
-            "path": "./extensions/customSearches/customSearches.js",
+            "path": "extensions/customSearches/customSearches.tsx",
             "priority": 1,
             "config": {
                 "searchLimit": 100
@@ -14,7 +14,7 @@
             "id": "bookings",
             "name": "Booking Manager",
             "enabled": true,
-            "path": "./extensions/bookings/bookings.js",
+            "path": "extensions/bookings/bookings.tsx",
             "priority": 0,
             "config": {
                 "maxRetries": 3,
