@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import type { PluginComponentProps } from '../../types';
-import { deleteKeysByPattern, deleteKey } from '@/services/apiService';
+import React, {useEffect, useState} from 'react';
+import type {PluginComponentProps} from '../../types';
+import {deleteKey, deleteKeysByPattern} from '@/services/apiService';
 
 const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
     context,
@@ -12,15 +12,13 @@ const BatchDeletePlugin: React.FC<PluginComponentProps> = ({
 
     useEffect(() => {
         // Listen for keys deleted events from other plugins
-        const unsubscribe = on('keys:deleted', (event: any) => {
+        return on('keys:deleted', (event: any) => {
             console.log(
                 'Batch delete plugin received keys deleted event:',
                 event
             );
             // Could update UI or refresh data here
         });
-
-        return unsubscribe;
     }, [on]);
 
     const handleBatchDelete = async () => {
