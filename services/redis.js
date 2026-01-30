@@ -1,13 +1,32 @@
 const { execSync } = require('child_process');
 const { getConnectionConfig } = require('./database');
 
+function buildRedisCliCommand(command, config, nodeOverride = null) {
+    const host = nodeOverride?.host || config.host;
+    const port = nodeOverride?.port || config.port;
+
+    let cliCommand = 'redis-cli';
+    cliCommand += ` -h ${host}`;
+    cliCommand += ` -p ${port}`;
+
+    if (config.username) {
+        cliCommand += ` --user ${config.username}`;
+    }
+    if (config.password) {
+        cliCommand += ` -a ${config.password}`;
+    }
+
+    if (config.tls) {
+        cliCommand += ' --tls --insecure';
+    }
+
+    return cliCommand;
+}
+
 // Execute Redis command using redis-cli
 async function execRedisCommand(command, connectionId, nodeOverride = null) {
     try {
-        // Get Redis configuration from the database
         const config = getConnectionConfig(connectionId);
-
-        // Use node override if provided (for cluster mode)
         const host = nodeOverride?.host || config.host;
         const port = nodeOverride?.port || config.port;
 
@@ -15,26 +34,7 @@ async function execRedisCommand(command, connectionId, nodeOverride = null) {
             `Executing redis-cli command for ${connectionId}${nodeOverride ? ` on node ${nodeOverride.id}` : ''}`
         );
 
-        // Build redis-cli command
-        let cliCommand = 'redis-cli';
-
-        // Add connection parameters
-        cliCommand += ` -h ${host}`;
-        cliCommand += ` -p ${port}`;
-
-        // Add authentication if needed
-        if (config.username) {
-            cliCommand += ` --user ${config.username}`;
-        }
-        if (config.password) {
-            cliCommand += ` -a ${config.password}`;
-        }
-
-        // Add TLS if enabled
-        if (config.tls) {
-            cliCommand += ' --tls --insecure'; // --insecure skips certificate validation
-        }
-
+        let cliCommand = buildRedisCliCommand(command, config, nodeOverride);
         // Determine command type for output formatting
         const cmd = command.trim().split(/\s+/)[0].toUpperCase();
         const isScan = cmd === 'SCAN';
@@ -136,6 +136,56 @@ async function execRedisCommand(command, connectionId, nodeOverride = null) {
         );
 
         // Handle common errors
+        if (error.stderr && error.stderr.includes('Connection refused')) {
+            throw {
+                message: 'Connection refused - Redis server not available',
+                command,
+                code: 'ECONNREFUSED'
+            };
+        }
+
+        throw {
+            message: error.message || 'Unknown Redis error',
+            command,
+            code: error.status || 'ERR'
+        };
+    }
+}
+
+async function execRedisCommandWithConfig(command, config) {
+    try {
+        const cliCommand = `${buildRedisCliCommand(command, config)} ${command}`;
+        console.log(
+            `Executing: ${cliCommand.replace(/-a [^ ]+/, '-a ******')}`
+        );
+
+        const result = execSync(cliCommand, {
+            encoding: 'utf8',
+            timeout: 10000
+        });
+
+        const processedResult = result.trim();
+        if (
+            processedResult.startsWith('ERR ') ||
+            processedResult.startsWith('WRONGTYPE ') ||
+            processedResult.startsWith('NOPERM ') ||
+            processedResult.startsWith('NOAUTH ') ||
+            processedResult.includes('ERR unknown command')
+        ) {
+            throw {
+                message: processedResult,
+                command,
+                code: 'REDIS_ERROR'
+            };
+        }
+
+        return processedResult;
+    } catch (error) {
+        console.error(
+            `Error executing Redis command (${command}):`,
+            error.message || error
+        );
+
         if (error.stderr && error.stderr.includes('Connection refused')) {
             throw {
                 message: 'Connection refused - Redis server not available',
@@ -683,6 +733,7 @@ async function execRedisPipelinedCommands(
 
 module.exports = {
     execRedisCommand,
+    execRedisCommandWithConfig,
     execRedisPipelinedCommands,
     parseRedisInfo,
     isClusterMode,

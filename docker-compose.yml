@@ -1,10 +1,4 @@
 services:
-    redis:
-        image: redis:7-alpine
-        ports:
-            - '6379:6379'
-        command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
-
     redis-ui:
         build:
             context: .
@@ -14,10 +8,10 @@ services:
             - PORT=3000
         restart: unless-stopped
         volumes:
-            - redis-ui-data:/app/data
-        depends_on:
-            - redis
+            - redis-ui-data2:/app/data
 
 volumes:
     redis-ui-data:
+        driver: local
+    redis-ui-data2:
         driver: local
