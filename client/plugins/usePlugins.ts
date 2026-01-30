@@ -171,7 +171,8 @@ export function usePlugins(context: PluginContext): PluginHookResult {
                                     priority: pluginDef.priority || 0,
                                     config: pluginDef.config || {},
                                     Component: PluginComponent,
-                                    eventHandlers: new Map()
+                                    eventHandlers: new Map(),
+                                    panelButton: module.panelButton || undefined
                                 };
 
                                 return plugin;

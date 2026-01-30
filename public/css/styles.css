@@ -108,6 +108,121 @@ body {
     padding: 20px;
 }
 
+/* Home layout */
+.home-layout {
+    position: relative;
+}
+
+.home-content {
+    width: 100%;
+}
+
+/* Left panel */
+.left-panel {
+    width: 200px;
+    min-width: 200px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    padding: 12px;
+    position: fixed;
+    top: 80px;
+    left: 10px;
+    z-index: 1000;
+    transition: width 0.3s ease, min-width 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+}
+
+.left-panel.collapsed {
+    width: 56px;
+    min-width: 56px;
+    padding: 12px 8px;
+}
+
+.left-panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.left-panel-plugin-group {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+}
+
+.left-panel-button {
+    flex: 1;
+    padding: 12px 16px;
+    background-color: var(--button-secondary);
+    color: var(--button-secondary-text);
+    border: 1px solid var(--button-secondary-border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    word-wrap: break-word;
+    white-space: normal;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.left-panel-button:hover {
+    background-color: var(--button-secondary-hover);
+    border-color: var(--button-secondary-border-hover);
+    transform: translateX(2px);
+}
+
+.left-panel-button-custom {
+    flex: 0 0 auto;
+    background-color: var(--bg-tertiary);
+    font-size: 18px;
+    padding: 12px 16px;
+    min-height: 48px;
+    min-width: 48px;
+    width: 48px;
+}
+
+.left-panel-button-custom:hover {
+    background-color: var(--bg-hover);
+}
+
+.left-panel.collapsed .left-panel-button {
+    padding: 8px;
+    font-size: 12px;
+    min-height: 32px;
+    justify-content: center;
+}
+
+.left-panel.collapsed .left-panel-plugin-group {
+    flex-direction: column;
+    gap: 4px;
+}
+
+.left-panel.collapsed .left-panel-button-custom {
+    width: 32px;
+    min-width: 32px;
+    padding: 8px;
+    font-size: 14px;
+    min-height: 32px;
+}
+
+.left-panel.collapsed .left-panel-plugin-group.collapsed-custom-only .left-panel-button-custom {
+    width: 100%;
+    min-width: auto;
+    flex: 1;
+    font-size: 12px;
+    text-align: center;
+}
+
 /* Header styles */
 header {
     display: flex;
