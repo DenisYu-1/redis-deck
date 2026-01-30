@@ -1,4 +1,4 @@
-<img src="public/logo.svg" alt="RedisDeck Logo" width="500">
+<img src="client/assets/logo.svg" alt="RedisDeck Logo" width="500">
 
 A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Plugin system allows adding custom flows and commands.
 
