@@ -10,21 +10,55 @@ import type { PluginContext } from '@/types';
 import { eventBus } from './eventBus';
 import { pluginRegistry } from './pluginRegistry';
 
-// Plugin imports registry - maps plugin paths to their imported modules
-const pluginImports: Record<string, () => Promise<any>> = {
-    'keyOperations/keyOperations.tsx': () =>
-        import('./plugins/keyOperations/keyOperations.tsx'),
-    'batchDelete/batchDelete.tsx': () =>
-        import('./plugins/batchDelete/batchDelete.tsx'),
-    'keysManager/keysManager.tsx': () =>
-        import('./plugins/keysManager/keysManager.tsx'),
-    'extensions/customSearches/customSearches.tsx': () =>
-        import('./plugins/extensions/customSearches/customSearches.tsx'),
-    'extensions/bookings/bookings.tsx': () =>
-        import('./plugins/extensions/bookings/bookings.tsx'),
-    'extensions/newsFeed/newsFeed.tsx': () =>
-        import('./plugins/extensions/newsFeed/newsFeed.tsx')
-};
+const pluginModules = import.meta.glob('./plugins/**/*.{tsx,jsx}', {
+    eager: false
+});
+
+function normalizeConfigPath(configPath: string): string {
+    let normalized = configPath.trim();
+    if (normalized.startsWith('./')) {
+        normalized = normalized.slice(2);
+    }
+    return normalized;
+}
+
+function findPluginModule(configPath: string): (() => Promise<any>) | null {
+    const normalized = normalizeConfigPath(configPath);
+
+    const possiblePaths = [
+        `./plugins/${normalized}`,
+        `./plugins/${normalized.replace(/\.(tsx|jsx|js)$/, '')}.tsx`,
+        `./plugins/${normalized.replace(/\.(tsx|jsx|js)$/, '')}.jsx`,
+        `./plugins/${normalized.replace(/\.(tsx|jsx|js)$/, '')}.js`
+    ];
+
+    for (const path of possiblePaths) {
+        if (pluginModules[path]) {
+            return pluginModules[path] as () => Promise<any>;
+        }
+    }
+
+    const normalizedNoExt = normalized.replace(/\.(tsx|jsx|js)$/, '');
+    for (const [globPath, importFn] of Object.entries(pluginModules)) {
+        const globPathNoExt = globPath.replace(/\.(tsx|jsx|js)$/, '');
+        if (
+            globPathNoExt.endsWith(normalizedNoExt) ||
+            globPath.endsWith(normalized)
+        ) {
+            return importFn as () => Promise<any>;
+        }
+    }
+
+    return null;
+}
+
+async function importPlugin(configPath: string): Promise<any> {
+    const importFn = findPluginModule(configPath);
+    if (!importFn) {
+        throw new Error(`Plugin module not found for path: ${configPath}`);
+    }
+    return await importFn();
+}
 
 export function usePlugins(context: PluginContext): PluginHookResult {
     const [plugins, setPlugins] = useState<Plugin[]>([]);
@@ -62,13 +96,15 @@ export function usePlugins(context: PluginContext): PluginHookResult {
             plugin.eventHandlers.forEach((_, eventType) => {
                 if (!subscribedTypes.has(eventType)) {
                     subscribedTypes.add(eventType);
-                    unsubscribers.push(eventBus.on(eventType, handleEventBusEvents));
+                    unsubscribers.push(
+                        eventBus.on(eventType, handleEventBusEvents)
+                    );
                 }
             });
         });
 
         return () => {
-            unsubscribers.forEach(unsubscribe => unsubscribe());
+            unsubscribers.forEach((unsubscribe) => unsubscribe());
         };
     }, [plugins]);
 
@@ -100,14 +136,9 @@ export function usePlugins(context: PluginContext): PluginHookResult {
                         )
                         .map(async (pluginDef: PluginDefinition) => {
                             try {
-                                // Import the plugin module using the registry
-                                const importFn = pluginImports[pluginDef.path];
-                                if (!importFn) {
-                                    throw new Error(
-                                        `Plugin ${pluginDef.id} not found in import registry. Path: ${pluginDef.path}`
-                                    );
-                                }
-                                const module = await importFn();
+                                const module = await importPlugin(
+                                    pluginDef.path
+                                );
                                 const PluginComponent = module.default;
 
                                 if (
@@ -129,11 +160,35 @@ export function usePlugins(context: PluginContext): PluginHookResult {
                                 };
 
                                 return plugin;
-                            } catch (error) {
-                                console.error(
-                                    `Failed to load plugin ${pluginDef.id}:`,
-                                    error
-                                );
+                            } catch (error: any) {
+                                const isModuleNotFound =
+                                    error?.message?.includes(
+                                        'Failed to fetch'
+                                    ) ||
+                                    error?.message?.includes(
+                                        'Cannot find module'
+                                    ) ||
+                                    error?.message?.includes(
+                                        'Plugin module not found'
+                                    ) ||
+                                    error?.code === 'MODULE_NOT_FOUND';
+
+                                if (isModuleNotFound) {
+                                    const availablePaths = Object.keys(
+                                        pluginModules
+                                    )
+                                        .slice(0, 10)
+                                        .join(', ');
+                                    console.warn(
+                                        `Plugin ${pluginDef.id} not found at path "${pluginDef.path}". ` +
+                                            `Available plugin paths: ${availablePaths}${Object.keys(pluginModules).length > 10 ? '...' : ''}`
+                                    );
+                                } else {
+                                    console.error(
+                                        `Failed to load plugin ${pluginDef.id}:`,
+                                        error
+                                    );
+                                }
                                 return null;
                             }
                         })

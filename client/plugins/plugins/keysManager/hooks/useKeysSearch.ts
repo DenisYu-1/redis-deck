@@ -1,7 +1,10 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
-import {getKeyDetails, searchKeys} from '@/services/apiService';
-import {useToast} from '@/hooks/useToast';
-import type {SearchKeysResult} from '../utils/types';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { getKeyDetails, searchKeys } from '@/services/apiService';
+import { useToast } from '@/hooks/useToast';
+import type { SearchKeysResult } from '../utils/types';
+
+const SEARCH_HISTORY_KEY = 'redis-search-history';
+const MAX_HISTORY_ITEMS = 10;
 
 export interface UseKeysSearchReturn {
     // State
@@ -12,6 +15,7 @@ export interface UseKeysSearchReturn {
     cursors: string[];
     hasMore: boolean;
     isLoadingKeys: boolean;
+    searchHistory: string[];
 
     // Actions
     setInputValue: (value: string) => void;
@@ -20,10 +24,44 @@ export interface UseKeysSearchReturn {
     handleSearch: () => Promise<void>;
     handleShowAll: () => void;
     handleLoadMore: () => void;
+    handleHistorySelect: (pattern: string) => void;
 }
 
+const loadHistoryFromStorage = (): string[] => {
+    try {
+        const stored = sessionStorage.getItem(SEARCH_HISTORY_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored) as string[];
+            return Array.isArray(parsed) ? parsed : [];
+        }
+    } catch (error) {
+        console.error('Failed to load search history from storage:', error);
+    }
+    return [];
+};
+
+const saveHistoryToStorage = (history: string[]): void => {
+    try {
+        sessionStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+    } catch (error) {
+        console.error('Failed to save search history to storage:', error);
+    }
+};
+
+const addToHistory = (pattern: string, currentHistory: string[]): string[] => {
+    const trimmed = pattern.trim();
+    if (!trimmed) {
+        return currentHistory;
+    }
+
+    const filtered = currentHistory.filter((item) => item !== trimmed);
+    const updated = [trimmed, ...filtered].slice(0, MAX_HISTORY_ITEMS);
+    saveHistoryToStorage(updated);
+    return updated;
+};
+
 export const useKeysSearch = (
-    currentEnvironment: string | null | undefined,
+    currentEnvironment: string | null | undefined
 ): UseKeysSearchReturn => {
     const [searchPattern, setSearchPattern] = useState('*');
     const [inputValue, setInputValue] = useState('*');
@@ -32,6 +70,9 @@ export const useKeysSearch = (
     const [cursors, setCursors] = useState<string[]>(['0']);
     const [hasMore, setHasMore] = useState(false);
     const [isLoadingKeys, setIsLoadingKeys] = useState(false);
+    const [searchHistory, setSearchHistory] = useState<string[]>(() =>
+        loadHistoryFromStorage()
+    );
 
     const { showToast } = useToast();
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -146,6 +187,11 @@ export const useKeysSearch = (
         // Update searchPattern with the current input value
         setSearchPattern(currentValue);
 
+        // Add to history if not empty
+        if (currentValue) {
+            setSearchHistory((prev) => addToHistory(currentValue, prev));
+        }
+
         // Check if this is a direct key search (no wildcards)
         const hasWildcards =
             currentValue.includes('*') ||
@@ -190,6 +236,16 @@ export const useKeysSearch = (
         void loadKeys(false);
     };
 
+    const handleHistorySelect = useCallback(
+        (pattern: string) => {
+            setInputValue(pattern);
+            setSearchPattern(pattern);
+            setSearchHistory((prev) => addToHistory(pattern, prev));
+            triggerSearch();
+        },
+        [triggerSearch]
+    );
+
     return {
         // State
         searchPattern,
@@ -199,6 +255,7 @@ export const useKeysSearch = (
         cursors,
         hasMore,
         isLoadingKeys,
+        searchHistory,
 
         // Actions
         setInputValue,
@@ -207,5 +264,6 @@ export const useKeysSearch = (
         handleSearch,
         handleShowAll,
         handleLoadMore,
+        handleHistorySelect
     };
 };

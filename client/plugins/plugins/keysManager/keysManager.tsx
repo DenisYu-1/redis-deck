@@ -189,6 +189,8 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                     }
                 }}
                 currentEnvironment={currentEnvironment || undefined}
+                searchHistory={keysSearch.searchHistory}
+                onHistorySelect={keysSearch.handleHistorySelect}
             />
 
             {/* Keys List and Details Row */}
