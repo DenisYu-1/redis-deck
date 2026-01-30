@@ -106,14 +106,6 @@ Supports all Redis data types:
 - Sets
 - Sorted Sets
 
-### Empty State Experience
-
-New users are greeted with a helpful empty state when no connections are configured:
-
-- Clear visual design
-- Direct link to add first connection
-- Smooth onboarding flow
-
 ### Statistics Dashboard
 
 Comprehensive monitoring and analytics available at `/statistics`:
@@ -179,6 +171,10 @@ Comprehensive monitoring and analytics available at `/statistics`:
 - **Database**: SQLite for connection management and statistics storage
 - Redis commands are executed using redis-cli under the hood
 - Credentials passed via environment variables for security
+
+## License
+
+This project is licensed under the Apache License 2.0. See the `LICENSE` file for details.
 
 ## Plugin System
 
