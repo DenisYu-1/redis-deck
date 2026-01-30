@@ -15,3 +15,4 @@ dist/
 .vite/
 .idea
 .cursor/
+docker-compose.override.yml
