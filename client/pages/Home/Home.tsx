@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/Header';
 import { EnvironmentSelector } from '@/components/Environment/EnvironmentSelector';
 import { EmptyState } from '@/components/EmptyState/EmptyState';
 import { Toast } from '@/components/common/Toast';
+import { LeftPanel } from '@/components/layout/LeftPanel';
 import { PluginContainer } from '@/plugins/PluginContainer';
 import { usePlugins } from '@/plugins/usePlugins';
 import { eventBus } from '@/plugins/eventBus';
@@ -29,7 +30,11 @@ export function Home() {
         }
     };
 
-    usePlugins(pluginContext);
+    const {
+        plugins,
+        emit,
+        isLoading: isLoadingPlugins
+    } = usePlugins(pluginContext);
 
     // Listen for plugin events
     useEffect(() => {
@@ -44,7 +49,7 @@ export function Home() {
         const unsubscribeToast = eventBus.on('toast:show', handlePluginEvents);
 
         return () => {
-            unsubscribeToast?.();
+            unsubscribeToast();
         };
     }, [showToast]);
 
@@ -53,9 +58,25 @@ export function Home() {
             <Header showNavigation={true} showBackButton={false}>
                 {!isLoading && hasConnections && <EnvironmentSelector />}
             </Header>
-            <main>
+            <main className="home-layout">
+                {!isLoading && hasConnections && (
+                    <>
+                        <LeftPanel
+                            plugins={plugins}
+                            context={pluginContext}
+                            emit={emit}
+                        />
+                        <div className="home-content">
+                            <PluginContainer
+                                context={pluginContext}
+                                plugins={plugins}
+                                emit={emit}
+                                isLoading={isLoadingPlugins}
+                            />
+                        </div>
+                    </>
+                )}
                 {!isLoading && !hasConnections && <EmptyState />}
-                {!isLoading && hasConnections && <PluginContainer context={pluginContext} />}
             </main>
             <Toast />
         </div>

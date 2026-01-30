@@ -1,3 +1,4 @@
+import type React from 'react';
 import type { PluginContext } from '@/types';
 
 // Event system types
@@ -28,6 +29,23 @@ export interface PluginDefinition {
     config?: Record<string, unknown>;
 }
 
+// Plugin component props
+export interface PluginComponentProps {
+    context: PluginContext;
+    emit: (event: PluginEvent) => void;
+    on: (eventType: PluginEventType, handler: PluginEventHandler) => () => void;
+}
+
+// Panel button metadata
+export interface PluginPanelButton {
+    readonly id: string;
+    onClick: (params: {
+        context: PluginContext;
+        emit: (event: PluginEvent) => void;
+        pluginId: string;
+    }) => void;
+}
+
 // Runtime plugin instance
 export interface Plugin {
     id: string;
@@ -36,13 +54,7 @@ export interface Plugin {
     config: Record<string, unknown>;
     Component: React.ComponentType<PluginComponentProps>;
     eventHandlers: Map<PluginEventType, PluginEventHandler>;
-}
-
-// Plugin component props
-export interface PluginComponentProps {
-    context: PluginContext;
-    emit: (event: PluginEvent) => void;
-    on: (eventType: PluginEventType, handler: PluginEventHandler) => () => void;
+    readonly panelButton?: PluginPanelButton;
 }
 
 // Plugin hook return type

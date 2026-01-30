@@ -25,6 +25,7 @@ export interface UseKeysSearchReturn {
     handleShowAll: () => void;
     handleLoadMore: () => void;
     handleHistorySelect: (pattern: string) => void;
+    addPatternToHistory: (pattern: string) => void;
 }
 
 const loadHistoryFromStorage = (): string[] => {
@@ -246,6 +247,10 @@ export const useKeysSearch = (
         [triggerSearch]
     );
 
+    const addPatternToHistory = useCallback((pattern: string) => {
+        setSearchHistory((prev) => addToHistory(pattern, prev));
+    }, []);
+
     return {
         // State
         searchPattern,
@@ -264,6 +269,7 @@ export const useKeysSearch = (
         handleSearch,
         handleShowAll,
         handleLoadMore,
-        handleHistorySelect
+        handleHistorySelect,
+        addPatternToHistory
     };
 };

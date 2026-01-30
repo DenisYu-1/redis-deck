@@ -149,6 +149,8 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                 const pattern = payload.pattern;
                 keysSearch.setInputValue(pattern);
                 keysSearch.setSearchPattern(pattern);
+                // Add pattern to search history
+                keysSearch.addPatternToHistory(pattern);
                 // Trigger search with the pattern
                 keysSearch.triggerSearch();
             }
