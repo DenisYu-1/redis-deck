@@ -111,16 +111,31 @@ export function usePlugins(context: PluginContext): PluginHookResult {
     useEffect(() => {
         const loadPlugins = async () => {
             try {
-                // Import config files directly since they're part of the build
                 const baseConfig = await import('./config/config.json');
-                let overrideConfig = null;
+                let overrideConfig: { plugins: PluginDefinition[] } | null =
+                    null;
 
-                try {
-                    const overrideModule =
-                        await import('./config/config.override.json');
+                const overrideModules = import.meta.glob(
+                    './config/config.override.json',
+                    { eager: true }
+                );
+                const overrideModule = Object.values(overrideModules)[0] as
+                    | { default?: { plugins: PluginDefinition[] } }
+                    | undefined;
+
+                if (overrideModule?.default?.plugins) {
                     overrideConfig = overrideModule.default;
-                } catch {
-                    console.log('No override config found');
+                } else {
+                    try {
+                        const overrideResponse = await fetch(
+                            '/js/plugins/config.override.json'
+                        );
+                        if (overrideResponse.ok) {
+                            overrideConfig = await overrideResponse.json();
+                        }
+                    } catch {
+                        overrideConfig = null;
+                    }
                 }
 
                 const mergedConfig = mergeConfigs(
