@@ -1,0 +1,28 @@
+{
+    "plugins": [
+        {
+            "id": "keys-manager",
+            "name": "Keys Manager",
+            "enabled": true,
+            "path": "keysManager/keysManager.tsx",
+            "priority": 100,
+            "config": {}
+        },
+        {
+            "id": "key-operations",
+            "name": "Key Operations",
+            "enabled": false,
+            "path": "keyOperations/keyOperations.tsx",
+            "priority": 90,
+            "config": {}
+        },
+        {
+            "id": "batch-delete",
+            "name": "Batch Delete Keys",
+            "enabled": true,
+            "path": "batchDelete/batchDelete.tsx",
+            "priority": 50,
+            "config": {}
+        }
+    ]
+}
