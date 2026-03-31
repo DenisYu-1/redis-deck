@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { PluginComponentProps } from '../../types';
 
@@ -81,6 +81,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     });
 
     const modals = useModals();
+    const [isReloadingValue, setIsReloadingValue] = useState(false);
 
     // Ref to store the unsubscribe function
     const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -171,6 +172,26 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
             source: 'keys-manager'
         });
     };
+
+    const handleReloadValue = useCallback(async () => {
+        if (!keyDetails.selectedKey || !currentEnvironment) return;
+
+        setIsReloadingValue(true);
+        try {
+            const [{ getKeyDetails }, { prepareValueForViewer }] = await Promise.all([
+                import('@/services/apiService'),
+                import('./utils/valueUtils')
+            ]);
+            const details = await getKeyDetails(keyDetails.selectedKey, currentEnvironment);
+            keyDetails.setKeyDetails(details);
+            const valueModalData = prepareValueForViewer(details.value, details.type);
+            modals.setValueModalData(valueModalData);
+        } catch {
+            showToast('Failed to reload value', 'error');
+        } finally {
+            setIsReloadingValue(false);
+        }
+    }, [keyDetails, currentEnvironment, modals]);
 
     // Form save handler
     const handleSaveKey = () => {
@@ -290,6 +311,8 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                 onClose={() => modals.setShowValueModal(false)}
                 valueModalData={modals.valueModalData}
                 onTabChange={modals.handleTabChange}
+                onReload={handleReloadValue}
+                isReloading={isReloadingValue}
             />
         </Container>
     );

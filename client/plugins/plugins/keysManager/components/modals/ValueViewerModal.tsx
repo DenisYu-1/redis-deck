@@ -18,13 +18,17 @@ interface ValueViewerModalProps {
     onClose: () => void;
     valueModalData: ValueModalData | null;
     onTabChange: (tab: string) => void;
+    onReload?: () => void;
+    isReloading?: boolean;
 }
 
 export const ValueViewerModal: React.FC<ValueViewerModalProps> = ({
     isOpen,
     onClose,
     valueModalData,
-    onTabChange
+    onTabChange,
+    onReload,
+    isReloading = false
 }) => {
     const jsonViewerRef = useRef<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -164,7 +168,33 @@ export const ValueViewerModal: React.FC<ValueViewerModalProps> = ({
                 <span className="close-modal" onClick={onClose}>
                     &times;
                 </span>
-                <h3>View Value</h3>
+                <div className="modal-title-row">
+                    <h3>View Value</h3>
+                    {onReload && (
+                        <button
+                            className="value-action-btn"
+                            onClick={onReload}
+                            disabled={isReloading}
+                            title="Reload value"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                style={isReloading ? { animation: 'spin 1s linear infinite' } : undefined}
+                            >
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                            </svg>
+                        </button>
+                    )}
+                </div>
 
                 <div className="value-tabs">
                     <button

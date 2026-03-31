@@ -819,6 +819,27 @@ html.dark-theme json-viewer {
     border-bottom: 1px solid var(--border-tertiary);
 }
 
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.modal-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-tertiary);
+}
+
+.modal-title-row h3 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    flex: 1;
+}
+
 .modal-buttons {
     display: flex;
     justify-content: flex-end;
