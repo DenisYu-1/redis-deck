@@ -13,20 +13,20 @@ const mockUseToast = useToast as jest.MockedFunction<typeof useToast>;
 describe('useKeysSearch - Search History', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        sessionStorage.clear();
+        localStorage.clear();
         mockUseToast.mockReturnValue({
             showToast: jest.fn(),
         });
     });
 
-    it('should initialize with empty history when sessionStorage is empty', () => {
+    it('should initialize with empty history when localStorage is empty', () => {
         const { result } = renderHook(() => useKeysSearch('test-env'));
         expect(result.current.searchHistory).toEqual([]);
     });
 
-    it('should load history from sessionStorage on initialization', () => {
+    it('should load history from localStorage on initialization', () => {
         const storedHistory = ['user:*', 'order:*'];
-        sessionStorage.setItem('redis-search-history', JSON.stringify(storedHistory));
+        localStorage.setItem('redis-search-history', JSON.stringify(storedHistory));
 
         const { result } = renderHook(() => useKeysSearch('test-env'));
         expect(result.current.searchHistory).toEqual(storedHistory);
@@ -74,7 +74,7 @@ describe('useKeysSearch - Search History', () => {
     });
 
     it('should move existing item to top when searching again', async () => {
-        sessionStorage.setItem('redis-search-history', JSON.stringify(['order:*', 'user:*']));
+        localStorage.setItem('redis-search-history', JSON.stringify(['order:*', 'user:*']));
         mockSearchKeys.mockResolvedValue({
             keys: [],
             cursors: ['0'],
@@ -97,7 +97,7 @@ describe('useKeysSearch - Search History', () => {
 
     it('should limit history to 10 items', async () => {
         const initialHistory = Array.from({ length: 10 }, (_, i) => `key${i}:*`);
-        sessionStorage.setItem('redis-search-history', JSON.stringify(initialHistory));
+        localStorage.setItem('redis-search-history', JSON.stringify(initialHistory));
         mockSearchKeys.mockResolvedValue({
             keys: [],
             cursors: ['0'],
@@ -116,11 +116,11 @@ describe('useKeysSearch - Search History', () => {
 
         expect(result.current.searchHistory.length).toBe(10);
         expect(result.current.searchHistory[0]).toBe('new-key:*');
-        expect(result.current.searchHistory).not.toContain('key0:*');
+        expect(result.current.searchHistory).not.toContain('key9:*');
     });
 
     it('should handle history selection and move item to top', async () => {
-        sessionStorage.setItem('redis-search-history', JSON.stringify(['order:*', 'user:*']));
+        localStorage.setItem('redis-search-history', JSON.stringify(['order:*', 'user:*']));
         mockSearchKeys.mockResolvedValue({
             keys: [],
             cursors: ['0'],
@@ -141,7 +141,7 @@ describe('useKeysSearch - Search History', () => {
         expect(result.current.searchPattern).toBe('user:*');
     });
 
-    it('should persist history to sessionStorage', async () => {
+    it('should persist history to localStorage', async () => {
         mockSearchKeys.mockResolvedValue({
             keys: [],
             cursors: ['0'],
@@ -158,7 +158,7 @@ describe('useKeysSearch - Search History', () => {
             await result.current.handleSearch();
         });
 
-        const stored = sessionStorage.getItem('redis-search-history');
+        const stored = localStorage.getItem('redis-search-history');
         expect(stored).toBeTruthy();
         const parsed = JSON.parse(stored!);
         expect(parsed).toContain('test:*');

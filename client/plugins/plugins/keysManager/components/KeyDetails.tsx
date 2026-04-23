@@ -17,11 +17,13 @@ interface KeyDetailsProps {
     isLoadingDetails: boolean;
     onViewValue: (value: any, type: string) => void;
     onCopyValue: (value: any) => void;
+    onCopyKey: (key: string) => void;
     onRefreshKey?: () => void;
     onSetTTL: () => void;
     onDelete: () => void;
     onRename: () => void;
     onCopy: () => void;
+    onEdit: () => void;
 }
 
 export const KeyDetails: React.FC<KeyDetailsProps> = ({
@@ -30,11 +32,13 @@ export const KeyDetails: React.FC<KeyDetailsProps> = ({
     isLoadingDetails,
     onViewValue,
     onCopyValue,
+    onCopyKey,
     onRefreshKey,
     onSetTTL,
     onDelete,
     onRename,
     onCopy,
+    onEdit,
 }) => {
     return (
         <KeyDetailsContainer className="key-details">
@@ -45,6 +49,35 @@ export const KeyDetails: React.FC<KeyDetailsProps> = ({
                         <>
                             <p>
                                 <strong>Key:</strong> {keyDetails.key}
+                                <ValueActions className="value-actions">
+                                    <button
+                                        className="value-action-btn"
+                                        onClick={() => onCopyKey(keyDetails.key)}
+                                        title="Copy key"
+                                    >
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <rect
+                                                x="8"
+                                                y="8"
+                                                width="12"
+                                                height="12"
+                                                rx="2"
+                                                ry="2"
+                                            ></rect>
+                                            <path d="M3 17V7a2 2 0 0 1 2-2h10"></path>
+                                            <path d="M8 3h11a2 2 0 0 1 2 2v11"></path>
+                                        </svg>
+                                    </button>
+                                </ValueActions>
                             </p>
                             <p>
                                 <strong>Type:</strong> {keyDetails.type}
@@ -179,6 +212,12 @@ export const KeyDetails: React.FC<KeyDetailsProps> = ({
                             className="secondary-btn"
                         >
                             Rename
+                        </button>
+                        <button
+                            onClick={onEdit}
+                            className="secondary-btn"
+                        >
+                            Edit
                         </button>
                         <button
                             onClick={onCopy}

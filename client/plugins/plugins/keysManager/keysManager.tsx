@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { PluginComponentProps } from '../../types';
 
@@ -81,6 +81,7 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
     });
 
     const modals = useModals();
+    const [isReloadingValue, setIsReloadingValue] = useState(false);
 
     // Ref to store the unsubscribe function
     const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -116,6 +117,25 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
             .catch(() => {
                 showToast('Failed to load utilities', 'error');
             });
+    };
+
+    const handleCopyKey = (key: string) => {
+        void navigator.clipboard
+            .writeText(key)
+            .then(() => {
+                showToast('Key copied to clipboard', 'success');
+            })
+            .catch(() => {
+                showToast('Failed to copy key', 'error');
+            });
+    };
+
+    const handleEditCurrentKey = () => {
+        if (!keyDetails.keyDetails) {
+            return;
+        }
+
+        addKeyForm.setFromKeyDetails(keyDetails.keyDetails);
     };
 
     // Listen for keys:selected events from plugins
@@ -172,6 +192,26 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
         });
     };
 
+    const handleReloadValue = useCallback(async () => {
+        if (!keyDetails.selectedKey || !currentEnvironment) return;
+
+        setIsReloadingValue(true);
+        try {
+            const [{ getKeyDetails }, { prepareValueForViewer }] = await Promise.all([
+                import('@/services/apiService'),
+                import('./utils/valueUtils')
+            ]);
+            const details = await getKeyDetails(keyDetails.selectedKey, currentEnvironment);
+            keyDetails.setKeyDetails(details);
+            const valueModalData = prepareValueForViewer(details.value, details.type);
+            modals.setValueModalData(valueModalData);
+        } catch {
+            showToast('Failed to reload value', 'error');
+        } finally {
+            setIsReloadingValue(false);
+        }
+    }, [keyDetails, currentEnvironment, modals]);
+
     // Form save handler
     const handleSaveKey = () => {
         void addKeyForm.handleSaveKey(context, emit);
@@ -212,11 +252,13 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                     isLoadingDetails={keyDetails.isLoadingDetails}
                     onViewValue={handleViewValue}
                     onCopyValue={handleCopyValue}
+                    onCopyKey={handleCopyKey}
                     onRefreshKey={keyDetails.refreshKey}
                     onSetTTL={() => modals.setShowTTLModal(true)}
                     onDelete={keyOperations.handleDelete}
                     onRename={() => modals.setShowRenameModal(true)}
                     onCopy={() => modals.setShowCopyModal(true)}
+                    onEdit={handleEditCurrentKey}
                 />
             </KeysRow>
 
@@ -290,6 +332,8 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                 onClose={() => modals.setShowValueModal(false)}
                 valueModalData={modals.valueModalData}
                 onTabChange={modals.handleTabChange}
+                onReload={handleReloadValue}
+                isReloading={isReloadingValue}
             />
         </Container>
     );

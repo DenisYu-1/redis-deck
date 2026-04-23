@@ -30,7 +30,7 @@ export interface UseKeysSearchReturn {
 
 const loadHistoryFromStorage = (): string[] => {
     try {
-        const stored = sessionStorage.getItem(SEARCH_HISTORY_KEY);
+        const stored = localStorage.getItem(SEARCH_HISTORY_KEY);
         if (stored) {
             const parsed = JSON.parse(stored) as string[];
             return Array.isArray(parsed) ? parsed : [];
@@ -43,7 +43,7 @@ const loadHistoryFromStorage = (): string[] => {
 
 const saveHistoryToStorage = (history: string[]): void => {
     try {
-        sessionStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+        localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
     } catch (error) {
         console.error('Failed to save search history to storage:', error);
     }

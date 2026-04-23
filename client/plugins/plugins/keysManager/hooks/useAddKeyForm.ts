@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { KeyType, ZSetMember } from '../utils/types';
+import type { KeyType, ZSetMember, KeyDetails } from '../utils/types';
+import { parseZsetMembersFromText } from '../utils/valueUtils';
 
 export interface UseAddKeyFormReturn {
     // Form state
@@ -18,6 +19,7 @@ export interface UseAddKeyFormReturn {
     setStringValue: (value: string) => void;
     setZsetRawValue: (value: string) => void;
     setExpiry: (expiry: string) => void;
+    setFromKeyDetails: (details: KeyDetails) => void;
 
     // ZSet member management
     handleAddZsetMember: () => void;
@@ -37,6 +39,27 @@ export interface UseAddKeyFormReturn {
 export const useAddKeyForm = (
     onOperationComplete: () => void
 ): UseAddKeyFormReturn => {
+    const normalizeKeyType = (type: string): KeyType => {
+        if (
+            type === 'zset' ||
+            type === 'hash' ||
+            type === 'list' ||
+            type === 'set'
+        ) {
+            return type;
+        }
+
+        return 'string';
+    };
+
+    const formatValueForInput = (value: unknown): string => {
+        if (typeof value === 'string') {
+            return value;
+        }
+
+        return JSON.stringify(value, null, 2) ?? '';
+    };
+
     // Add/Update Key form state
     const [isAddFormExpanded, setIsAddFormExpanded] = useState(false);
     const [keyName, setKeyName] = useState('');
@@ -125,6 +148,37 @@ export const useAddKeyForm = (
                 source: 'keys-manager'
             });
         }
+    };
+
+    const setFromKeyDetails = (details: KeyDetails) => {
+        const selectedType = normalizeKeyType(details.type);
+        const initialMembers: ZSetMember[] = [{ score: 0, value: '' }];
+
+        setIsAddFormExpanded(true);
+        setKeyName(details.key);
+        setKeyType(selectedType);
+        setExpiry(details.ttl && details.ttl > 0 ? String(details.ttl) : '');
+
+        if (selectedType === 'string') {
+            setStringValue(formatValueForInput(details.value));
+            setZsetMembers(initialMembers);
+            setZsetRawValue('');
+            return;
+        }
+
+        if (selectedType === 'zset') {
+            const parsed = parseZsetMembersFromText(formatValueForInput(details.value));
+            setZsetMembers(
+                parsed.members.length > 0 ? parsed.members : initialMembers
+            );
+            setStringValue('');
+            setZsetRawValue('');
+            return;
+        }
+
+        setStringValue(formatValueForInput(details.value));
+        setZsetMembers(initialMembers);
+        setZsetRawValue('');
     };
 
     const handleSaveKey = async (context: any, emit: any) => {
@@ -251,6 +305,7 @@ export const useAddKeyForm = (
         setStringValue,
         setZsetRawValue,
         setExpiry,
+    setFromKeyDetails,
 
         // ZSet member management
         handleAddZsetMember,
