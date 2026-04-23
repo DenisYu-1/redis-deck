@@ -119,6 +119,25 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
             });
     };
 
+    const handleCopyKey = (key: string) => {
+        void navigator.clipboard
+            .writeText(key)
+            .then(() => {
+                showToast('Key copied to clipboard', 'success');
+            })
+            .catch(() => {
+                showToast('Failed to copy key', 'error');
+            });
+    };
+
+    const handleEditCurrentKey = () => {
+        if (!keyDetails.keyDetails) {
+            return;
+        }
+
+        addKeyForm.setFromKeyDetails(keyDetails.keyDetails);
+    };
+
     // Listen for keys:selected events from plugins
     useEffect(() => {
         unsubscribeRef.current = on('keys:selected', (event) => {
@@ -233,11 +252,13 @@ const KeysManagerPlugin: React.FC<PluginComponentProps> = ({
                     isLoadingDetails={keyDetails.isLoadingDetails}
                     onViewValue={handleViewValue}
                     onCopyValue={handleCopyValue}
+                    onCopyKey={handleCopyKey}
                     onRefreshKey={keyDetails.refreshKey}
                     onSetTTL={() => modals.setShowTTLModal(true)}
                     onDelete={keyOperations.handleDelete}
                     onRename={() => modals.setShowRenameModal(true)}
                     onCopy={() => modals.setShowCopyModal(true)}
+                    onEdit={handleEditCurrentKey}
                 />
             </KeysRow>
 

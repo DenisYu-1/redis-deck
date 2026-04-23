@@ -53,7 +53,7 @@ export const ValueDisplay = styled.pre`
     font-size: 13px;
     white-space: pre-wrap;
     word-break: break-all;
-    max-height: 300px;
+    max-height: 130px;
     overflow-y: auto;
 `;
 
