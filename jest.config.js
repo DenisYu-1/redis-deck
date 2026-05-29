@@ -5,8 +5,10 @@ export default {
     testMatch: [
         '**/__tests__/**/*.test.ts',
         '**/__tests__/**/*.test.tsx',
+        '**/__tests__/**/*.test.js',
         '**/*.test.ts',
-        '**/*.test.tsx'
+        '**/*.test.tsx',
+        '**/*.test.js'
     ],
     moduleNameMapper: {
         '\\.svg\\?react$': '<rootDir>/__tests__/mocks/svgMock.tsx',
@@ -23,7 +25,8 @@ export default {
                     allowSyntheticDefaultImports: true
                 }
             }
-        ]
+        ],
+        '^.+\.jsx?$': 'babel-jest'
     },
     setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
     collectCoverageFrom: [

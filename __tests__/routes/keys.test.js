@@ -6,7 +6,8 @@ const {
     deleteTestKeys,
     keyExists,
     getKeyValue,
-    getKeyTTL
+    getKeyTTL,
+    getZSetMembers
 } = require('../helpers/testHelpers');
 
 describe('Keys Routes', () => {
@@ -573,6 +574,57 @@ describe('Keys Routes', () => {
                 .expect(400);
 
             expect(response.body).toHaveProperty('error');
+        });
+
+        test('should remove old members when updating existing zset', async () => {
+            // First, create a zset with multiple members
+            const initialMembers = [
+                { score: 1, value: 'member-a' },
+                { score: 2, value: 'member-b' },
+                { score: 3, value: 'member-c' }
+            ];
+
+            await request(app)
+                .post('/api/keys/test:keys:zset-update/zadd')
+                .query({ env: testConnectionId })
+                .send({ members: initialMembers })
+                .expect(200);
+
+            // Verify initial members exist
+            let members = await getZSetMembers(
+                'test:keys:zset-update',
+                testConnectionId
+            );
+            expect(members).toHaveLength(3);
+            expect(members.map((m) => m.value)).toContain('member-a');
+            expect(members.map((m) => m.value)).toContain('member-b');
+            expect(members.map((m) => m.value)).toContain('member-c');
+
+            // Now update with different members (simulating edit that removes member-a and member-b)
+            const updatedMembers = [{ score: 10, value: 'member-x' }];
+
+            const response = await request(app)
+                .post('/api/keys/test:keys:zset-update/zadd')
+                .query({ env: testConnectionId })
+                .send({ members: updatedMembers })
+                .expect(200);
+
+            expect(response.body).toHaveProperty('success', true);
+
+            // Verify only the new member exists, old members should be removed
+            members = await getZSetMembers(
+                'test:keys:zset-update',
+                testConnectionId
+            );
+            expect(members).toHaveLength(1);
+            expect(members[0].value).toBe('member-x');
+            expect(members[0].score).toBe(10);
+
+            // Verify old members are gone
+            const memberValues = members.map((m) => m.value);
+            expect(memberValues).not.toContain('member-a');
+            expect(memberValues).not.toContain('member-b');
+            expect(memberValues).not.toContain('member-c');
         });
     });
 });

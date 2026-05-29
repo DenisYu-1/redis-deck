@@ -595,12 +595,38 @@ router.post('/keys/:key/zadd', async (req, res) => {
             command += ` ${member.score} "${escapedValue}"`;
         }
 
+        // Delete existing key if it exists to ensure clean update
+        // This prevents old members from remaining when editing a zset
+        let targetNode = null;
+        try {
+            const delResult = await execRedisCommand(`DEL "${key}"`, env);
+
+            // Check for MOVED response on DEL
+            if (delResult.includes('MOVED')) {
+                const movedMatch = delResult.match(/MOVED\s+\d+\s+([^:]+):(\d+)/);
+                if (movedMatch) {
+                    const targetHost = movedMatch[1];
+                    const targetPort = parseInt(movedMatch[2]);
+
+                    targetNode = {
+                        id: `${targetHost}:${targetPort}`,
+                        host: targetHost,
+                        port: targetPort
+                    };
+
+                    // Retry DEL on the correct node
+                    await execRedisCommand(`DEL "${key}"`, env, targetNode);
+                }
+            }
+        } catch {
+            // Key might not exist, which is fine
+        }
+
         // Execute ZADD with proper cluster handling
         let result;
-        let targetNode = null;
 
         try {
-            result = await execRedisCommand(command, env);
+            result = await execRedisCommand(command, env, targetNode);
 
             // Check for MOVED response
             if (result.includes('MOVED')) {

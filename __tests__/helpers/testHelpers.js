@@ -121,6 +121,28 @@ async function getKeyTTL(key, connectionId = global.TEST_CONNECTION_ID) {
     }
 }
 
+async function getZSetMembers(key, connectionId = global.TEST_CONNECTION_ID) {
+    try {
+        const result = await execRedisCommand(
+            `ZRANGE "${key}" 0 -1 WITHSCORES`,
+            connectionId
+        );
+        const members = [];
+        const lines = result.split('\n').filter((line) => line.trim() !== '');
+        for (let i = 0; i < lines.length; i += 2) {
+            if (lines[i + 1] !== undefined) {
+                members.push({
+                    value: lines[i].trim(),
+                    score: parseFloat(lines[i + 1].trim())
+                });
+            }
+        }
+        return members;
+    } catch {
+        return [];
+    }
+}
+
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -134,5 +156,6 @@ module.exports = {
     keyExists,
     getKeyValue,
     getKeyTTL,
+    getZSetMembers,
     sleep
 };

@@ -4,6 +4,10 @@ const { execRedisCommand } = require('../services/redis');
 
 require('@testing-library/jest-dom');
 
+// Polyfill for TextEncoder/TextDecoder (needed for some dependencies in jsdom)
+global.TextEncoder = require('util').TextEncoder;
+global.TextDecoder = require('util').TextDecoder;
+
 dotenv.config();
 
 const TEST_CONNECTION_ID = 'test-connection';
