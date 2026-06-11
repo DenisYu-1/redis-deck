@@ -36,7 +36,7 @@ function createApp() {
     });
 
     // React Router fallback - serve index.html for all routes
-    app.get('*', (req, res) => {
+    app.get('*splat', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
     });
 
