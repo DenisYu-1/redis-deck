@@ -20,7 +20,7 @@
     },
     "dependencies": {
         "@alenaksu/json-viewer": "^2.1.2",
-        "better-sqlite3": "^12.10.0",
+        "better-sqlite3": "^12.11.1",
         "chart.js": "^4.5.1",
         "dotenv": "^16.5.0",
         "express": "^5.2.1",
