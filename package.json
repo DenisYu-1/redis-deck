@@ -35,7 +35,7 @@
         "@testing-library/jest-dom": "^6.1.5",
         "@testing-library/react": "^15.0.7",
         "@testing-library/user-event": "^14.5.1",
-        "@types/better-sqlite3": "^7.6.9",
+        "@types/better-sqlite3": "^9.6.0",
         "@types/express": "^5.0.3",
         "@types/jest": "^30.0.0",
         "@types/node": "^26.1.2",
