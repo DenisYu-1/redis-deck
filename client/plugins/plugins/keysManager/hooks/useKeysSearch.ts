@@ -123,7 +123,7 @@ export const useKeysSearch = (
                     const result: SearchKeysResult = await searchKeys(
                         searchPattern,
                         currentCursors,
-                        100,
+                        5000,
                         envToUse,
                         signal
                     );

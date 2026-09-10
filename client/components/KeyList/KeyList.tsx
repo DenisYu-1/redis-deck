@@ -46,7 +46,7 @@ export function KeyList({ searchPattern, searchTrigger, onKeySelect }: KeyListPr
                 const result = await searchKeys(
                     searchPattern,
                     currentCursors,
-                    100,
+                    5000,
                     envToUse,
                     signal
                 );
