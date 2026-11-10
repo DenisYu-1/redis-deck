@@ -101,11 +101,18 @@ router.get('/history', async (req, res) => {
         const toTimestamp = Math.floor(Date.now() / 1000);
         const fromTimestamp = toTimestamp - hours * 3600;
 
-        const data = await statsCollector.getMultiMetricHistory(
-            env,
-            fromTimestamp,
-            toTimestamp
-        );
+        const data = (
+            await statsCollector.getMultiMetricHistory(
+                env,
+                fromTimestamp,
+                toTimestamp
+            )
+        ).map((row) => ({
+            ...row,
+            memory_used: row.used_memory,
+            memory_peak: row.used_memory_peak,
+            instantaneous_ops_per_sec: row.ops_per_sec
+        }));
 
         res.json({
             data,

@@ -5,7 +5,9 @@ import { AppRoutes } from '@/App';
 import { useAppStore } from '@/store/useAppStore';
 import { showToast } from '@/utils/toast';
 
-jest.mock('@/pages/Home/Home', () => ({ Home: () => <div>KEYS PAGE</div> }));
+jest.mock('@/pages/Keys/KeysPage', () => ({
+    KeysPage: () => <div>KEYS PAGE</div>
+}));
 jest.mock('@/pages/Connections/ConnectionsPage', () => ({
     ConnectionsPage: () => <div>CONNECTIONS PAGE</div>
 }));
