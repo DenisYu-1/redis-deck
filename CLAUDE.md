@@ -29,22 +29,24 @@ Two processes, one repo:
 
 **Backend** — Express (CommonJS, `.js`), no build step, run directly with node/nodemon.
 - `server.js` — entry: creates app, starts two `setInterval` loops (stats snapshot every 5 min, cleanup every 24 h), listens on `PORT` (default 3000).
-- `config/app.js` — builds the Express app: JSON middleware, static `dist/` + `/public`, mounts routers under `/api` (+ `/api/custom`, `/api/stats`), SPA fallback serves `dist/index.html` for all other routes.
-- `routes/` — one router per concern: `connections`, `keys`, `environment`, `info`, `custom`, `stats`.
+- `config/app.js` — builds the Express app: JSON middleware, static `dist/` + `/public`, mounts routers under `/api` (+ `/api/stats`), SPA fallback serves `dist/index.html` for all other routes.
+- `routes/` — one router per concern: `connections`, `keys`, `environment`, `info`, `stats`, `searches` (saved searches), `workflows`.
+- `guards/writeGuard.js` — enforces Read-only / Confirm-writes connections on every write route (403 / 428). Any new write route or Workflow must go through it.
 - `services/redis.js` — **the Redis layer shells out to `redis-cli` via `execSync`** (no client library for data ops despite `redis` being a dep). Builds CLI args from stored connection config, handles `--csv`/`--raw` modes, cluster node scanning, INFO parsing, pipelined commands. `redis-cli` must be on PATH.
-- `services/database.js` — `better-sqlite3` at `data/redis-config.sqlite`. Stores connection definitions (incl. passwords) and stats snapshots; contains an inline schema-migration check on startup.
-- `services/statsCollector.js` — parses `INFO` into snapshot rows in SQLite; 30-day retention.
+- `services/database.js` — `better-sqlite3` at `data/redis-config.sqlite`. Stores connection definitions (incl. passwords), saved searches, workflow run history and stats snapshots; contains an inline schema-migration check on startup.
+- `services/{keyMeta,keyStore,bulkKeys,workflows}.js`, `services/statsCollector.js` — key metadata/pages, bulk TTL/export, the Workflow registry/runner, and INFO snapshots (30-day retention).
 
-**Frontend** — React 18 + TypeScript + Vite, in `client/`.
-- `client/App.tsx` — three routes: `/` (`Home`), `/settings`, `/statistics`. Pages live in `client/pages/<Name>/`.
-- State: Zustand single store `client/store/useAppStore.ts` (connections, current environment, selected key). Path alias `@/` → `client/`.
+**Frontend** — React 18 + TypeScript + Vite, in `client/`. Design reference: `design/`, spec: `docs/v2-redesign/SPEC.md`, terms: `GLOSSARY.md`.
+- `client/App.tsx` — routes inside `AppShell`: `/` redirects to `/keys`; `/keys`, `/stats` and `/stats/:board`, `/connections`, `/workflows/:actionId`; `/settings` redirects to `/connections`. Pages live in `client/pages/<Name>/` (`Keys`, `Statistics`, `Workflows`, `Connections`, `Welcome`).
+- Shared UI in `client/components/{layout,ui}/`; pure helpers in `client/utils/`; theme tokens in `client/styles/`.
+- State: Zustand single store `client/store/useAppStore.ts` (connections, current connection, theme). Path alias `@/` → `client/`.
 - API calls go through `client/services/apiService.ts`.
-- Styling: styled-components; dark mode persisted in localStorage.
+- Dark mode persisted in localStorage.
 
-**Plugin system** — `client/plugins/`.
-- `core/PluginManager.js` fetches `/js/plugins/config.json` and optionally `config.override.json`, merges by plugin `id` (override wins, `enabled:false` disables). Built-in config is `client/plugins/config/config.json` (tracked); `config.override.json` is gitignored for local/private plugins.
-- Plugin components get `{ context, emit, on }` props. `context` exposes `getCurrentEnvironment()`, `onOperationComplete()`, `showToast()`.
-- Built-in plugins under `client/plugins/plugins/`; private ones under `client/plugins/plugins/extensions/`.
+**Plugins = Workflows** — there is no client-side plugin runtime any more.
+- Manifests: `client/plugins/config/config.json` (tracked) merged with gitignored `config.override.json` by plugin `id` (override wins, `enabled:false` disables), read by `services/workflows.js` and served via `GET /api/workflows`.
+- Handlers: `services/workflows/<pluginId>/<actionId>.js` exporting `plan` and `run`; private ones in gitignored `services/workflows/extensions/`. See `client/plugins/README.md`.
+- `/api/custom/execute` was removed; do not reintroduce generic command execution.
 
 ## Notes
 

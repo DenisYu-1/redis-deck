@@ -26,7 +26,7 @@ export function SlowLogTable() {
             }
         };
 
-        fetchSlowLog();
+        void fetchSlowLog();
     }, [currentEnvironment, showToast]);
 
     const formatDuration = (us: number) => {

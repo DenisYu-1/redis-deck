@@ -1,30 +1,6 @@
 {
     "plugins": [
         {
-            "id": "keys-manager",
-            "name": "Keys Manager",
-            "enabled": true,
-            "path": "keysManager/keysManager.tsx",
-            "priority": 100,
-            "config": {}
-        },
-        {
-            "id": "key-operations",
-            "name": "Key Operations",
-            "enabled": false,
-            "path": "keyOperations/keyOperations.tsx",
-            "priority": 90,
-            "config": {}
-        },
-        {
-            "id": "batch-delete",
-            "name": "Batch Delete Keys",
-            "enabled": true,
-            "path": "batchDelete/batchDelete.tsx",
-            "priority": 50,
-            "config": {}
-        },
-        {
             "id": "examples",
             "name": "Examples",
             "enabled": true,
@@ -60,9 +36,18 @@
                             "required": true,
                             "def": "60",
                             "options": [
-                                { "value": "60", "label": "1 minute" },
-                                { "value": "300", "label": "5 minutes" },
-                                { "value": "3600", "label": "1 hour" }
+                                {
+                                    "value": "60",
+                                    "label": "1 minute"
+                                },
+                                {
+                                    "value": "300",
+                                    "label": "5 minutes"
+                                },
+                                {
+                                    "value": "3600",
+                                    "label": "1 hour"
+                                }
                             ]
                         }
                     ]

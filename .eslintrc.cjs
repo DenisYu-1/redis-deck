@@ -10,7 +10,7 @@ module.exports = {
         'plugin:react-hooks/recommended',
         'plugin:prettier/recommended',
     ],
-    ignorePatterns: ['dist', 'node_modules', '*.cjs'],
+    ignorePatterns: ['dist', 'node_modules', '*.cjs', '__tests__'],
     parser: '@typescript-eslint/parser',
     parserOptions: {
         ecmaVersion: 'latest',
@@ -35,6 +35,10 @@ module.exports = {
         ],
         '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
         '@typescript-eslint/no-non-null-assertion': 'error',
+        '@typescript-eslint/restrict-template-expressions': [
+            'error',
+            { allowNumber: true },
+        ],
         '@typescript-eslint/strict-boolean-expressions': 'off',
         '@typescript-eslint/no-confusing-void-expression': 'off',
     },

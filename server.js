@@ -49,8 +49,7 @@ app.listen(PORT, () => {
     });
 
     console.log('\nConnections can be managed at: /api/connections');
-    console.log('Custom Redis commands available at: /api/custom/execute');
-    console.log('Statistics available at: /statistics');
+    console.log('Statistics available at: /stats');
     console.log(
         `Stats collection running every ${COLLECTION_INTERVAL / 60000} minutes`
     );

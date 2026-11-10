@@ -80,21 +80,6 @@ export interface ToastMessage {
     type: 'success' | 'error' | 'warning' | 'info';
 }
 
-export interface PluginConfig {
-    id: string;
-    name: string;
-    enabled: boolean;
-    path: string;
-    priority: number;
-    config?: Record<string, unknown>;
-}
-
-export interface PluginContext {
-    getCurrentEnvironment: () => string;
-    onOperationComplete: () => void;
-    showToast: (message: string, type: ToastMessage['type']) => void;
-}
-
 export interface StatsSnapshot {
     timestamp: string;
     memory_used: number;

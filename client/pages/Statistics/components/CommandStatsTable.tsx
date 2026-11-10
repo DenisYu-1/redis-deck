@@ -28,7 +28,7 @@ export function CommandStatsTable() {
             }
         };
 
-        fetchCommandStats();
+        void fetchCommandStats();
     }, [currentEnvironment, showToast]);
 
     return (

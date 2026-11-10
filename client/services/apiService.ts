@@ -166,7 +166,7 @@ export async function searchKeys(
     if (filters.type) params.set('type', filters.type);
     if (filters.ttl && filters.ttl !== 'any') params.set('ttl', filters.ttl);
     const response = await fetch(
-        `${API_BASE}/keys?${params}`,
+        `${API_BASE}/keys?${params.toString()}`,
         signal ? { signal } : undefined
     );
     return handleResponse<SearchKeysResponse>(response);
@@ -322,7 +322,7 @@ export async function getMemoryByPattern(
         fast: fastMode.toString()
     });
     const response = await fetch(
-        `${API_BASE}/stats/memory-by-pattern?${params}`
+        `${API_BASE}/stats/memory-by-pattern?${params.toString()}`
     );
     return handleResponse<MemoryByPatternResponse>(response);
 }
@@ -369,7 +369,7 @@ export async function addConnection(
         },
         body: JSON.stringify(connection)
     });
-    await handleResponse<void>(response);
+    await handleResponse<undefined>(response);
 }
 
 export async function updateConnection(
@@ -382,7 +382,7 @@ export async function updateConnection(
         },
         body: JSON.stringify(connection)
     });
-    await handleResponse<void>(response);
+    await handleResponse<undefined>(response);
 }
 
 export async function deleteKeysByPattern(
@@ -394,7 +394,7 @@ export async function deleteKeysByPattern(
         pattern
     });
     const response = await writeFetch(
-        `${API_BASE}/allkeys?${params}`,
+        `${API_BASE}/allkeys?${params.toString()}`,
         {
             method: 'DELETE'
         },
@@ -458,7 +458,7 @@ export async function deleteConnection(id: string): Promise<void> {
     const response = await fetch(`${API_BASE}/connections/${id}`, {
         method: 'DELETE'
     });
-    await handleResponse<void>(response);
+    await handleResponse<undefined>(response);
 }
 
 export async function addToSortedSet(

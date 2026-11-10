@@ -18,6 +18,7 @@ export function useKeyDetail(env: string | null, key: string | null) {
 
     useEffect(() => {
         if (!env || !key) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when the selection clears
             setState(IDLE);
             return;
         }

@@ -1,26 +1,19 @@
 {
     "plugins": [
         {
-            "id": "custom-searches",
-            "name": "Custom Searches",
+            "id": "my-workflows",
+            "name": "My Workflows",
             "enabled": true,
-            "path": "extensions/customSearches/customSearches.tsx",
             "priority": 1,
-            "config": {
-                "searchLimit": 100
-            }
-        },
-        {
-            "id": "bookings",
-            "name": "Booking Manager",
-            "enabled": true,
-            "path": "extensions/bookings/bookings.tsx",
-            "priority": 0,
-            "config": {
-                "maxRetries": 3,
-                "timeframeStart": -14,
-                "timeframeEnd": 90
-            }
+            "actions": [
+                {
+                    "id": "my-action",
+                    "title": "My action",
+                    "desc": "Handler: services/workflows/extensions/my-workflows/my-action.js",
+                    "writes": false,
+                    "inputs": []
+                }
+            ]
         }
     ]
 }

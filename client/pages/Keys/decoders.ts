@@ -9,6 +9,8 @@ export interface Decoded {
 }
 
 type PhpValue = null | boolean | number | string | PhpValue[] | PhpObject;
+// Interface (not Record) so the alias can reference itself recursively.
+// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
 interface PhpObject {
     [key: string]: PhpValue;
 }

@@ -98,13 +98,6 @@ const writes = [
             request(app)
                 .post('/api/exec')
                 .send({ env, command: 'SET test:guard:k v' })
-    ],
-    [
-        'POST /custom/execute (SET)',
-        (env) =>
-            request(app)
-                .post('/api/custom/execute')
-                .send({ env, commands: ['SET test:guard:k v'] })
     ]
 ];
 

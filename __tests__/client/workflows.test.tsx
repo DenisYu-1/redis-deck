@@ -6,7 +6,9 @@ import { useAppStore } from '@/store/useAppStore';
 import * as api from '@/services/apiService';
 import type { WorkflowPlugin } from '@/types/workflows';
 
-jest.mock('@/pages/Home/Home', () => ({ Home: () => <div>KEYS PAGE</div> }));
+jest.mock('@/pages/Keys/KeysPage', () => ({
+    KeysPage: () => <div>KEYS PAGE</div>
+}));
 jest.mock('@/pages/Connections/ConnectionsPage', () => ({
     ConnectionsPage: () => <div>CONNECTIONS</div>
 }));
