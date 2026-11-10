@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Logo } from '@/components/common/Logo';
 import { ChartIcon, KeyIcon, SlidersIcon } from '@/components/ui/Icons';
 import { ConnectionSwitcher } from './ConnectionSwitcher';
+import { SavedSearches } from './SavedSearches';
 import { ThemeToggle } from './ThemeToggle';
 import {
     getKeyCount,
@@ -70,6 +71,7 @@ export function Sidebar() {
                     <span>Statistics</span>
                 </NavLink>
             </nav>
+            {pathname.startsWith('/keys') && <SavedSearches />}
             {pathname.startsWith('/stats') && (
                 <div className="navgroup">
                     <div className="navhead">

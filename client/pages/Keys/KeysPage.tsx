@@ -18,7 +18,9 @@ export function KeysPage() {
     const selectedKey = useAppStore((s) => s.selectedKey);
     const setSelectedKey = useAppStore((s) => s.setSelectedKey);
 
-    const [pattern, setPattern] = useState('*');
+    const pattern = useAppStore((s) => s.keyPattern);
+    // (pattern lives in the store so the sidebar can apply saved searches)
+    const setPattern = useAppStore((s) => s.setKeyPattern);
     const [type, setType] = useState('');
     const [ttl, setTtl] = useState<TtlFilter>('any');
     const [view, setView] = useState<View>('tree');

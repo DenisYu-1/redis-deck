@@ -440,3 +440,46 @@ export async function getServerStatus(
         pingMs: Math.round(performance.now() - started)
     };
 }
+
+export interface SavedSearch {
+    id: number;
+    name: string;
+    pattern: string;
+}
+
+function searchesUrl(connectionId: string): string {
+    return `${API_BASE}/connections/${encodeURIComponent(connectionId)}/searches`;
+}
+
+export async function listSavedSearches(
+    connectionId: string
+): Promise<SavedSearch[]> {
+    const response = await fetch(searchesUrl(connectionId));
+    const body = await handleResponse<{ searches?: SavedSearch[] }>(response);
+    return body.searches ?? [];
+}
+
+export async function createSavedSearch(
+    connectionId: string,
+    name: string,
+    pattern: string
+): Promise<SavedSearch> {
+    const response = await fetch(searchesUrl(connectionId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, pattern })
+    });
+    const body = await handleResponse<{ search: SavedSearch }>(response);
+    return body.search;
+}
+
+export async function deleteSavedSearch(
+    connectionId: string,
+    searchId: number
+): Promise<void> {
+    const response = await fetch(
+        `${searchesUrl(connectionId)}/${String(searchId)}`,
+        { method: 'DELETE' }
+    );
+    await handleResponse<unknown>(response);
+}
