@@ -212,7 +212,7 @@ function safetyFields(row) {
 function getAllConnections() {
     return db
         .prepare(
-            'SELECT id, host, port, username, tls, cluster, `order`, tier, db, verify_tls, read_only, confirm_writes FROM connections ORDER BY `order` ASC'
+            'SELECT id, host, port, username, (password != \'\') AS has_password, tls, cluster, `order`, tier, db, verify_tls, read_only, confirm_writes FROM connections ORDER BY `order` ASC'
         )
         .all()
         .map(
@@ -222,9 +222,11 @@ function getAllConnections() {
                 confirm_writes,
                 tier,
                 db: dbNum,
+                has_password,
                 ...c
             }) => ({
                 ...c,
+                hasPassword: has_password === 1,
                 ...safetyFields({
                     tier,
                     db: dbNum,

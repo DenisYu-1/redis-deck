@@ -8,8 +8,8 @@ import { subscribeToasts } from '@/utils/toast';
 import type { RedisConnection } from '@/types';
 
 jest.mock('@/pages/Home/Home', () => ({ Home: () => <div>KEYS PAGE</div> }));
-jest.mock('@/pages/Settings/SettingsApp', () => ({
-    SettingsApp: () => <div>CONNECTIONS PAGE</div>
+jest.mock('@/pages/Connections/ConnectionsPage', () => ({
+    ConnectionsPage: () => <div>CONNECTIONS PAGE</div>
 }));
 jest.mock('@/pages/Statistics/StatisticsApp', () => ({
     StatisticsApp: () => <div>STATS PAGE</div>

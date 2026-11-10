@@ -6,6 +6,8 @@ export interface RedisConnection {
     port: number;
     username?: string;
     password?: string;
+    /** Server-reported: a password is stored. The password itself never reaches the client. */
+    hasPassword?: boolean;
     tls: boolean;
     cluster: boolean;
     tier?: ConnectionTier;

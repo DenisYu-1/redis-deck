@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { Home } from './pages/Home/Home';
-import { SettingsApp } from './pages/Settings/SettingsApp';
+import { ConnectionsPage } from './pages/Connections/ConnectionsPage';
 import { StatisticsApp } from './pages/Statistics/StatisticsApp';
 
 export function AppRoutes() {
@@ -12,7 +12,7 @@ export function AppRoutes() {
                 <Route path="/keys" element={<Home />} />
                 <Route path="/stats" element={<StatisticsApp />} />
                 <Route path="/stats/:board" element={<StatisticsApp />} />
-                <Route path="/connections" element={<SettingsApp />} />
+                <Route path="/connections" element={<ConnectionsPage />} />
                 <Route
                     path="/settings"
                     element={<Navigate to="/connections" replace />}
