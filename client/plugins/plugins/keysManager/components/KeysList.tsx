@@ -1,20 +1,6 @@
 import React from 'react';
-import { FixedSizeList as RawFixedSizeList } from 'react-window';
+import { List, type RowComponentProps } from 'react-window';
 
-// @types/react-window 1.x predates React 18's Component type tightening, so its
-// class type isn't a valid JSX component. Re-type it with just the props we use.
-interface VirtualRowProps {
-    index: number;
-    style: React.CSSProperties;
-}
-const FixedSizeList = RawFixedSizeList as unknown as React.FC<{
-    height: number;
-    width: string | number;
-    itemCount: number;
-    itemSize: number;
-    overscanCount?: number;
-    children: (props: VirtualRowProps) => React.ReactNode;
-}>;
 import {
     KeysListContainer,
     KeysResultsList,
@@ -32,6 +18,33 @@ interface KeysListProps {
     onKeySelect: (key: string) => void;
     onLoadMore: () => void;
 }
+
+interface RowExtraProps {
+    keys: string[];
+    selectedKey: string | null;
+    onKeySelect: (key: string) => void;
+}
+
+const Row = ({
+    index,
+    style,
+    keys,
+    selectedKey,
+    onKeySelect
+}: RowComponentProps<RowExtraProps>) => {
+    const key = keys[index];
+    if (key === undefined) return null;
+    return (
+        <KeyRow
+            style={style}
+            className={selectedKey === key ? 'selected' : ''}
+            onClick={() => onKeySelect(key)}
+            title={key}
+        >
+            {key}
+        </KeyRow>
+    );
+};
 
 const ROW_HEIGHT = 36;
 const MAX_LIST_HEIGHT = 480;
@@ -56,30 +69,14 @@ export const KeysList: React.FC<KeysListProps> = ({
             </h3>
             <KeysResultsList id="keys-results" $isLoading={isLoadingKeys}>
                 {keys.length > 0 && (
-                    <FixedSizeList
-                        height={listHeight}
-                        width="100%"
-                        itemCount={keys.length}
-                        itemSize={ROW_HEIGHT}
+                    <List
+                        style={{ height: listHeight, width: '100%' }}
+                        rowCount={keys.length}
+                        rowHeight={ROW_HEIGHT}
                         overscanCount={10}
-                    >
-                        {({ index, style }) => {
-                            const key = keys[index];
-                            if (key === undefined) return null;
-                            return (
-                                <KeyRow
-                                    style={style}
-                                    className={
-                                        selectedKey === key ? 'selected' : ''
-                                    }
-                                    onClick={() => onKeySelect(key)}
-                                    title={key}
-                                >
-                                    {key}
-                                </KeyRow>
-                            );
-                        }}
-                    </FixedSizeList>
+                        rowComponent={Row}
+                        rowProps={{ keys, selectedKey, onKeySelect }}
+                    />
                 )}
                 {isLoadingKeys && keys.length === 0 && (
                     <LoadingItem>Searching for keys...</LoadingItem>
