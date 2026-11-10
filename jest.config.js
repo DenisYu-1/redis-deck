@@ -13,7 +13,7 @@ export default {
     moduleNameMapper: {
         '\\.svg\\?react$': '<rootDir>/__tests__/mocks/svgMock.tsx',
         '^@/(.*)$': '<rootDir>/client/$1',
-        '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
+        '\\.(css|less|scss|sass)$': '<rootDir>/__tests__/mocks/styleMock.js'
     },
     transform: {
         '^.+\\.tsx?$': [
