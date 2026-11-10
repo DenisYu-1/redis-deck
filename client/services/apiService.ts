@@ -405,6 +405,57 @@ export async function deleteKeysByPattern(
     return handleResponse<{ count: number; message: string }>(response);
 }
 
+const jsonPost = (body: unknown): RequestInit => ({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+});
+
+/** seconds > 0 sets an expiry; null removes it (PERSIST). */
+export async function setKeysTtl(
+    keys: string[],
+    seconds: number | null,
+    environment: string
+): Promise<{ updated: number }> {
+    const response = await writeFetch(
+        `${API_BASE}/keys/ttl?env=${environment}`,
+        jsonPost({ keys, seconds }),
+        environment
+    );
+    return handleResponse<{ updated: number }>(response);
+}
+
+export async function deleteKeys(
+    keys: string[],
+    environment: string
+): Promise<{ deleted: number }> {
+    const response = await writeFetch(
+        `${API_BASE}/keys/delete?env=${environment}`,
+        jsonPost({ keys }),
+        environment
+    );
+    return handleResponse<{ deleted: number }>(response);
+}
+
+export interface ExportedKey {
+    key: string;
+    type: string;
+    ttl: number;
+    value: unknown;
+}
+
+/** A read: no write guard, no confirmation. Server caps at 1000 keys. */
+export async function exportKeys(
+    keys: string[],
+    environment: string
+): Promise<ExportedKey[]> {
+    const response = await fetch(
+        `${API_BASE}/keys/export?env=${environment}`,
+        jsonPost({ keys })
+    );
+    return handleResponse<ExportedKey[]>(response);
+}
+
 export async function deleteConnection(id: string): Promise<void> {
     const response = await fetch(`${API_BASE}/connections/${id}`, {
         method: 'DELETE'

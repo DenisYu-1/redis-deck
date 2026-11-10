@@ -50,6 +50,25 @@
 .scanline {
     margin-left: auto;
 }
+.selbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px 8px 16px;
+    border-top: 1px solid var(--bd);
+    background: var(--sf);
+}
+.selbar b {
+    font-weight: 500;
+}
+.selbar-clear {
+    border: 0;
+    background: none;
+}
+.selbar-gap {
+    flex: 1;
+}
 .klist {
     display: flex;
     flex-direction: column;
