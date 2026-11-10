@@ -14,7 +14,6 @@ type View = 'tree' | 'flat';
 
 export function KeysPage() {
     const env = useAppStore((s) => s.currentEnvironment);
-    const hasConnections = useAppStore((s) => s.connections.length > 0);
     const selectedKey = useAppStore((s) => s.selectedKey);
     const setSelectedKey = useAppStore((s) => s.setSelectedKey);
 
@@ -48,14 +47,6 @@ export function KeysPage() {
             return next;
         });
     }, []);
-
-    if (!hasConnections) {
-        return (
-            <EmptyState title="No connections yet">
-                Add a connection to browse keys.
-            </EmptyState>
-        );
-    }
 
     const { scan } = data;
     const scanLine =
