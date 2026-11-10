@@ -18,3 +18,4 @@ dist/
 .idea
 .cursor/
 docker-compose.override.yml
+dump.rdb
