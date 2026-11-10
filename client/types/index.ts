@@ -22,11 +22,31 @@ export interface KeyDetails {
     size?: number;
 }
 
+export interface KeyMeta {
+    type: string;
+    /** Seconds; -1 no expiry, -2 gone. */
+    ttl: number;
+    /** MEMORY USAGE in bytes, null when unavailable. */
+    size: number | null;
+}
+
+export interface ScanStats {
+    iterations: number;
+    /** Keys SCAN returned before the TTL filter. */
+    returned: number;
+    matched: number;
+    ms: number;
+}
+
+export type TtlFilter = 'any' | 'has' | 'none' | 'lt1h';
+
 export interface SearchKeysResponse {
     keys: string[];
     cursors: string[];
     hasMore: boolean;
     total: string;
+    meta?: Record<string, KeyMeta>;
+    scan?: ScanStats;
 }
 
 export interface KeyCountResponse {

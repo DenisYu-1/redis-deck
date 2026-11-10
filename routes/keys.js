@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { execRedisCommand, scanClusterNodes } = require('../services/redis');
 const keyStore = require('../services/keyStore');
+const {
+    pageMeta,
+    matchesTtl,
+    TYPES,
+    TTL_FILTERS
+} = require('../services/keyMeta');
 
 const fail = (res, error) =>
     res
@@ -14,6 +20,19 @@ router.get('/keys', async (req, res) => {
         const env = req.query.env;
         const pattern = req.query.pattern || '*';
         const count = parseInt(req.query.count) || 50;
+        const type = req.query.type || null;
+        const ttlFilter = req.query.ttl || 'any';
+        if (type && !TYPES.includes(type)) {
+            return res.status(400).json({ error: `Unknown type "${type}"` });
+        }
+        if (!TTL_FILTERS.includes(ttlFilter)) {
+            return res
+                .status(400)
+                .json({ error: `Unknown ttl filter "${ttlFilter}"` });
+        }
+        const started = Date.now();
+        const meta = {};
+        let returned = 0;
 
         // Get cursors array from frontend
         let cursors = ['0'];
@@ -48,10 +67,19 @@ router.get('/keys', async (req, res) => {
                 pattern,
                 nextCursors,
                 scanCount,
-                env
+                env,
+                type
             );
 
-            keys = keys.concat(result.keys);
+            // SCAN may repeat a key across calls; metadata is per page.
+            const fresh = [...new Set(result.keys)];
+            returned += fresh.length;
+            const pageKeys = await pageMeta(env, fresh);
+            const kept = fresh.filter((k) => {
+                meta[k] = pageKeys[k];
+                return matchesTtl(ttlFilter, pageKeys[k].ttl);
+            });
+            keys = keys.concat(kept);
             nextCursors = result.cursors;
             hasMore = result.hasMore;
             iterations++;
@@ -63,7 +91,14 @@ router.get('/keys', async (req, res) => {
             keys,
             cursors: nextCursors, // Array of cursors (one for each node)
             hasMore,
-            total: keys.length + (hasMore ? '?' : 0)
+            total: keys.length + (hasMore ? '?' : 0),
+            meta: Object.fromEntries(keys.map((k) => [k, meta[k]])),
+            scan: {
+                iterations,
+                returned,
+                matched: keys.length,
+                ms: Date.now() - started
+            }
         });
     } catch (error) {
         console.error('Error scanning keys:', error);
