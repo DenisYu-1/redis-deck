@@ -125,6 +125,18 @@ function initializeDatabase() {
         console.error('Error adding safety columns to connections:', error);
     }
 
+    // Saved key-pattern searches, per connection (tier badge is derived, not stored)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS saved_searches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            connection_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            pattern TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY (connection_id) REFERENCES connections(id) ON DELETE CASCADE
+        )
+    `);
+
     // Create stats_snapshots table for statistics collection
     db.exec(`
         CREATE TABLE IF NOT EXISTS stats_snapshots (
@@ -212,7 +224,7 @@ function safetyFields(row) {
 function getAllConnections() {
     return db
         .prepare(
-            'SELECT id, host, port, username, tls, cluster, `order`, tier, db, verify_tls, read_only, confirm_writes FROM connections ORDER BY `order` ASC'
+            'SELECT id, host, port, username, (password != \'\') AS has_password, tls, cluster, `order`, tier, db, verify_tls, read_only, confirm_writes FROM connections ORDER BY `order` ASC'
         )
         .all()
         .map(
@@ -222,9 +234,11 @@ function getAllConnections() {
                 confirm_writes,
                 tier,
                 db: dbNum,
+                has_password,
                 ...c
             }) => ({
                 ...c,
+                hasPassword: has_password === 1,
                 ...safetyFields({
                     tier,
                     db: dbNum,
@@ -300,8 +314,12 @@ function updateConnection(id, connection) {
 
 // Delete a connection
 function deleteConnection(id) {
-    const stmt = db.prepare('DELETE FROM connections WHERE id = ?');
-    const result = stmt.run(id);
+    const result = db.transaction(() => {
+        db.prepare('DELETE FROM saved_searches WHERE connection_id = ?').run(
+            id
+        );
+        return db.prepare('DELETE FROM connections WHERE id = ?').run(id);
+    })();
     return result.changes > 0;
 }
 

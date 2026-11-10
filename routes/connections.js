@@ -28,6 +28,9 @@ router.get('/connections', (req, res) => {
 // Export all connections
 router.get('/connections/export', (req, res) => {
     try {
+        // Passwords are only included when explicitly requested, so a default
+        // backup file is safe to share.
+        const includePasswords = req.query.includePasswords === 'true';
         const allConnections = getAllConnections();
         const connectionsWithPasswords = allConnections.map((conn) => {
             const fullConnection = getConnection(conn.id);
@@ -36,7 +39,9 @@ router.get('/connections/export', (req, res) => {
                 host: fullConnection.host,
                 port: fullConnection.port,
                 username: fullConnection.username || '',
-                password: fullConnection.password || '',
+                ...(includePasswords && {
+                    password: fullConnection.password || ''
+                }),
                 tls: fullConnection.tls === 1,
                 cluster: fullConnection.cluster === 1,
                 ...safetyFields(fullConnection),
@@ -69,6 +74,7 @@ router.get('/connections/:id', (req, res) => {
         }
 
         // Don't send the password back to the client
+        connection.hasPassword = Boolean(connection.password);
         delete connection.password;
 
         res.json({ connection });
@@ -277,12 +283,19 @@ router.post('/connections/test', async (req, res) => {
                 .json({ error: 'Connection host and port are required' });
         }
 
+        // Blank password for a saved Connection: fall back to the stored one
+        if (!connection.password && connection.id) {
+            const saved = getConnection(connection.id);
+            if (saved) connection.password = saved.password;
+        }
+
         const config = {
             host: connection.host,
             port: connection.port,
             username: connection.username,
             password: connection.password,
             tls: Boolean(connection.tls),
+            cluster: Boolean(connection.cluster),
             db: Number(connection.db) || 0,
             verifyTls: connection.verifyTls !== false
         };

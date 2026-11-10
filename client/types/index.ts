@@ -6,6 +6,8 @@ export interface RedisConnection {
     port: number;
     username?: string;
     password?: string;
+    /** Server-reported: a password is stored. The password itself never reaches the client. */
+    hasPassword?: boolean;
     tls: boolean;
     cluster: boolean;
     tier?: ConnectionTier;
@@ -27,6 +29,16 @@ export interface KeyDetails {
     ttl: number;
     value: unknown;
     size?: number;
+}
+
+/** `GET /keys/:key/meta`; null where Redis cannot answer. */
+export interface KeyInfo {
+    type: string;
+    encoding: string | null;
+    /** Seconds since last access. */
+    idle: number | null;
+    memory: number | null;
+    length: number | null;
 }
 
 export interface KeyMeta {
