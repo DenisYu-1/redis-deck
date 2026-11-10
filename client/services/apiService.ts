@@ -94,14 +94,15 @@ export async function saveKey(
     key: string,
     value: unknown,
     expiry: number | null,
-    environment: string
+    environment: string,
+    type = 'string'
 ): Promise<{ success: boolean }> {
     const response = await fetch(`${API_BASE}/keys?env=${environment}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ key, value, expiry })
+        body: JSON.stringify({ key, value, expiry, type })
     });
     return handleResponse<{ success: boolean }>(response);
 }
@@ -161,18 +162,16 @@ export async function copyKey(
     sourceEnv: string,
     targetEnv: string
 ): Promise<{ success: boolean }> {
-    const response = await fetch(`${API_BASE}/keys/copy`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            sourceKey,
-            targetKey,
-            sourceEnv,
-            targetEnv
-        })
-    });
+    const response = await fetch(
+        `${API_BASE}/keys/${encodeURIComponent(sourceKey)}/copy?env=${sourceEnv}`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ targetKey, targetEnv })
+        }
+    );
     return handleResponse<{ success: boolean }>(response);
 }
 

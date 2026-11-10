@@ -109,7 +109,7 @@ describe('Keys Routes', () => {
             expect(response.body).toHaveProperty('key', 'test:keys:get');
             expect(response.body).toHaveProperty('type', 'string');
             expect(response.body).toHaveProperty('value');
-            expect(response.body.value.trim()).toBe('test-value');
+            expect(response.body.value).toBe('test-value');
         });
 
         test('should get key with TTL', async () => {
@@ -141,7 +141,7 @@ describe('Keys Routes', () => {
                 .expect(200);
 
             expect(response.body.type).toBe('hash');
-            expect(response.body.value).toBeDefined();
+            expect(response.body.value).toEqual({ field1: 'value1', field2: 'value2' });
         });
 
         test('should return 404 for non-existent key', async () => {

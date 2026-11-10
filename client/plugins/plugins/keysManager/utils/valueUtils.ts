@@ -23,89 +23,47 @@ export interface ValueModalData {
  * Format Redis key values for display based on their type
  */
 export const formatValue = (type: string, value: any): string => {
-    if (type === 'hash') {
-        // Format hash values as key-value pairs
-        if (typeof value === 'object' && value !== null) {
-            // Already processed into object format
-            return Object.entries(value)
-                .map(([key, val]) => `${key}: ${val}`)
-                .join('\n');
-        } else if (typeof value === 'string') {
-            // Raw string format
-            const lines = value.split('\n');
-            let formatted = '';
-            for (let i = 0; i < lines.length; i += 2) {
-                if (lines[i]?.trim() && i + 1 < lines.length) {
-                    formatted += `${lines[i]}: ${lines[i + 1]}\n`;
-                }
-            }
-            return formatted;
-        }
-        return String(value);
-    } else if (type === 'list' || type === 'set') {
-        // Format list or set as numbered items
-        if (typeof value === 'string') {
-            const items = value.split('\n').filter((item) => item.trim());
-            return items
-                .map((item, index) => `${index + 1}) ${item}`)
-                .join('\n');
-        } else if (Array.isArray(value)) {
-            return value
-                .map((item, index) => `${index + 1}) ${item}`)
-                .join('\n');
-        }
-        return String(value);
-    } else if (type === 'zset') {
-        // Format sorted set with scores in a more readable way
-        if (typeof value === 'string') {
-            const lines = value
-                .split('\n')
-                .filter((line) => line.trim() !== '');
-            if (lines.length === 0) {
-                return 'Empty sorted set';
-            }
-
-            let formatted = '';
-            for (let i = 0; i < lines.length; i += 2) {
-                if (lines[i]?.trim() && i + 1 < lines.length && lines[i + 1]) {
-                    const member = lines[i]!.trim();
-                    const score = lines[i + 1]!.trim();
-                    formatted += `• ${member} → ${score}\n`;
-                }
-            }
-            return formatted || 'Empty sorted set';
-        }
-        return String(value);
+    if (type === 'hash' && value && typeof value === 'object') {
+        return Object.entries(value)
+            .map(([key, val]) => `${key}: ${val}`)
+            .join('\n');
     }
-
-    // Default for string and other types
+    if ((type === 'list' || type === 'set') && Array.isArray(value)) {
+        return value.map((item, i) => `${i + 1}) ${item}`).join('\n');
+    }
+    if (type === 'zset' && Array.isArray(value)) {
+        return value.length
+            ? value.map((e) => `• ${e.member} → ${e.score}`).join('\n')
+            : 'Empty sorted set';
+    }
+    if (type === 'stream' && Array.isArray(value)) {
+        return value
+            .map((e) => `${e.id} ${JSON.stringify(e.fields)}`)
+            .join('\n');
+    }
     return String(value);
 };
 
 /**
  * Parse ZSet value for the viewer modal, handling JSON parsing
  */
-export const parseZsetForViewer = (value: string): ZSetParseResult => {
-    const lines = value.split('\n').filter((line) => line.trim());
+export const parseZsetForViewer = (
+    entries: { member: string; score: number }[]
+): ZSetParseResult => {
     const formattedLines: string[] = [];
     const jsonMap: Record<string, any> = {};
     let hasJson = false;
 
-    for (let i = 0; i < lines.length; i += 2) {
-        if (i + 1 < lines.length) {
-            const member = lines[i]!.trim();
-            const score = lines[i + 1]!.trim();
-
-            try {
-                const parsed = JSON.parse(member);
-                formattedLines.push(
-                    `• ${JSON.stringify(parsed, null, 2)} → ${score}`
-                );
-                jsonMap[score] = parsed;
-                hasJson = true;
-            } catch {
-                formattedLines.push(`• ${member} → ${score}`);
-            }
+    for (const { member, score } of entries) {
+        try {
+            const parsed = JSON.parse(member);
+            formattedLines.push(
+                `• ${JSON.stringify(parsed, null, 2)} → ${score}`
+            );
+            jsonMap[String(score)] = parsed;
+            hasJson = true;
+        } catch {
+            formattedLines.push(`• ${member} → ${score}`);
         }
     }
 
@@ -162,7 +120,7 @@ export const prepareValueForViewer = (
         let jsonData = null;
         let hasJson = false;
 
-        if (type === 'zset' && typeof value === 'string') {
+        if (type === 'zset' && Array.isArray(value)) {
             const result = parseZsetForViewer(value);
             formatted = result.formatted;
 

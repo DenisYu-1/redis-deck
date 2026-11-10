@@ -95,6 +95,34 @@ function looksLikeRedisError(text) {
     );
 }
 
+// Turn a failed redis-cli spawn into the {message, command, code} error shape.
+function cliError(error, command) {
+    const text = `${error.stdout || ''}${error.stderr || ''}`.trim();
+    if (text.includes('Connection refused')) {
+        return {
+            message: 'Connection refused - Redis server not available',
+            command,
+            code: 'ECONNREFUSED'
+        };
+    }
+    if (text && looksLikeRedisError(text)) {
+        return {
+            message: text.replace(/^\(error\)\s*/, ''),
+            command,
+            code: 'REDIS_ERROR'
+        };
+    }
+    console.error(
+        `Error executing Redis command (${command}):`,
+        error.message || error
+    );
+    return {
+        message: text || error.message || 'Unknown Redis error',
+        command,
+        code: error.code || 'ERR'
+    };
+}
+
 async function runCommand(command, config, nodeOverride, label) {
     let raw = false;
     if (command.startsWith('--raw ')) {
@@ -126,30 +154,7 @@ async function runCommand(command, config, nodeOverride, label) {
     try {
         out = await runRedisCli(args, { timeout: 10000 });
     } catch (error) {
-        const text = `${error.stdout || ''}${error.stderr || ''}`.trim();
-        if (text.includes('Connection refused')) {
-            throw {
-                message: 'Connection refused - Redis server not available',
-                command,
-                code: 'ECONNREFUSED'
-            };
-        }
-        if (text && looksLikeRedisError(text)) {
-            throw {
-                message: text.replace(/^\(error\)\s*/, ''),
-                command,
-                code: 'REDIS_ERROR'
-            };
-        }
-        console.error(
-            `Error executing Redis command (${command}):`,
-            error.message || error
-        );
-        throw {
-            message: text || error.message || 'Unknown Redis error',
-            command,
-            code: error.code || 'ERR'
-        };
+        throw cliError(error, command);
     }
 
     let processedResult = out.trim();
@@ -196,6 +201,33 @@ async function runCommand(command, config, nodeOverride, label) {
 async function execRedisCommand(command, connectionId, nodeOverride = null) {
     const config = getConnectionConfig(connectionId);
     return runCommand(command, config, nodeOverride, connectionId);
+}
+
+// Run one command given as an argv array (no quoting/escaping to get wrong)
+// and return the parsed JSON reply. Redis errors (incl. MOVED) are thrown.
+async function execArgv(argv, connectionId, nodeOverride = null) {
+    const config = getConnectionConfig(connectionId);
+    const args = [
+        ...connArgs(config, nodeOverride),
+        '--json',
+        ...argv.map(String)
+    ];
+    console.log(`redis-cli [${connectionId}]: ${argv[0]} ${argv[1] ?? ''}`);
+    let out;
+    try {
+        out = (await runRedisCli(args)).trim();
+    } catch (error) {
+        throw cliError(error, argv[0]);
+    }
+    // redis-cli --json prints errors as: error:"ERR ..."
+    if (out.startsWith('error:')) {
+        throw {
+            message: JSON.parse(out.slice(6)),
+            command: argv[0],
+            code: 'REDIS_ERROR'
+        };
+    }
+    return out ? JSON.parse(out) : null;
 }
 
 // Execute a Redis command against an unsaved config (used by "test connection").
@@ -297,129 +329,6 @@ async function getClusterNodes(connectionId) {
                 port: 6379
             }
         ];
-    }
-}
-
-async function fetchKeyValue(key, type, connectionId, node = null) {
-    switch (type) {
-        case 'string':
-            return execRedisCommand(`--raw GET "${key}"`, connectionId, node);
-        case 'hash':
-            return execRedisCommand(`HGETALL "${key}"`, connectionId, node);
-        case 'list':
-            return execRedisCommand(
-                `--raw LRANGE "${key}" 0 999`,
-                connectionId,
-                node
-            );
-        case 'set':
-            return execRedisCommand(
-                `--raw SSCAN "${key}" 0 COUNT 1000`,
-                connectionId,
-                node
-            );
-        case 'zset':
-            return execRedisCommand(
-                `ZRANGE "${key}" 0 -1 WITHSCORES`,
-                connectionId,
-                node
-            );
-        default:
-            return `Unsupported type: ${type}`;
-    }
-}
-
-async function readKey(key, connectionId, node = null) {
-    const type = (
-        await execRedisCommand(`TYPE "${key}"`, connectionId, node)
-    ).trim();
-    const ttl = parseInt(
-        (await execRedisCommand(`TTL "${key}"`, connectionId, node)).trim()
-    );
-    const value = await fetchKeyValue(key, type, connectionId, node);
-    return { key, type, value, ttl };
-}
-
-// Get a specific key from cluster nodes (tries all nodes until found)
-async function getKeyFromCluster(key, connectionId) {
-    try {
-        const clusterMode = await isClusterMode(connectionId);
-
-        if (!clusterMode) {
-            const existsResult = await execRedisCommand(
-                `EXISTS "${key}"`,
-                connectionId
-            );
-            if (parseInt(existsResult.trim()) !== 1) {
-                throw new Error('Key not found');
-            }
-            return readKey(key, connectionId);
-        }
-
-        const nodes = await getClusterNodes(connectionId);
-
-        for (const node of nodes) {
-            try {
-                const existsResult = await execRedisCommand(
-                    `EXISTS "${key}"`,
-                    connectionId,
-                    node
-                );
-
-                if (existsResult.includes('MOVED')) {
-                    console.log(
-                        `Got MOVED response for key "${key}" on node ${node.id}: ${existsResult}`
-                    );
-                    const movedMatch = existsResult.match(
-                        /MOVED\s+\d+\s+([^:]+):(\d+)/
-                    );
-                    if (movedMatch) {
-                        const targetNode = {
-                            id: `${movedMatch[1]}:${movedMatch[2]}`,
-                            host: movedMatch[1],
-                            port: parseInt(movedMatch[2])
-                        };
-                        const redirectedExists = await execRedisCommand(
-                            `EXISTS "${key}"`,
-                            connectionId,
-                            targetNode
-                        );
-                        if (parseInt(redirectedExists.trim()) === 1) {
-                            console.log(
-                                `Found key "${key}" on redirected node ${targetNode.id}`
-                            );
-                            return {
-                                ...(await readKey(
-                                    key,
-                                    connectionId,
-                                    targetNode
-                                )),
-                                nodeId: targetNode.id
-                            };
-                        }
-                    }
-                    continue;
-                }
-
-                if (parseInt(existsResult.trim()) === 1) {
-                    console.log(`Found key "${key}" on node ${node.id}`);
-                    return {
-                        ...(await readKey(key, connectionId, node)),
-                        nodeId: node.id
-                    };
-                }
-            } catch (error) {
-                console.log(
-                    `Error checking key "${key}" on node ${node.id}:`,
-                    error.message
-                );
-            }
-        }
-
-        throw new Error('Key not found');
-    } catch (error) {
-        console.error('Error getting key from cluster:', error);
-        throw error;
     }
 }
 
@@ -543,5 +452,5 @@ module.exports = {
     isClusterMode,
     getClusterNodes,
     scanClusterNodes,
-    getKeyFromCluster
+    execArgv
 };

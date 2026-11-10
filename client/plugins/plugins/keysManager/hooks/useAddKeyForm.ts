@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { KeyType, ZSetMember, KeyDetails } from '../utils/types';
-import { parseZsetMembersFromText } from '../utils/valueUtils';
 
 export interface UseAddKeyFormReturn {
     // Form state
@@ -167,10 +166,10 @@ export const useAddKeyForm = (
         }
 
         if (selectedType === 'zset') {
-            const parsed = parseZsetMembersFromText(formatValueForInput(details.value));
-            setZsetMembers(
-                parsed.members.length > 0 ? parsed.members : initialMembers
-            );
+            const members: ZSetMember[] = (
+                details.value as { member: string; score: number }[]
+            ).map((e) => ({ score: e.score, value: e.member }));
+            setZsetMembers(members.length > 0 ? members : initialMembers);
             setStringValue('');
             setZsetRawValue('');
             return;
@@ -243,15 +242,37 @@ export const useAddKeyForm = (
                 setZsetMembers([{ score: 0, value: '' }]);
                 setZsetRawValue('');
             } else {
-                emit({
-                    type: 'toast:show',
-                    payload: {
-                        message: `Support for ${keyType} keys is not implemented yet`,
-                        type: 'error'
-                    },
-                    source: 'keys-manager'
-                });
-                return;
+                // hash: {"field":"value"}, list/set: ["a","b"] as JSON
+                let parsed: unknown;
+                try {
+                    parsed = JSON.parse(stringValue);
+                } catch {
+                    parsed = undefined;
+                }
+                const valid =
+                    keyType === 'hash'
+                        ? parsed &&
+                          typeof parsed === 'object' &&
+                          !Array.isArray(parsed)
+                        : Array.isArray(parsed);
+                if (!valid) {
+                    emit({
+                        type: 'toast:show',
+                        payload: {
+                            message:
+                                keyType === 'hash'
+                                    ? 'Value must be a JSON object'
+                                    : 'Value must be a JSON array',
+                            type: 'error'
+                        },
+                        source: 'keys-manager'
+                    });
+                    return;
+                }
+                await import('@/services/apiService').then(({ saveKey }) =>
+                    saveKey(keyName, parsed, expiryValue, environment, keyType)
+                );
+                setStringValue('');
             }
 
             emit({
@@ -305,7 +326,7 @@ export const useAddKeyForm = (
         setStringValue,
         setZsetRawValue,
         setExpiry,
-    setFromKeyDetails,
+        setFromKeyDetails,
 
         // ZSet member management
         handleAddZsetMember,
