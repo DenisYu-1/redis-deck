@@ -95,7 +95,7 @@ describe('sidebar Workflows group', () => {
     it('is hidden when no plugin defines actions', async () => {
         mocked.getWorkflows.mockResolvedValue([]);
         renderAt('/keys');
-        await screen.findByText('KEYS PAGE');
+        await screen.findByRole('link', { name: /Statistics/ });
         await waitFor(() => expect(mocked.getWorkflows).toHaveBeenCalled());
         expect(screen.queryByText('Workflows')).not.toBeInTheDocument();
     });
