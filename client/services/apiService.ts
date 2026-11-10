@@ -9,6 +9,7 @@ import type {
     SlowLogResponse,
     HistoryResponse
 } from '@/types';
+import type { WorkflowPlugin, WorkflowRun } from '@/types/workflows';
 import { useAppStore } from '@/store/useAppStore';
 import { showToast } from '@/utils/toast';
 
@@ -358,6 +359,63 @@ export async function addToSortedSet(
         environment
     );
     return handleResponse<{ success: boolean }>(response);
+}
+
+export async function getWorkflows(): Promise<WorkflowPlugin[]> {
+    const response = await fetch(`${API_BASE}/workflows`);
+    const result = await handleResponse<{ plugins: WorkflowPlugin[] }>(
+        response
+    );
+    return result.plugins;
+}
+
+export async function getWorkflowHistory(
+    actionId: string
+): Promise<WorkflowRun[]> {
+    const response = await fetch(
+        `${API_BASE}/workflows/${encodeURIComponent(actionId)}/history`
+    );
+    const result = await handleResponse<{ runs: WorkflowRun[] }>(response);
+    return result.runs;
+}
+
+export async function planWorkflow(
+    actionId: string,
+    environment: string,
+    inputs: Record<string, string>
+): Promise<{ text: string }> {
+    const response = await fetch(
+        `${API_BASE}/workflows/${encodeURIComponent(actionId)}/plan`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ env: environment, inputs })
+        }
+    );
+    const result = await handleResponse<{ plan: { text: string } }>(response);
+    return result.plan;
+}
+
+/** Runs a Workflow; `writes` Workflows go through the confirm-writes prompt. */
+export async function runWorkflow(
+    actionId: string,
+    environment: string,
+    inputs: Record<string, string>,
+    writes: boolean
+): Promise<{ ok: boolean; text: string }> {
+    const url = `${API_BASE}/workflows/${encodeURIComponent(actionId)}/run`;
+    const init: RequestInit = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ env: environment, inputs })
+    };
+    const response = writes
+        ? await writeFetch(url, init, environment)
+        : await fetch(url, init);
+    const result = await handleResponse<{
+        result: { ok: boolean; text: string };
+    }>(response);
+    return result.result;
 }
 
 export interface ServerStatus {

@@ -1,5 +1,6 @@
 import type React from 'react';
 import type { PluginContext } from '@/types';
+import type { WorkflowAction } from '@/types/workflows';
 
 // Event system types
 export type PluginEventType =
@@ -24,10 +25,15 @@ export interface PluginDefinition {
     id: string;
     name: string;
     enabled: boolean;
-    path: string;
+    /** Optional: a plugin may only contribute Workflows (`actions`). */
+    path?: string;
     priority: number;
     config?: Record<string, unknown>;
+    /** Workflow manifest; handlers live on the server (see services/workflows). */
+    actions?: WorkflowActionManifest[];
 }
+
+export type WorkflowActionManifest = Omit<WorkflowAction, 'fullId'>;
 
 // Plugin component props
 export interface PluginComponentProps {

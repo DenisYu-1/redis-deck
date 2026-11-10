@@ -10,6 +10,8 @@ client/plugins/config/config.override.json
 client/plugins/plugins/extensions/*
 public/js/plugins/extensions/*
 !client/plugins/plugins/extensions/.gitkeep
+services/workflows/extensions/*
+!services/workflows/extensions/.gitkeep
 !public/js/plugins/extensions/.gitkeep
 dist/
 .vite/

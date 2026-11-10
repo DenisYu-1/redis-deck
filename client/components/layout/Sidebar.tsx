@@ -10,6 +10,7 @@ import {
     type ServerStatus
 } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
+import { useWorkflows } from '@/pages/Workflows/useWorkflows';
 
 const BOARDS = [
     { to: '/stats', label: 'Overview', end: true },
@@ -29,6 +30,7 @@ export function Sidebar() {
     const [info, setInfo] = useState<{ env: string; s: ServerStatus } | null>(
         null
     );
+    const workflowPlugins = useWorkflows() ?? [];
     const keyCount = counts?.env === env ? counts.n : null;
     const status = info?.env === env ? info.s : null;
 
@@ -86,6 +88,29 @@ export function Sidebar() {
                         >
                             {b.label}
                         </NavLink>
+                    ))}
+                </div>
+            )}
+            {workflowPlugins.length > 0 && (
+                <div className="navgroup" aria-label="Workflows">
+                    <div className="navhead">
+                        <span>Workflows</span>
+                    </div>
+                    {workflowPlugins.map((p) => (
+                        <div key={p.id}>
+                            <div className="navhead xs">
+                                <span>{p.name}</span>
+                            </div>
+                            {p.actions.map((a) => (
+                                <NavLink
+                                    key={a.fullId}
+                                    to={`/workflows/${a.fullId}`}
+                                    className={navClass}
+                                >
+                                    {a.title}
+                                </NavLink>
+                            ))}
+                        </div>
                     ))}
                 </div>
             )}

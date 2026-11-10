@@ -3,6 +3,7 @@ import { AppShell } from './components/layout/AppShell';
 import { Home } from './pages/Home/Home';
 import { SettingsApp } from './pages/Settings/SettingsApp';
 import { StatisticsApp } from './pages/Statistics/StatisticsApp';
+import { WorkflowPage } from './pages/Workflows/WorkflowPage';
 
 export function AppRoutes() {
     return (
@@ -12,6 +13,7 @@ export function AppRoutes() {
                 <Route path="/keys" element={<Home />} />
                 <Route path="/stats" element={<StatisticsApp />} />
                 <Route path="/stats/:board" element={<StatisticsApp />} />
+                <Route path="/workflows/:actionId" element={<WorkflowPage />} />
                 <Route path="/connections" element={<SettingsApp />} />
                 <Route
                     path="/settings"
