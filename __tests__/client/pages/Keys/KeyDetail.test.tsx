@@ -20,6 +20,7 @@ function show(details: KeyDetails, meta: KeyInfo | null = info) {
             loading={false}
             error={null}
             onReload={jest.fn()}
+            onChanged={jest.fn()}
         />
     );
 }

@@ -6,6 +6,7 @@ import { formatNumber } from '@/utils/formatter';
 import { formatSize } from '@/utils/bytes';
 import { formatTtl } from '@/utils/ttl';
 import { showToast } from '@/utils/toast';
+import { KeyActions } from './KeyActions';
 import { ValueInspector } from './ValueInspector';
 import { ValueTable } from './ValueTable';
 import { filterRows, toRows } from './valueRows';
@@ -30,6 +31,8 @@ interface Props {
     loading: boolean;
     error: string | null;
     onReload: () => void;
+    /** After a write: undefined = refresh, string = select that key, null = key gone. */
+    onChanged: (next?: string | null) => void;
 }
 
 function KeyName({ name }: { name: string }) {
@@ -118,7 +121,8 @@ export function KeyDetail({
     info,
     loading,
     error,
-    onReload
+    onReload,
+    onChanged
 }: Props) {
     if (error) {
         return (
@@ -171,6 +175,11 @@ export function KeyDetail({
                         {loading ? 'Loading…' : 'Reload'}
                     </button>
                 </div>
+                <KeyActions
+                    keyName={keyName}
+                    details={details}
+                    onChanged={onChanged}
+                />
                 <dl className="meta">
                     <div>
                         <dt>TTL</dt>

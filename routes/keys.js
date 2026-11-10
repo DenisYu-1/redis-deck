@@ -392,4 +392,18 @@ router.post('/keys/:key/zadd', writeGuard(), async (req, res) => {
     }
 });
 
+// Add one hash field ({ field, value }) or zset member ({ member, score }).
+router.post('/keys/:key/members', writeGuard(), async (req, res) => {
+    try {
+        const type = await keyStore.addMember(
+            req.query.env,
+            req.params.key,
+            req.body || {}
+        );
+        res.json({ success: true, key: req.params.key, type });
+    } catch (error) {
+        fail(res, error);
+    }
+});
+
 module.exports = router;

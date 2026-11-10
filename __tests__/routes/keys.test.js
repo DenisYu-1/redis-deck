@@ -141,7 +141,10 @@ describe('Keys Routes', () => {
                 .expect(200);
 
             expect(response.body.type).toBe('hash');
-            expect(response.body.value).toEqual({ field1: 'value1', field2: 'value2' });
+            expect(response.body.value).toEqual({
+                field1: 'value1',
+                field2: 'value2'
+            });
         });
 
         test('should return 404 for non-existent key', async () => {
@@ -389,6 +392,69 @@ describe('Keys Routes', () => {
                 .expect(400);
 
             expect(response.body).toHaveProperty('error');
+        });
+    });
+
+    describe('POST /api/keys/:key/members', () => {
+        test('adds a hash field without touching others or the TTL', async () => {
+            await createTestHash(
+                'test:keys:addfield',
+                { a: '1' },
+                testConnectionId
+            );
+            await request(app)
+                .post('/api/keys/test:keys:addfield/expire')
+                .query({ env: testConnectionId })
+                .send({ seconds: 300 })
+                .expect(200);
+
+            await request(app)
+                .post('/api/keys/test:keys:addfield/members')
+                .query({ env: testConnectionId })
+                .send({ field: 'b', value: '2' })
+                .expect(200);
+
+            const res = await request(app)
+                .get('/api/keys/test:keys:addfield')
+                .query({ env: testConnectionId })
+                .expect(200);
+            expect(res.body.value).toEqual({ a: '1', b: '2' });
+            expect(res.body.ttl).toBeGreaterThan(0);
+        });
+
+        test('adds a zset member with a score', async () => {
+            await request(app)
+                .post('/api/keys/test:keys:addz/members')
+                .query({ env: testConnectionId })
+                .send({ member: 'm1', score: 2.5 })
+                .expect(200);
+            const members = await getZSetMembers(
+                'test:keys:addz',
+                testConnectionId
+            );
+            expect(members).toEqual([{ value: 'm1', score: 2.5 }]);
+        });
+
+        test('rejects a missing hash field with 400', async () => {
+            await createTestHash(
+                'test:keys:addbad',
+                { a: '1' },
+                testConnectionId
+            );
+            await request(app)
+                .post('/api/keys/test:keys:addbad/members')
+                .query({ env: testConnectionId })
+                .send({ value: 'x' })
+                .expect(400);
+        });
+
+        test('refuses a string key with 400', async () => {
+            await createTestKey('test:keys:adds', 'v', testConnectionId);
+            await request(app)
+                .post('/api/keys/test:keys:adds/members')
+                .query({ env: testConnectionId })
+                .send({ field: 'a', value: 'x' })
+                .expect(400);
         });
     });
 

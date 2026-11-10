@@ -13,6 +13,7 @@ import type {
 import type { WorkflowPlugin, WorkflowRun } from '@/types/workflows';
 import { useAppStore } from '@/store/useAppStore';
 import { showToast } from '@/utils/toast';
+import { requestWriteConfirmation } from '@/utils/confirmWrite';
 
 const API_BASE = '/api';
 
@@ -49,11 +50,8 @@ async function writeFetch(
         .connections.find((c) => c.id === connectionId);
     const headers = { ...(init.headers as Record<string, string>) };
     if (conn?.confirmWrites) {
-        const typed = window.prompt(
-            `Writes to '${connectionId}' need confirmation. Type the connection name to continue.`
-        );
-        if (typed !== connectionId) {
-            throw new Error('Write cancelled: connection name did not match');
+        if (!(await requestWriteConfirmation(connectionId))) {
+            throw new Error('Write cancelled: connection name not confirmed');
         }
         headers['X-Confirm-Connection'] = connectionId;
     }
@@ -430,6 +428,24 @@ export async function addToSortedSet(
         environment
     );
     return handleResponse<{ success: boolean }>(response);
+}
+
+/** Adds one hash field ({ field, value }) or zset member ({ member, score }). */
+export async function addMember(
+    key: string,
+    entry: { field: string; value: string } | { member: string; score: number },
+    environment: string
+): Promise<{ success: boolean; type: string }> {
+    const response = await writeFetch(
+        `${API_BASE}/keys/${encodeURIComponent(key)}/members?env=${environment}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entry)
+        },
+        environment
+    );
+    return handleResponse<{ success: boolean; type: string }>(response);
 }
 
 export async function getWorkflows(): Promise<WorkflowPlugin[]> {

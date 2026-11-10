@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from '@/App';
+import { ConfirmWriteHost } from '@/components/ui/ConfirmWriteHost';
 import { useAppStore } from '@/store/useAppStore';
 import { saveKey, deleteKey } from '@/services/apiService';
 import { subscribeToasts } from '@/utils/toast';
@@ -131,29 +132,56 @@ describe('writes against guarded connections', () => {
         off();
     });
 
-    it('sends X-Confirm-Connection once the connection name is typed', async () => {
-        const prompt = jest.spyOn(window, 'prompt').mockReturnValue('prod-cw');
-        await saveKey('k', 'v', null, 'prod-cw');
+    it('asks for the connection name in a modal and sends the header', async () => {
+        const user = userEvent.setup();
+        render(<ConfirmWriteHost />);
+        const done = saveKey('k', 'v', null, 'prod-cw');
+        const dialog = await screen.findByRole('dialog');
+        const confirm = within(dialog).getByRole('button', {
+            name: 'Confirm write'
+        });
+        expect(confirm).toBeDisabled();
+        await user.type(
+            within(dialog).getByLabelText(/connection name/i),
+            'prod-cw'
+        );
+        await user.click(confirm);
+        await done;
         const init = fetchMock.mock.calls[0][1] as RequestInit;
         expect(
             (init.headers as Record<string, string>)['X-Confirm-Connection']
         ).toBe('prod-cw');
-        prompt.mockRestore();
+        expect(screen.queryByRole('dialog')).toBeNull();
     });
 
-    it('does not send the write when the typed name is wrong', async () => {
-        const prompt = jest.spyOn(window, 'prompt').mockReturnValue('nope');
-        await expect(saveKey('k', 'v', null, 'prod-cw')).rejects.toThrow(
-            /cancel/i
-        );
+    it('does not send the write when the modal is cancelled', async () => {
+        const user = userEvent.setup();
+        render(<ConfirmWriteHost />);
+        const done = saveKey('k', 'v', null, 'prod-cw');
+        const rejected = expect(done).rejects.toThrow(/cancel/i);
+        await user.click(await screen.findByRole('button', { name: 'Cancel' }));
+        await rejected;
         expect(fetchMock).not.toHaveBeenCalled();
-        prompt.mockRestore();
     });
 
-    it('does not prompt for unguarded connections', async () => {
-        const prompt = jest.spyOn(window, 'prompt');
+    it('a wrong name keeps the confirm button disabled', async () => {
+        const user = userEvent.setup();
+        render(<ConfirmWriteHost />);
+        void saveKey('k', 'v', null, 'prod-cw').catch(() => undefined);
+        await user.type(
+            await screen.findByLabelText(/connection name/i),
+            'nope'
+        );
+        expect(
+            screen.getByRole('button', { name: 'Confirm write' })
+        ).toBeDisabled();
+        await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+
+    it('does not ask for unguarded connections', async () => {
+        render(<ConfirmWriteHost />);
         await saveKey('k', 'v', null, 'dev');
-        expect(prompt).not.toHaveBeenCalled();
-        prompt.mockRestore();
+        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(fetchMock).toHaveBeenCalled();
     });
 });

@@ -8,6 +8,7 @@ import { formatNumber } from '@/utils/formatter';
 import { KeyDetail } from './KeyDetail';
 import { KeyList } from './KeyList';
 import { KeyToolbar } from './KeyToolbar';
+import { NewKeyModal } from './NewKeyModal';
 import { useKeySelection } from './hooks/useKeySelection';
 import { useKeyDetail } from './hooks/useKeyDetail';
 import { useKeysQuery } from './hooks/useKeysQuery';
@@ -25,6 +26,12 @@ export function KeysPage() {
     const setPattern = useAppStore((s) => s.setKeyPattern);
     const [type, setType] = useState('');
     const [ttl, setTtl] = useState<TtlFilter>('any');
+    const [creating, setCreating] = useState(false);
+    const readOnly = useAppStore(
+        (s) =>
+            s.connections.find((c) => c.id === s.currentEnvironment)
+                ?.readOnly ?? false
+    );
     const [view, setView] = useState<View>('tree');
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
@@ -44,6 +51,18 @@ export function KeysPage() {
                       depth: 0
                   })),
         [view, data.keys, expanded]
+    );
+
+    // After a write: refresh the list and the detail; follow a rename, drop a delete.
+    const { reload: reloadList } = data;
+    const { reload: reloadDetail } = detail;
+    const afterWrite = useCallback(
+        (next?: string | null) => {
+            reloadList();
+            if (next === undefined) reloadDetail();
+            else setSelectedKey(next);
+        },
+        [reloadList, reloadDetail, setSelectedKey]
     );
 
     const toggleFolder = useCallback((path: string) => {
@@ -82,7 +101,16 @@ export function KeysPage() {
                 onType={setType}
                 onTtl={setTtl}
                 scanLine={scanLine}
+                onNewKey={() => setCreating(true)}
+                newKeyDisabled={readOnly}
             />
+            {creating && env && (
+                <NewKeyModal
+                    env={env}
+                    onClose={() => setCreating(false)}
+                    onCreated={(key) => afterWrite(key)}
+                />
+            )}
             <div className="panes">
                 <section className="klist" aria-label="Keys">
                     <div className="khead">
@@ -179,6 +207,7 @@ export function KeysPage() {
                             loading={detail.loading}
                             error={detail.error}
                             onReload={detail.reload}
+                            onChanged={afterWrite}
                         />
                     ) : (
                         <EmptyState title="Select a key">

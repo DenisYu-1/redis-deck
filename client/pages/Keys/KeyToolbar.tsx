@@ -27,6 +27,8 @@ interface Props {
     onType: (type: string) => void;
     onTtl: (ttl: TtlFilter) => void;
     scanLine: string;
+    onNewKey: () => void;
+    newKeyDisabled: boolean;
 }
 
 const DEBOUNCE_MS = 350;
@@ -50,7 +52,9 @@ export function KeyToolbar({
     onPattern,
     onType,
     onTtl,
-    scanLine
+    scanLine,
+    onNewKey,
+    newKeyDisabled
 }: Props) {
     const [draft, setDraft] = useState(pattern);
     const input = useRef<HTMLInputElement>(null);
@@ -118,6 +122,19 @@ export function KeyToolbar({
                         </option>
                     ))}
                 </select>
+                <button
+                    type="button"
+                    className="btn primary"
+                    disabled={newKeyDisabled}
+                    title={
+                        newKeyDisabled
+                            ? 'This connection is read-only'
+                            : undefined
+                    }
+                    onClick={onNewKey}
+                >
+                    New key
+                </button>
             </div>
             <div className="chips">
                 <div

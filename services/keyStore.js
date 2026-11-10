@@ -158,6 +158,49 @@ async function writeKey(connectionId, key, type, value, ttl = 0) {
     return run(connectionId, add).then(({ node }) => ({ node }));
 }
 
+// Add one hash field or zset member in place (keeps the TTL and the rest of
+// the value). Type comes from the key; a missing key is created from the shape
+// of `entry`: { field, value } is a hash, { member, score } a zset.
+async function addMember(connectionId, key, entry) {
+    const { result, node } = await run(connectionId, ['TYPE', key]);
+    const existing = String(result).trim();
+    let type = existing;
+    if (existing === 'none') {
+        type = entry.score !== undefined ? 'zset' : 'hash';
+    }
+    if (type === 'hash') {
+        if (!entry.field || entry.value === undefined) {
+            throw fail('Hash field and value are required', 'BAD_VALUE', 400);
+        }
+        await execArgv(
+            ['HSET', key, entry.field, String(entry.value)],
+            connectionId,
+            node
+        );
+    } else if (type === 'zset') {
+        const score = Number(entry.score);
+        if (
+            entry.member === undefined ||
+            entry.score === '' ||
+            !Number.isFinite(score)
+        ) {
+            throw fail(
+                'Member and numeric score are required',
+                'BAD_VALUE',
+                400
+            );
+        }
+        await execArgv(
+            ['ZADD', key, score, String(entry.member)],
+            connectionId,
+            node
+        );
+    } else {
+        throw fail(`Cannot add members to a ${type} key`, 'BAD_TYPE', 400);
+    }
+    return type;
+}
+
 async function deleteKey(connectionId, key) {
     return (await run(connectionId, ['DEL', key])).result;
 }
@@ -185,6 +228,7 @@ module.exports = {
     readMeta,
     keyExists,
     writeKey,
+    addMember,
     deleteKey,
     renameKey,
     expireKey,

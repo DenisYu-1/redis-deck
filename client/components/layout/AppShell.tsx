@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ProdBanner } from './ProdBanner';
 import { Toast } from '@/components/ui/Toast';
+import { ConfirmWriteHost } from '@/components/ui/ConfirmWriteHost';
 import { loadEnvironments } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
@@ -44,6 +45,7 @@ export function AppShell() {
                 <Outlet />
             </div>
             <Toast />
+            <ConfirmWriteHost />
         </div>
     );
 }
