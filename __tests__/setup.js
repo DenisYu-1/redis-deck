@@ -8,6 +8,11 @@ require('@testing-library/jest-dom');
 global.TextEncoder = require('util').TextEncoder;
 global.TextDecoder = require('util').TextDecoder;
 
+// jsdom drops setImmediate; node-redis uses it. Backend runs under real node.
+if (typeof global.setImmediate === 'undefined') {
+    global.setImmediate = (fn, ...args) => setTimeout(fn, 0, ...args);
+}
+
 dotenv.config();
 
 const TEST_CONNECTION_ID = 'test-connection';

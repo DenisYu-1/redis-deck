@@ -30,29 +30,33 @@ router.get('/keys', async (req, res) => {
         let nextCursors = cursors;
         let iterations = 0;
         let hasMore = false;
-        const MAX_ITERATIONS = 1000; // Limit auto-pagination to prevent excessive scanning
+        // Bounded so proving "no match" over a huge keyspace can't hang the
+        // request. When we stop early, hasMore stays true and Load More resumes
+        // from the cursor. ponytail: raise MAX_ITERATIONS or add a real key
+        // index if bounded deep search isn't good enough.
+        const MAX_ITERATIONS = 60;
 
-        // Auto-pagination loop - continue until we find at least one key or exhaust pagination
+        // Auto-pagination loop - keep scanning until we have a full page of keys
+        // or run out. Each iteration is one socket round-trip (not a process).
+        // COUNT starts small so a broad pattern fills the page in one cheap hop,
+        // then ramps up so a selective pattern sweeps the keyspace in few hops.
         do {
+            const scanCount = iterations < 3 ? Math.max(count, 500) : 20000;
             const result = await scanClusterNodes(
                 pattern,
                 nextCursors,
-                count,
+                scanCount,
                 env
             );
 
-            // Add keys to results
             keys = keys.concat(result.keys);
-
-            // Update cursors for next iteration
             nextCursors = result.cursors;
             hasMore = result.hasMore;
-
             iterations++;
+        } while (keys.length < count && hasMore && iterations < MAX_ITERATIONS);
 
-            // Continue if we found no keys, there are more available, and we haven't hit max iterations
-        } while (keys.length === 0 && hasMore && iterations < MAX_ITERATIONS);
-
+        // No trimming: return everything the sweep found so the cursor we hand
+        // back lines up exactly with these keys (Load More must not skip any).
         res.json({
             keys,
             cursors: nextCursors, // Array of cursors (one for each node)
@@ -371,12 +375,21 @@ router.delete('/allkeys', async (req, res) => {
     }
 });
 
+// P1.9: 10s per-process DBSIZE cache. ponytail: plain Map, not shared across workers.
+const keycountCache = new Map();
+const KEYCOUNT_TTL_MS = 10000;
+
 // Get total number of keys in database
 router.get('/keycount', async (req, res) => {
     try {
         const env = req.query.env;
+        const hit = keycountCache.get(env);
+        if (hit && Date.now() - hit.at < KEYCOUNT_TTL_MS) {
+            return res.json({ count: hit.count });
+        }
         const result = await execRedisCommand('DBSIZE', env);
         const keyCount = parseInt(result) || 0;
+        keycountCache.set(env, { at: Date.now(), count: keyCount });
         res.json({ count: keyCount });
     } catch (error) {
         console.error('Error getting key count:', error);
@@ -603,7 +616,9 @@ router.post('/keys/:key/zadd', async (req, res) => {
 
             // Check for MOVED response on DEL
             if (delResult.includes('MOVED')) {
-                const movedMatch = delResult.match(/MOVED\s+\d+\s+([^:]+):(\d+)/);
+                const movedMatch = delResult.match(
+                    /MOVED\s+\d+\s+([^:]+):(\d+)/
+                );
                 if (movedMatch) {
                     const targetHost = movedMatch[1];
                     const targetPort = parseInt(movedMatch[2]);
