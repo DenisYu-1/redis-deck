@@ -97,7 +97,8 @@ export async function searchKeys(
     cursors: string[],
     count: number,
     environment: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    filters: { type?: string; ttl?: string } = {}
 ): Promise<SearchKeysResponse> {
     const params = new URLSearchParams({
         pattern,
@@ -105,6 +106,8 @@ export async function searchKeys(
         count: count.toString(),
         env: environment
     });
+    if (filters.type) params.set('type', filters.type);
+    if (filters.ttl && filters.ttl !== 'any') params.set('ttl', filters.ttl);
     const response = await fetch(
         `${API_BASE}/keys?${params}`,
         signal ? { signal } : undefined

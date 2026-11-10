@@ -352,7 +352,13 @@ function parseScanCsv(result) {
 // loops and post-write searches, where a stale hit is a correctness bug.
 // Duplicate rapid fires are de-duped client-side (AbortController). The cheap
 // repeated call (DBSIZE) is cached in routes/keys.js instead.
-async function scanClusterNodes(pattern, cursors, count, connectionId) {
+async function scanClusterNodes(
+    pattern,
+    cursors,
+    count,
+    connectionId,
+    type = null
+) {
     const clusterMode = await isClusterMode(connectionId);
 
     if (!clusterMode) {
@@ -363,7 +369,8 @@ async function scanClusterNodes(pattern, cursors, count, connectionId) {
         const client = await getClient(connectionId);
         const reply = await client.scan(cursor, {
             MATCH: String(pattern),
-            COUNT: count
+            COUNT: count,
+            ...(type ? { TYPE: type } : {})
         });
         const nextCursor = String(reply.cursor);
         return {
@@ -387,7 +394,7 @@ async function scanClusterNodes(pattern, cursors, count, connectionId) {
         const cursor = Array.isArray(cursors) && cursors[i] ? cursors[i] : '0';
         try {
             const result = await execRedisCommand(
-                `SCAN ${cursor} MATCH "${safePattern}" COUNT ${count}`,
+                `SCAN ${cursor} MATCH "${safePattern}" COUNT ${count}${type ? ` TYPE ${type}` : ''}`,
                 connectionId,
                 node
             );
