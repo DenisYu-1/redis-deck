@@ -9,7 +9,6 @@ import { KeyList } from './KeyList';
 import { KeyToolbar } from './KeyToolbar';
 import { useKeySelection } from './hooks/useKeySelection';
 import { useKeysQuery } from './hooks/useKeysQuery';
-import './keys.css';
 
 type View = 'tree' | 'flat';
 
