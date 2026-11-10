@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { execRedisCommand, scanClusterNodes } = require('../services/redis');
 const keyStore = require('../services/keyStore');
+const bulkKeys = require('../services/bulkKeys');
 const { writeGuard } = require('../guards/writeGuard');
 const {
     pageMeta,
@@ -104,6 +105,37 @@ router.get('/keys', async (req, res) => {
     } catch (error) {
         console.error('Error scanning keys:', error);
         res.status(500).json(error);
+    }
+});
+
+// Bulk operations on a selection of keys. Registered before /keys/:key routes.
+router.post('/keys/ttl', writeGuard(), async (req, res) => {
+    try {
+        const { keys, seconds } = req.body; // seconds: n > 0, or null to PERSIST
+        res.json({
+            updated: await bulkKeys.setTtl(req.query.env, keys, seconds)
+        });
+    } catch (error) {
+        fail(res, error);
+    }
+});
+
+router.post('/keys/delete', writeGuard(), async (req, res) => {
+    try {
+        res.json({
+            deleted: await bulkKeys.deleteKeys(req.query.env, req.body.keys)
+        });
+    } catch (error) {
+        fail(res, error);
+    }
+});
+
+// A read, so no guard.
+router.post('/keys/export', async (req, res) => {
+    try {
+        res.json(await bulkKeys.exportKeys(req.query.env, req.body.keys));
+    } catch (error) {
+        fail(res, error);
     }
 });
 

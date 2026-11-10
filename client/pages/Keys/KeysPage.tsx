@@ -5,6 +5,7 @@ import { useAppStore } from '@/store/useAppStore';
 import type { TtlFilter } from '@/types';
 import { buildKeyTree, flattenTree, type TreeRow } from '@/utils/keyTree';
 import { formatNumber } from '@/utils/formatter';
+import { BulkActions } from './BulkActions';
 import { KeyList } from './KeyList';
 import { KeyToolbar } from './KeyToolbar';
 import { useKeySelection } from './hooks/useKeySelection';
@@ -17,6 +18,10 @@ export function KeysPage() {
     const hasConnections = useAppStore((s) => s.connections.length > 0);
     const selectedKey = useAppStore((s) => s.selectedKey);
     const setSelectedKey = useAppStore((s) => s.setSelectedKey);
+
+    const readOnly = useAppStore(
+        (s) => s.connections.find((c) => c.id === env)?.readOnly === true
+    );
 
     const [pattern, setPattern] = useState('*');
     const [type, setType] = useState('');
@@ -145,6 +150,14 @@ export function KeysPage() {
                             onToggleFolder={toggleFolder}
                         />
                     )}
+                    <BulkActions
+                        env={env ?? ''}
+                        readOnly={readOnly}
+                        keys={selection.keys}
+                        matched={data.keys.length}
+                        onClear={selection.clear}
+                        onChanged={data.reload}
+                    />
                     <div className="kfoot">
                         <span className="mono xs mu">
                             {formatNumber(data.keys.length)} loaded
