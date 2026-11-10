@@ -125,6 +125,18 @@ function initializeDatabase() {
         console.error('Error adding safety columns to connections:', error);
     }
 
+    // Saved key-pattern searches, per connection (tier badge is derived, not stored)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS saved_searches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            connection_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            pattern TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY (connection_id) REFERENCES connections(id) ON DELETE CASCADE
+        )
+    `);
+
     // Create stats_snapshots table for statistics collection
     db.exec(`
         CREATE TABLE IF NOT EXISTS stats_snapshots (
@@ -302,8 +314,12 @@ function updateConnection(id, connection) {
 
 // Delete a connection
 function deleteConnection(id) {
-    const stmt = db.prepare('DELETE FROM connections WHERE id = ?');
-    const result = stmt.run(id);
+    const result = db.transaction(() => {
+        db.prepare('DELETE FROM saved_searches WHERE connection_id = ?').run(
+            id
+        );
+        return db.prepare('DELETE FROM connections WHERE id = ?').run(id);
+    })();
     return result.changes > 0;
 }
 

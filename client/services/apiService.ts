@@ -3,6 +3,7 @@ import type {
     SearchKeysResponse,
     KeyCountResponse,
     KeyDetails,
+    KeyInfo,
     RealtimeStats,
     CommandStatsResponse,
     MemoryByPatternResponse,
@@ -187,6 +188,16 @@ export async function getKeyDetails(
         `${API_BASE}/keys/${encodeURIComponent(key)}?env=${environment}`
     );
     return handleResponse<KeyDetails>(response);
+}
+
+export async function getKeyInfo(
+    key: string,
+    environment: string
+): Promise<KeyInfo> {
+    const response = await fetch(
+        `${API_BASE}/keys/${encodeURIComponent(key)}/meta?env=${environment}`
+    );
+    return handleResponse<KeyInfo>(response);
 }
 
 export async function saveKey(
@@ -439,4 +450,47 @@ export async function getServerStatus(
         version: info.server?.redis_version ?? '?',
         pingMs: Math.round(performance.now() - started)
     };
+}
+
+export interface SavedSearch {
+    id: number;
+    name: string;
+    pattern: string;
+}
+
+function searchesUrl(connectionId: string): string {
+    return `${API_BASE}/connections/${encodeURIComponent(connectionId)}/searches`;
+}
+
+export async function listSavedSearches(
+    connectionId: string
+): Promise<SavedSearch[]> {
+    const response = await fetch(searchesUrl(connectionId));
+    const body = await handleResponse<{ searches?: SavedSearch[] }>(response);
+    return body.searches ?? [];
+}
+
+export async function createSavedSearch(
+    connectionId: string,
+    name: string,
+    pattern: string
+): Promise<SavedSearch> {
+    const response = await fetch(searchesUrl(connectionId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, pattern })
+    });
+    const body = await handleResponse<{ search: SavedSearch }>(response);
+    return body.search;
+}
+
+export async function deleteSavedSearch(
+    connectionId: string,
+    searchId: number
+): Promise<void> {
+    const response = await fetch(
+        `${searchesUrl(connectionId)}/${String(searchId)}`,
+        { method: 'DELETE' }
+    );
+    await handleResponse<unknown>(response);
 }
