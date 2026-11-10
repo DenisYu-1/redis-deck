@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ConfirmWriteHost } from '@/components/ui/ConfirmWriteHost';
 import { SelectionBar } from '@/pages/Keys/SelectionBar';
 import { BulkTtlDialog } from '@/pages/Keys/BulkTtlDialog';
 import { setKeysTtl, exportKeys, deleteKeys } from '@/services/apiService';
@@ -124,8 +125,16 @@ describe('bulk api calls', () => {
 
     it('deleteKeys is confirm-aware: sends the header after the typed name matches', async () => {
         ok({ deleted: 1 });
-        jest.spyOn(window, 'prompt').mockReturnValue('prod');
-        await deleteKeys(['a'], 'prod');
+        render(<ConfirmWriteHost />);
+        const done = deleteKeys(['a'], 'prod');
+        await userEvent.type(
+            await screen.findByLabelText(/connection name/i),
+            'prod'
+        );
+        await userEvent.click(
+            screen.getByRole('button', { name: 'Confirm write' })
+        );
+        await done;
         const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
         expect(
             (init.headers as Record<string, string>)['X-Confirm-Connection']
@@ -133,8 +142,14 @@ describe('bulk api calls', () => {
     });
 
     it('deleteKeys is cancelled when the typed name is wrong', async () => {
-        jest.spyOn(window, 'prompt').mockReturnValue('nope');
-        await expect(deleteKeys(['a'], 'prod')).rejects.toThrow(/cancelled/);
+        render(<ConfirmWriteHost />);
+        const rejected = expect(deleteKeys(['a'], 'prod')).rejects.toThrow(
+            /cancelled/
+        );
+        await userEvent.click(
+            await screen.findByRole('button', { name: 'Cancel' })
+        );
+        await rejected;
         expect(fetchMock).not.toHaveBeenCalled();
     });
 

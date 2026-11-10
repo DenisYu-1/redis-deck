@@ -31,11 +31,6 @@ export function KeysPage() {
     const [type, setType] = useState('');
     const [ttl, setTtl] = useState<TtlFilter>('any');
     const [creating, setCreating] = useState(false);
-    const readOnly = useAppStore(
-        (s) =>
-            s.connections.find((c) => c.id === s.currentEnvironment)
-                ?.readOnly ?? false
-    );
     const [view, setView] = useState<View>('tree');
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
