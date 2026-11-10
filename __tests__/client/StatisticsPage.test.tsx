@@ -1,5 +1,6 @@
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { StatisticsApp } from '@/pages/Statistics/StatisticsApp';
 import { useAppStore } from '@/store/useAppStore';
 import { getHistoryStats, getRealtimeStats } from '@/services/apiService';
@@ -9,8 +10,11 @@ jest.mock('@/services/apiService', () => ({
     getRealtimeStats: jest.fn(),
     takeSnapshot: jest.fn()
 }));
-jest.mock('@/pages/Statistics/components/ChartsSection', () => ({
-    ChartsSection: () => <div>CHARTS</div>
+jest.mock('@/pages/Statistics/components/charts', () => ({
+    MemoryChart: () => <div>CHART-MEMORY</div>,
+    KeyspaceChart: () => <div>CHART-KEYSPACE</div>,
+    HitRateChart: () => <div>CHART-HITRATE</div>,
+    OpsChart: () => <div>CHART-OPS</div>
 }));
 jest.mock('@/pages/Statistics/components/CommandStatsTable', () => ({
     CommandStatsTable: () => <div>COMMANDS</div>
@@ -53,6 +57,7 @@ const realtime = (ops: number, hits = 90, misses = 10) => ({
 const tileText = (id: string) => screen.getByTestId(`tile-${id}`).textContent;
 
 beforeEach(() => {
+    localStorage.clear();
     jest.useFakeTimers();
     (getHistoryStats as jest.Mock).mockReset().mockResolvedValue(history(1));
     (getRealtimeStats as jest.Mock).mockReset().mockResolvedValue(realtime(50));
@@ -60,9 +65,16 @@ beforeEach(() => {
 });
 afterEach(() => jest.useRealTimers());
 
-const setup = () => {
+const setup = (path = '/stats') => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    render(<StatisticsApp />);
+    render(
+        <MemoryRouter initialEntries={[path]}>
+            <Routes>
+                <Route path="/stats" element={<StatisticsApp />} />
+                <Route path="/stats/:board" element={<StatisticsApp />} />
+            </Routes>
+        </MemoryRouter>
+    );
     return user;
 };
 
@@ -141,13 +153,78 @@ describe('Statistics page', () => {
 
     it('omits out-of-scope features', async () => {
         setup();
-        await screen.findByText('CHARTS');
+        await screen.findByText('CHART-MEMORY');
         expect(screen.getByText('COMMANDS')).toBeInTheDocument();
         expect(screen.getByText('SLOWLOG')).toBeInTheDocument();
         expect(screen.getByText('PATTERNS')).toBeInTheDocument();
-        for (const re of [/widget/i, /latency/i, /queue/i, /edit layout/i]) {
+        for (const re of [/widget/i, /latency/i, /queue/i]) {
             expect(screen.queryByText(re)).toBeNull();
             expect(screen.queryByRole('button', { name: re })).toBeNull();
         }
+    });
+
+    it('/stats/memory renders the Memory deep-dive board, not Overview', async () => {
+        setup('/stats/memory');
+        expect(
+            await screen.findByRole('heading', { name: 'Memory deep-dive' })
+        ).toBeInTheDocument();
+        expect(screen.getByText('CHART-MEMORY')).toBeInTheDocument();
+        expect(screen.getByText('PATTERNS')).toBeInTheDocument();
+        expect(screen.queryByText('COMMANDS')).toBeNull();
+        expect(screen.queryByText('CHART-OPS')).toBeNull();
+        expect(screen.getByTestId('tile-mem')).toBeInTheDocument();
+        expect(screen.queryByTestId('tile-ops')).toBeNull();
+    });
+
+    it('removes a widget, restores it, and persists across remounts per board', async () => {
+        const user = setup();
+        await screen.findByText('CHART-OPS');
+        await user.click(screen.getByRole('button', { name: 'Edit layout' }));
+        await user.click(
+            screen.getByRole('button', { name: 'Remove Operations/sec' })
+        );
+        expect(screen.queryByText('CHART-OPS')).toBeNull();
+        await user.click(screen.getByRole('button', { name: 'Done' }));
+        expect(screen.queryByRole('button', { name: /^Remove/ })).toBeNull();
+
+        cleanup();
+        setup();
+        await screen.findByText('CHART-MEMORY');
+        expect(screen.queryByText('CHART-OPS')).toBeNull();
+        cleanup();
+        setup('/stats/memory');
+        await screen.findByText('CHART-MEMORY');
+
+        cleanup();
+        const user2 = setup();
+        await user2.click(
+            await screen.findByRole('button', { name: 'Restore removed' })
+        );
+        expect(screen.getByText('CHART-OPS')).toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: 'Restore removed' })
+        ).toBeNull();
+    });
+
+    it('shows an empty-board state when every widget is removed', async () => {
+        const user = setup('/stats/memory');
+        await screen.findByText('CHART-MEMORY');
+        await user.click(screen.getByRole('button', { name: 'Edit layout' }));
+        for (const name of [
+            'Key metrics',
+            'Memory usage',
+            'Keyspace',
+            'Memory by pattern'
+        ]) {
+            await user.click(
+                screen.getByRole('button', { name: `Remove ${name}` })
+            );
+        }
+        expect(screen.getByTestId('empty-board')).toBeInTheDocument();
+        await user.click(
+            screen.getByRole('button', { name: 'Restore removed' })
+        );
+        expect(screen.queryByTestId('empty-board')).toBeNull();
+        expect(screen.getByText('CHART-MEMORY')).toBeInTheDocument();
     });
 });
