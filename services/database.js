@@ -136,6 +136,22 @@ function initializeDatabase() {
             FOREIGN KEY (connection_id) REFERENCES connections(id) ON DELETE CASCADE
         )
     `);
+    // Workflow run history (kept even if the connection is later deleted)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS workflow_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_id TEXT NOT NULL,
+            connection_id TEXT NOT NULL,
+            tier TEXT NOT NULL,
+            inputs TEXT NOT NULL,
+            ok INTEGER NOT NULL,
+            text TEXT,
+            created_at INTEGER NOT NULL
+        )
+    `);
+    db.exec(
+        'CREATE INDEX IF NOT EXISTS idx_workflow_runs_action ON workflow_runs(action_id, id)'
+    );
 
     // Create stats_snapshots table for statistics collection
     db.exec(`

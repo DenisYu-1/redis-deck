@@ -144,7 +144,9 @@ export function usePlugins(context: PluginContext): PluginHookResult {
                 );
                 const loadedPlugins = await Promise.all(
                     mergedConfig.plugins
-                        .filter((p: PluginDefinition) => p.enabled)
+                        .filter(
+                            (p: PluginDefinition) => p.enabled && p.path
+                        )
                         .sort(
                             (a: PluginDefinition, b: PluginDefinition) =>
                                 (b.priority || 0) - (a.priority || 0)
@@ -152,7 +154,7 @@ export function usePlugins(context: PluginContext): PluginHookResult {
                         .map(async (pluginDef: PluginDefinition) => {
                             try {
                                 const module = await importPlugin(
-                                    pluginDef.path
+                                    pluginDef.path ?? ''
                                 );
                                 const PluginComponent = module.default;
 

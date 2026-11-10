@@ -19,6 +19,7 @@ jest.mock('@/services/apiService', () => ({
         { id: 'local', host: 'h1', port: 6379, tls: false, cluster: false },
         { id: 'prod', host: 'h2', port: 6380, tls: true, cluster: false }
     ]),
+    getWorkflows: jest.fn().mockResolvedValue([]),
     getKeyCount: jest.fn().mockResolvedValue({ count: 42 }),
     getServerStatus: jest
         .fn()
