@@ -81,6 +81,34 @@ async function readKey(connectionId, key, { full = false } = {}) {
     };
 }
 
+const LENGTH_CMD = {
+    string: 'STRLEN',
+    hash: 'HLEN',
+    list: 'LLEN',
+    set: 'SCARD',
+    zset: 'ZCARD',
+    stream: 'XLEN'
+};
+
+// -> { type, encoding, idle, memory, length }. Fields Redis cannot answer
+// (IDLETIME under an LFU policy, MEMORY USAGE, JSON length) are null.
+async function readMeta(connectionId, key) {
+    const { result: type, node } = await run(connectionId, ['TYPE', key]);
+    if (type === 'none') {
+        throw fail('Key not found', 'KEY_NOT_FOUND', 404);
+    }
+    const ask = (...argv) =>
+        execArgv(argv, connectionId, node).catch(() => null);
+    const lengthCmd = LENGTH_CMD[type];
+    const [encoding, idle, memory, length] = await Promise.all([
+        ask('OBJECT', 'ENCODING', key),
+        ask('OBJECT', 'IDLETIME', key),
+        ask('MEMORY', 'USAGE', key),
+        lengthCmd ? ask(lengthCmd, key) : null
+    ]);
+    return { type, encoding, idle, memory, length };
+}
+
 async function keyExists(connectionId, key) {
     return (await run(connectionId, ['EXISTS', key])).result === 1;
 }
@@ -154,6 +182,7 @@ async function copyKey(connectionId, key, targetConnectionId, targetKey) {
 
 module.exports = {
     readKey,
+    readMeta,
     keyExists,
     writeKey,
     deleteKey,

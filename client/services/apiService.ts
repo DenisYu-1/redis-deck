@@ -3,6 +3,7 @@ import type {
     SearchKeysResponse,
     KeyCountResponse,
     KeyDetails,
+    KeyInfo,
     RealtimeStats,
     CommandStatsResponse,
     MemoryByPatternResponse,
@@ -187,6 +188,16 @@ export async function getKeyDetails(
         `${API_BASE}/keys/${encodeURIComponent(key)}?env=${environment}`
     );
     return handleResponse<KeyDetails>(response);
+}
+
+export async function getKeyInfo(
+    key: string,
+    environment: string
+): Promise<KeyInfo> {
+    const response = await fetch(
+        `${API_BASE}/keys/${encodeURIComponent(key)}/meta?env=${environment}`
+    );
+    return handleResponse<KeyInfo>(response);
 }
 
 export async function saveKey(

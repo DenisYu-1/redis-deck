@@ -151,6 +151,19 @@ router.get('/keys/:key', async (req, res) => {
     }
 });
 
+// Encoding, idle time, memory and length for the detail header.
+router.get('/keys/:key/meta', async (req, res) => {
+    try {
+        res.json(await keyStore.readMeta(req.query.env, req.params.key));
+    } catch (error) {
+        if (error.code === 'KEY_NOT_FOUND') {
+            return res.status(404).json({ error: 'Key not found' });
+        }
+        console.error(`Error reading meta for ${req.params.key}:`, error);
+        fail(res, error);
+    }
+});
+
 // Check if a key exists
 router.get('/keys/:key/exists', async (req, res) => {
     try {
