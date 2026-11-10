@@ -1,7 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Header } from '@/components/layout/Header';
-import { Toast } from '@/components/common/Toast';
-import { setTheme, getTheme } from '@/utils/theme';
 import { useToast } from '@/hooks/useToast';
 import { useAppStore } from '@/store/useAppStore';
 import {
@@ -14,12 +11,6 @@ import {
 import type { RedisConnection } from '@/types';
 import {
     ConnectionsManager,
-    SettingsSection,
-    SettingItem,
-    SettingInfo,
-    SettingControl,
-    ThemeSelector,
-    ThemeOption,
     ConnectionsList,
     ConnectionCard,
     ConnectionDetails,
@@ -37,7 +28,6 @@ import {
 
 export function SettingsApp() {
     const [connections, setConnections] = useState<RedisConnection[]>([]);
-    const [currentTheme, setCurrentTheme] = useState(getTheme());
     const [isEditing, setIsEditing] = useState(false);
     const [editingConnection, setEditingConnection] =
         useState<RedisConnection | null>(null);
@@ -68,11 +58,6 @@ export function SettingsApp() {
     useEffect(() => {
         void fetchConnections();
     }, [showToast]);
-
-    const handleThemeChange = (theme: 'light' | 'dark') => {
-        setTheme(theme);
-        setCurrentTheme(theme);
-    };
 
     const handleAddNew = () => {
         setEditingConnection({
@@ -145,48 +130,8 @@ export function SettingsApp() {
 
     return (
         <div className="container">
-            <Header showNavigation={true} showBackButton={true}>
-                <div className="connection-info">
-                    <span
-                        id="total-keys-count"
-                        className="total-keys"
-                        style={{ display: 'none' }}
-                    >
-                        Total Keys: N/A
-                    </span>
-                </div>
-            </Header>
-
             <ConnectionsManager>
                 <h2>Settings</h2>
-
-                <SettingsSection>
-                    <h3>Appearance</h3>
-                    <SettingItem>
-                        <SettingInfo>
-                            <label>Theme</label>
-                            <span className="description">
-                                Choose your preferred color theme
-                            </span>
-                        </SettingInfo>
-                        <SettingControl>
-                            <ThemeSelector>
-                                <ThemeOption
-                                    $active={currentTheme === 'light'}
-                                    onClick={() => handleThemeChange('light')}
-                                >
-                                    ☀️ Light
-                                </ThemeOption>
-                                <ThemeOption
-                                    $active={currentTheme === 'dark'}
-                                    onClick={() => handleThemeChange('dark')}
-                                >
-                                    🌙 Dark
-                                </ThemeOption>
-                            </ThemeSelector>
-                        </SettingControl>
-                    </SettingItem>
-                </SettingsSection>
 
                 <h2>Redis Connections Manager</h2>
 
@@ -241,8 +186,6 @@ export function SettingsApp() {
                     />
                 )}
             </ConnectionsManager>
-
-            <Toast />
         </div>
     );
 }

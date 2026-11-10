@@ -1,7 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Header } from '@/components/layout/Header';
-import { EnvironmentSelector } from '@/components/Environment/EnvironmentSelector';
-import { Toast } from '@/components/common/Toast';
 import { MetricsGrid } from './components/MetricsGrid';
 import { ChartsSection } from './components/ChartsSection';
 import { CommandStatsTable } from './components/CommandStatsTable';
@@ -58,10 +55,6 @@ export function StatisticsApp() {
 
     return (
         <div className="container">
-            <Header showNavigation={true} showBackButton={true}>
-                <EnvironmentSelector />
-            </Header>
-
             <main className="stats-container">
                 <div className="stats-header">
                     <h2>Redis Statistics</h2>
@@ -92,8 +85,6 @@ export function StatisticsApp() {
 
                 <MemoryPatternAnalysis />
             </main>
-
-            <Toast />
         </div>
     );
 }

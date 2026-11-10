@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
-import { Header } from '@/components/layout/Header';
-import { EnvironmentSelector } from '@/components/Environment/EnvironmentSelector';
-import { EmptyState } from '@/components/EmptyState/EmptyState';
-import { Toast } from '@/components/common/Toast';
+import { Link } from 'react-router-dom';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { LeftPanel } from '@/components/layout/LeftPanel';
 import { PluginContainer } from '@/plugins/PluginContainer';
 import { usePlugins } from '@/plugins/usePlugins';
@@ -55,9 +53,6 @@ export function Home() {
 
     return (
         <div className="container">
-            <Header showNavigation={true} showBackButton={false}>
-                {!isLoading && hasConnections && <EnvironmentSelector />}
-            </Header>
             <main className="home-layout">
                 {!isLoading && hasConnections && (
                     <>
@@ -76,9 +71,19 @@ export function Home() {
                         </div>
                     </>
                 )}
-                {!isLoading && !hasConnections && <EmptyState />}
+                {!isLoading && !hasConnections && (
+                    <EmptyState
+                        title="No Redis connections configured"
+                        action={
+                            <Link className="btn primary" to="/connections">
+                                Add a connection
+                            </Link>
+                        }
+                    >
+                        Add a connection to get started.
+                    </EmptyState>
+                )}
             </main>
-            <Toast />
         </div>
     );
 }

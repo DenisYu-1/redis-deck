@@ -307,3 +307,24 @@ export async function addToSortedSet(
     );
     return handleResponse<{ success: boolean }>(response);
 }
+
+export interface ServerStatus {
+    version: string;
+    pingMs: number;
+}
+
+export async function getServerStatus(
+    environment: string
+): Promise<ServerStatus> {
+    const started = performance.now();
+    const response = await fetch(
+        `${API_BASE}/info?env=${encodeURIComponent(environment)}`
+    );
+    const info = await handleResponse<{
+        server?: { redis_version?: string };
+    }>(response);
+    return {
+        version: info.server?.redis_version ?? '?',
+        pingMs: Math.round(performance.now() - started)
+    };
+}
