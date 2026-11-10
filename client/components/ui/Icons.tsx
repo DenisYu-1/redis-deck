@@ -59,3 +59,10 @@ export const MoonIcon = () => (
         <path d="M21 13A9 9 0 1111 3a7 7 0 0010 10z" />
     </Svg>
 );
+
+export const LockIcon = () => (
+    <Svg>
+        <rect x="5" y="11" width="14" height="9" rx="2" />
+        <path d="M8 11V8a4 4 0 018 0v3" />
+    </Svg>
+);

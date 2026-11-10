@@ -1,3 +1,5 @@
+export type ConnectionTier = 'local' | 'staging' | 'production';
+
 export interface RedisConnection {
     id: string;
     host: string;
@@ -6,6 +8,11 @@ export interface RedisConnection {
     password?: string;
     tls: boolean;
     cluster: boolean;
+    tier?: ConnectionTier;
+    db?: number;
+    verifyTls?: boolean;
+    readOnly?: boolean;
+    confirmWrites?: boolean;
     displayOrder?: number;
 }
 
@@ -34,12 +41,7 @@ export interface KeyCountResponse {
 }
 
 export type RedisValueType =
-    | 'string'
-    | 'list'
-    | 'set'
-    | 'zset'
-    | 'hash'
-    | 'none';
+    'string' | 'list' | 'set' | 'zset' | 'hash' | 'none';
 
 export interface ToastMessage {
     message: string;

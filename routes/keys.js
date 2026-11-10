@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { execRedisCommand, scanClusterNodes } = require('../services/redis');
 const keyStore = require('../services/keyStore');
+const { writeGuard } = require('../guards/writeGuard');
 
 const fail = (res, error) =>
     res
@@ -128,7 +129,7 @@ router.get('/keys/:key/exists', async (req, res) => {
 });
 
 // Create/replace a key. type defaults to string; value shape as in GET.
-router.post('/keys', async (req, res) => {
+router.post('/keys', writeGuard(), async (req, res) => {
     try {
         const env = req.query.env;
         const { key, value, expiry, type = 'string' } = req.body;
@@ -153,7 +154,7 @@ router.post('/keys', async (req, res) => {
 });
 
 // Delete a key
-router.delete('/keys/:key', async (req, res) => {
+router.delete('/keys/:key', writeGuard(), async (req, res) => {
     try {
         const count = await keyStore.deleteKey(req.query.env, req.params.key);
         res.json({ deleted: count > 0, count, key: req.params.key });
@@ -164,7 +165,7 @@ router.delete('/keys/:key', async (req, res) => {
 });
 
 // Delete keys by pattern
-router.delete('/allkeys', async (req, res) => {
+router.delete('/allkeys', writeGuard(), async (req, res) => {
     try {
         const env = req.query.env;
         const pattern = req.query.pattern;
@@ -238,7 +239,7 @@ router.get('/keycount', async (req, res) => {
 });
 
 // Rename a key
-router.post('/keys/:key/rename', async (req, res) => {
+router.post('/keys/:key/rename', writeGuard(), async (req, res) => {
     try {
         const { newKey } = req.body;
         if (!newKey) {
@@ -256,7 +257,7 @@ router.post('/keys/:key/rename', async (req, res) => {
 });
 
 // Set expiry on a key (negative seconds removes it)
-router.post('/keys/:key/expire', async (req, res) => {
+router.post('/keys/:key/expire', writeGuard(), async (req, res) => {
     try {
         const { seconds } = req.body;
         if (seconds === undefined) {
@@ -276,33 +277,37 @@ router.post('/keys/:key/expire', async (req, res) => {
 });
 
 // Copy a key, optionally to another environment
-router.post('/keys/:key/copy', async (req, res) => {
-    try {
-        const env = req.query.env;
-        const key = req.params.key;
-        const { targetKey, targetEnv } = req.body;
-        if (!targetKey) {
-            return res
-                .status(400)
-                .json({ error: 'Target key name is required' });
+router.post(
+    '/keys/:key/copy',
+    writeGuard((req) => req.body?.targetEnv || req.query.env),
+    async (req, res) => {
+        try {
+            const env = req.query.env;
+            const key = req.params.key;
+            const { targetKey, targetEnv } = req.body;
+            if (!targetKey) {
+                return res
+                    .status(400)
+                    .json({ error: 'Target key name is required' });
+            }
+            const targetEnvironment = targetEnv || env;
+            await keyStore.copyKey(env, key, targetEnvironment, targetKey);
+            res.json({
+                result: 'Key copied successfully',
+                sourceKey: key,
+                targetKey,
+                targetEnv: targetEnvironment
+            });
+        } catch (error) {
+            console.error('Error copying key:', error);
+            fail(res, error);
         }
-        const targetEnvironment = targetEnv || env;
-        await keyStore.copyKey(env, key, targetEnvironment, targetKey);
-        res.json({
-            result: 'Key copied successfully',
-            sourceKey: key,
-            targetKey,
-            targetEnv: targetEnvironment
-        });
-    } catch (error) {
-        console.error('Error copying key:', error);
-        fail(res, error);
     }
-});
+);
 
 // Replace a sorted set. members: [{ value, score }] (kept for older clients;
 // POST /keys with type "zset" and [{member, score}] does the same).
-router.post('/keys/:key/zadd', async (req, res) => {
+router.post('/keys/:key/zadd', writeGuard(), async (req, res) => {
     try {
         const key = req.params.key;
         const { members, expiry } = req.body;

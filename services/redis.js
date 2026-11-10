@@ -56,8 +56,14 @@ function connArgs(config, nodeOverride = null) {
     if (config.password) {
         args.push('-a', String(config.password), '--no-auth-warning');
     }
+    if (config.db) {
+        args.push('-n', String(config.db));
+    }
     if (config.tls) {
-        args.push('--tls', '--insecure');
+        args.push('--tls');
+        if (config.verifyTls === false) {
+            args.push('--insecure');
+        }
     }
     return args;
 }
@@ -445,6 +451,7 @@ async function execRedisPipelinedCommands(
 }
 
 module.exports = {
+    connArgs,
     execRedisCommand,
     execRedisCommandWithConfig,
     execRedisPipelinedCommands,

@@ -11,11 +11,12 @@ function makeClient(cfg) {
     const client = createClient({
         username: cfg.username || undefined,
         password: cfg.password || undefined,
+        database: cfg.db || undefined,
         socket: {
             host: cfg.host,
             port: Number(cfg.port),
             tls: cfg.tls ? true : undefined,
-            rejectUnauthorized: cfg.tls ? false : undefined, // mirrors redis-cli --insecure
+            rejectUnauthorized: cfg.tls ? cfg.verifyTls !== false : undefined, // mirrors redis-cli --insecure when verify is off
             connectTimeout: 10000,
             reconnectStrategy: (retries) => Math.min(retries * 200, 2000)
         }

@@ -6,7 +6,8 @@ const {
     createConnection,
     updateConnection,
     deleteConnection,
-    updateConnectionOrder
+    updateConnectionOrder,
+    safetyFields
 } = require('../services/database');
 const {
     execRedisCommand,
@@ -38,6 +39,7 @@ router.get('/connections/export', (req, res) => {
                 password: fullConnection.password || '',
                 tls: fullConnection.tls === 1,
                 cluster: fullConnection.cluster === 1,
+                ...safetyFields(fullConnection),
                 order: fullConnection.order || 0
             };
         });
@@ -179,6 +181,14 @@ router.put('/connections/:id', (req, res) => {
             connection.password = existing.password;
         }
 
+        // Omitted safety fields keep their stored values
+        const stored = safetyFields(existing);
+        for (const key of Object.keys(stored)) {
+            if (connection[key] === undefined) {
+                connection[key] = stored[key];
+            }
+        }
+
         const success = updateConnection(id, connection);
 
         if (success) {
@@ -272,7 +282,9 @@ router.post('/connections/test', async (req, res) => {
             port: connection.port,
             username: connection.username,
             password: connection.password,
-            tls: Boolean(connection.tls)
+            tls: Boolean(connection.tls),
+            db: Number(connection.db) || 0,
+            verifyTls: connection.verifyTls !== false
         };
 
         const result = await execRedisCommandWithConfig('PING', config);
@@ -348,6 +360,11 @@ router.post('/connections/import', (req, res) => {
                     password: conn.password || '',
                     tls: conn.tls ? 1 : 0,
                     cluster: conn.cluster ? 1 : 0,
+                    tier: conn.tier,
+                    db: conn.db,
+                    verifyTls: conn.verifyTls,
+                    readOnly: conn.readOnly,
+                    confirmWrites: conn.confirmWrites,
                     order: finalOrder
                 };
 

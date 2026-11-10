@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SlidersIcon, UpDownIcon } from '@/components/ui/Icons';
+import { TierBadge } from '@/components/ui/Badge';
 import { useAppStore } from '@/store/useAppStore';
 
 export function ConnectionSwitcher() {
@@ -29,6 +30,7 @@ export function ConnectionSwitcher() {
                         </span>
                     )}
                 </span>
+                {current?.tier && <TierBadge tier={current.tier} />}
                 <UpDownIcon />
             </button>
             {open && (
@@ -52,6 +54,7 @@ export function ConnectionSwitcher() {
                                 }
                             />
                             <span style={{ flex: 1 }}>{c.id}</span>
+                            <TierBadge tier={c.tier ?? 'local'} />
                         </button>
                     ))}
                     <hr />

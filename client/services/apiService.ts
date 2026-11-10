@@ -9,15 +9,54 @@ import type {
     SlowLogResponse,
     HistoryResponse
 } from '@/types';
+import { useAppStore } from '@/store/useAppStore';
+import { showToast } from '@/utils/toast';
 
 const API_BASE = '/api';
 
 async function handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || response.statusText);
+        const body = await response.text();
+        let message = body;
+        try {
+            message = (JSON.parse(body) as { error?: string }).error ?? body;
+        } catch {
+            // not JSON: use the raw text
+        }
+        if (response.status === 403 || response.status === 428) {
+            // write guard refusal: surface it even if the caller swallows errors
+            showToast(message, 'error');
+        }
+        throw new Error(message || response.statusText);
     }
     return response.json() as Promise<T>;
+}
+
+/**
+ * Fetch for a request that writes to `connectionId`. The server enforces
+ * Read-only (403) and Confirm-writes (428); this only collects the typed
+ * connection name for the latter. Refusals are toasted in handleResponse.
+ */
+async function writeFetch(
+    url: string,
+    init: RequestInit,
+    connectionId: string
+): Promise<Response> {
+    const conn = useAppStore
+        .getState()
+        .connections.find((c) => c.id === connectionId);
+    const headers = { ...(init.headers as Record<string, string>) };
+    if (conn?.confirmWrites) {
+        const typed = window.prompt(
+            `Writes to '${connectionId}' need confirmation. Type the connection name to continue.`
+        );
+        if (typed !== connectionId) {
+            throw new Error('Write cancelled: connection name did not match');
+        }
+        headers['X-Confirm-Connection'] = connectionId;
+    }
+    const response = await fetch(url, { ...init, headers });
+    return response;
 }
 
 export async function loadEnvironments(): Promise<RedisConnection[]> {
@@ -97,13 +136,17 @@ export async function saveKey(
     environment: string,
     type = 'string'
 ): Promise<{ success: boolean }> {
-    const response = await fetch(`${API_BASE}/keys?env=${environment}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
+    const response = await writeFetch(
+        `${API_BASE}/keys?env=${environment}`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ key, value, expiry, type })
         },
-        body: JSON.stringify({ key, value, expiry, type })
-    });
+        environment
+    );
     return handleResponse<{ success: boolean }>(response);
 }
 
@@ -111,11 +154,12 @@ export async function deleteKey(
     key: string,
     environment: string
 ): Promise<{ success: boolean; deletedCount: number }> {
-    const response = await fetch(
+    const response = await writeFetch(
         `${API_BASE}/keys/${encodeURIComponent(key)}?env=${environment}`,
         {
             method: 'DELETE'
-        }
+        },
+        environment
     );
     return handleResponse<{ success: boolean; deletedCount: number }>(response);
 }
@@ -125,7 +169,7 @@ export async function setTTL(
     seconds: number,
     environment: string
 ): Promise<{ success: boolean }> {
-    const response = await fetch(
+    const response = await writeFetch(
         `${API_BASE}/keys/${encodeURIComponent(key)}/expire?env=${environment}`,
         {
             method: 'POST',
@@ -133,7 +177,8 @@ export async function setTTL(
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ seconds })
-        }
+        },
+        environment
     );
     return handleResponse<{ success: boolean }>(response);
 }
@@ -143,7 +188,7 @@ export async function renameKey(
     newKey: string,
     environment: string
 ): Promise<{ success: boolean }> {
-    const response = await fetch(
+    const response = await writeFetch(
         `${API_BASE}/keys/${encodeURIComponent(oldKey)}/rename?env=${environment}`,
         {
             method: 'POST',
@@ -151,7 +196,8 @@ export async function renameKey(
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ newKey })
-        }
+        },
+        environment
     );
     return handleResponse<{ success: boolean }>(response);
 }
@@ -162,7 +208,7 @@ export async function copyKey(
     sourceEnv: string,
     targetEnv: string
 ): Promise<{ success: boolean }> {
-    const response = await fetch(
+    const response = await writeFetch(
         `${API_BASE}/keys/${encodeURIComponent(sourceKey)}/copy?env=${sourceEnv}`,
         {
             method: 'POST',
@@ -170,7 +216,8 @@ export async function copyKey(
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ targetKey, targetEnv })
-        }
+        },
+        targetEnv
     );
     return handleResponse<{ success: boolean }>(response);
 }
@@ -276,9 +323,13 @@ export async function deleteKeysByPattern(
         env: environment,
         pattern
     });
-    const response = await fetch(`${API_BASE}/allkeys?${params}`, {
-        method: 'DELETE'
-    });
+    const response = await writeFetch(
+        `${API_BASE}/allkeys?${params}`,
+        {
+            method: 'DELETE'
+        },
+        environment
+    );
     return handleResponse<{ count: number; message: string }>(response);
 }
 
@@ -295,7 +346,7 @@ export async function addToSortedSet(
     expiry: number | null,
     environment: string
 ): Promise<{ success: boolean }> {
-    const response = await fetch(
+    const response = await writeFetch(
         `${API_BASE}/keys/${encodeURIComponent(key)}/zadd?env=${environment}`,
         {
             method: 'POST',
@@ -303,7 +354,8 @@ export async function addToSortedSet(
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ members, expiry })
-        }
+        },
+        environment
     );
     return handleResponse<{ success: boolean }>(response);
 }

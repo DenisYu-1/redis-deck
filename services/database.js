@@ -103,6 +103,28 @@ function initializeDatabase() {
         // ignore
     }
 
+    // Safety-model columns (v2). Existing rows get the safe defaults.
+    try {
+        const have = db
+            .prepare('PRAGMA table_info(connections)')
+            .all()
+            .map((col) => col.name);
+        const safetyColumns = [
+            ['tier', "TEXT DEFAULT 'local'"],
+            ['db', 'INTEGER DEFAULT 0'],
+            ['verify_tls', 'INTEGER DEFAULT 1'],
+            ['read_only', 'INTEGER DEFAULT 0'],
+            ['confirm_writes', 'INTEGER DEFAULT 0']
+        ];
+        for (const [name, def] of safetyColumns) {
+            if (!have.includes(name)) {
+                db.exec(`ALTER TABLE connections ADD COLUMN ${name} ${def}`);
+            }
+        }
+    } catch (error) {
+        console.error('Error adding safety columns to connections:', error);
+    }
+
     // Create stats_snapshots table for statistics collection
     db.exec(`
         CREATE TABLE IF NOT EXISTS stats_snapshots (
@@ -169,13 +191,49 @@ function initializeDatabase() {
 // Initialize the database
 initializeDatabase();
 
+const TIERS = ['local', 'staging', 'production'];
+
+function normalizeTier(tier) {
+    return TIERS.includes(tier) ? tier : 'local';
+}
+
+// Safety settings as the typed fields the API and UI use (no secrets).
+function safetyFields(row) {
+    return {
+        tier: normalizeTier(row.tier),
+        db: row.db ?? 0,
+        verifyTls: row.verify_tls !== 0,
+        readOnly: row.read_only === 1,
+        confirmWrites: row.confirm_writes === 1
+    };
+}
+
 // Get all connections
 function getAllConnections() {
     return db
         .prepare(
-            'SELECT id, host, port, username, tls, cluster, `order` FROM connections ORDER BY `order` ASC'
+            'SELECT id, host, port, username, tls, cluster, `order`, tier, db, verify_tls, read_only, confirm_writes FROM connections ORDER BY `order` ASC'
         )
-        .all();
+        .all()
+        .map(
+            ({
+                verify_tls,
+                read_only,
+                confirm_writes,
+                tier,
+                db: dbNum,
+                ...c
+            }) => ({
+                ...c,
+                ...safetyFields({
+                    tier,
+                    db: dbNum,
+                    verify_tls,
+                    read_only,
+                    confirm_writes
+                })
+            })
+        );
 }
 
 // Get a specific connection by ID
@@ -191,8 +249,8 @@ function createConnection(connection) {
     const nextOrder = (maxOrderResult.maxOrder ?? -1) + 1;
 
     const stmt = db.prepare(`
-        INSERT INTO connections (id, host, port, username, password, tls, cluster, \`order\`)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO connections (id, host, port, username, password, tls, cluster, \`order\`, tier, db, verify_tls, read_only, confirm_writes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -203,7 +261,12 @@ function createConnection(connection) {
         connection.password || '',
         connection.tls ? 1 : 0,
         connection.cluster ? 1 : 0,
-        connection.order !== undefined ? connection.order : nextOrder
+        connection.order !== undefined ? connection.order : nextOrder,
+        normalizeTier(connection.tier),
+        Number(connection.db) || 0,
+        connection.verifyTls === false ? 0 : 1,
+        connection.readOnly ? 1 : 0,
+        connection.confirmWrites ? 1 : 0
     );
 
     return result.changes > 0;
@@ -213,7 +276,7 @@ function createConnection(connection) {
 function updateConnection(id, connection) {
     const stmt = db.prepare(`
         UPDATE connections
-        SET host = ?, port = ?, username = ?, password = ?, tls = ?, cluster = ?, updated_at = CURRENT_TIMESTAMP
+        SET host = ?, port = ?, username = ?, password = ?, tls = ?, cluster = ?, tier = ?, db = ?, verify_tls = ?, read_only = ?, confirm_writes = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     `);
 
@@ -224,6 +287,11 @@ function updateConnection(id, connection) {
         connection.password || '',
         connection.tls ? 1 : 0,
         connection.cluster ? 1 : 0,
+        normalizeTier(connection.tier),
+        Number(connection.db) || 0,
+        connection.verifyTls === false ? 0 : 1,
+        connection.readOnly ? 1 : 0,
+        connection.confirmWrites ? 1 : 0,
         id
     );
 
@@ -266,7 +334,8 @@ function getConnectionConfig(id) {
         username: connection.username || undefined,
         password: connection.password || undefined,
         tls: connection.tls === 1,
-        cluster: connection.cluster === 1
+        cluster: connection.cluster === 1,
+        ...safetyFields(connection)
     };
 }
 
@@ -283,6 +352,7 @@ module.exports = {
     deleteConnection,
     updateConnectionOrder,
     getConnectionConfig,
+    safetyFields,
     getDatabase,
     db
 };

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import { ProdBanner } from './ProdBanner';
 import { Toast } from '@/components/ui/Toast';
 import { loadEnvironments } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
@@ -39,6 +40,7 @@ export function AppShell() {
         <div className="app">
             <Sidebar />
             <div className="main scroll">
+                <ProdBanner />
                 <Outlet />
             </div>
             <Toast />
