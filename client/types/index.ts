@@ -29,6 +29,16 @@ export interface KeyDetails {
     size?: number;
 }
 
+/** `GET /keys/:key/meta`; null where Redis cannot answer. */
+export interface KeyInfo {
+    type: string;
+    encoding: string | null;
+    /** Seconds since last access. */
+    idle: number | null;
+    memory: number | null;
+    length: number | null;
+}
+
 export interface KeyMeta {
     type: string;
     /** Seconds; -1 no expiry, -2 gone. */

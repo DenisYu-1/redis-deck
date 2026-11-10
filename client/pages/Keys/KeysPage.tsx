@@ -5,9 +5,11 @@ import { useAppStore } from '@/store/useAppStore';
 import type { TtlFilter } from '@/types';
 import { buildKeyTree, flattenTree, type TreeRow } from '@/utils/keyTree';
 import { formatNumber } from '@/utils/formatter';
+import { KeyDetail } from './KeyDetail';
 import { KeyList } from './KeyList';
 import { KeyToolbar } from './KeyToolbar';
 import { useKeySelection } from './hooks/useKeySelection';
+import { useKeyDetail } from './hooks/useKeyDetail';
 import { useKeysQuery } from './hooks/useKeysQuery';
 
 type View = 'tree' | 'flat';
@@ -27,6 +29,7 @@ export function KeysPage() {
     const query = useMemo(() => ({ pattern, type, ttl }), [pattern, type, ttl]);
     const data = useKeysQuery(env ?? null, query);
     const selection = useKeySelection(data.keys);
+    const detail = useKeyDetail(env ?? null, selectedKey);
 
     const rows: TreeRow[] = useMemo(
         () =>
@@ -162,11 +165,24 @@ export function KeysPage() {
                     </div>
                 </section>
                 <section className="detail" aria-label="Key detail">
-                    <EmptyState title={selectedKey ?? 'Select a key'}>
-                        {selectedKey
-                            ? 'Key detail arrives with the next release.'
-                            : 'Pick a key from the list to inspect it.'}
-                    </EmptyState>
+                    {selectedKey ? (
+                        <KeyDetail
+                            keyName={selectedKey}
+                            details={
+                                detail.details?.key === selectedKey
+                                    ? detail.details
+                                    : null
+                            }
+                            info={detail.info}
+                            loading={detail.loading}
+                            error={detail.error}
+                            onReload={detail.reload}
+                        />
+                    ) : (
+                        <EmptyState title="Select a key">
+                            Pick a key from the list to inspect it.
+                        </EmptyState>
+                    )}
                 </section>
             </div>
         </div>
