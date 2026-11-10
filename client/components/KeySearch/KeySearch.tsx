@@ -7,11 +7,7 @@ interface KeySearchProps {
     onShowAll: () => void;
 }
 
-export function KeySearch({
-    searchPattern,
-    onSearch,
-    onShowAll
-}: KeySearchProps) {
+export function KeySearch({ searchPattern, onSearch, onShowAll }: KeySearchProps) {
     const [pattern, setPattern] = useState(searchPattern);
     const currentEnvironment = useAppStore((state) => state.currentEnvironment);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -54,13 +50,7 @@ export function KeySearch({
                     onChange={(e) => setPattern(e.target.value)}
                     onKeyDown={handleKeyDown}
                 />
-                <button
-                    type="button"
-                    onClick={handleSearch}
-                    disabled={!currentEnvironment}
-                >
-                    Search
-                </button>
+                <button type="button" onClick={handleSearch} disabled={!currentEnvironment}>Search</button>
                 <button onClick={handleShowAll} className="secondary-btn">
                     Show All Keys
                 </button>
