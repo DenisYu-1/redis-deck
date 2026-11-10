@@ -53,9 +53,6 @@ export function Sidebar() {
         <aside className="side">
             <div className="brand">
                 <Logo />
-                <span>
-                    Redis<b>Deck</b>
-                </span>
             </div>
             <ConnectionSwitcher />
             <nav className="navgroup" aria-label="Main">

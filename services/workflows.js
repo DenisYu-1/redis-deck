@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getDatabase } = require('./database');
-const { execRedisCommand } = require('./redis');
+const { execRedisCommand, execArgv } = require('./redis');
 
 const CONFIG_DIR = path.join(__dirname, '..', 'client', 'plugins', 'config');
 const HANDLER_DIRS = [
@@ -130,7 +130,9 @@ function makeContext(env, tier) {
     return {
         env,
         tier,
-        exec: (command) => execRedisCommand(command, env)
+        exec: (command) => execRedisCommand(command, env),
+        // argv form: parsed JSON reply, no quoting needed (use for JSON values)
+        argv: (...args) => execArgv(args, env)
     };
 }
 

@@ -44,7 +44,7 @@
   --shadow:rgba(0,0,0,.5);--dot:#1C1F23;
   color-scheme:dark;
 }
-html,body{height:100%}
+html,body,#root{height:100%}
 html body{background:var(--bg);color:var(--tx);font-family:var(--f-ui);font-size:13px;line-height:1.45;box-sizing:border-box;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;
   -webkit-font-smoothing:antialiased}
@@ -66,10 +66,10 @@ svg{flex:none}
 .app{height:100%;display:grid;grid-template-columns:236px minmax(0,1fr);border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:var(--bg);box-shadow:0 20px 60px var(--shadow)}
 .app.bare{grid-template-columns:minmax(0,1fr)}
 .app.bare .side{display:none}
-.side{background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;gap:14px;padding:14px 10px 10px;overflow:auto;min-height:0}
+.side{background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;gap:14px;padding:14px 10px 10px;overflow-x:hidden;overflow-y:auto;min-height:0}
 .main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
 .brand{display:flex;align-items:center;gap:9px;padding:0 6px;font-weight:600;font-size:15px;letter-spacing:-.01em}
-.brand b{color:var(--ac);font-weight:600}
+.brand .logo{height:22px;width:auto;max-width:100%}
 .connwrap{position:relative}
 .connbtn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:var(--r2);border:1px solid var(--bd);border-radius:8px;text-align:left}
 .connbtn:hover{border-color:var(--bd2)}
@@ -180,7 +180,7 @@ kbd{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border:1px solid va
 }
 @media (max-width:860px){
   html body{height:auto;padding-block:12px}
-  html{height:auto}
+  html,#root{height:auto}
   .app{height:auto;grid-template-columns:minmax(0,1fr);overflow:visible}
   .side{border-right:0;border-bottom:1px solid var(--bd);overflow:visible}
   .main,.panes{overflow:visible}
