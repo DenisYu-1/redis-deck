@@ -19,19 +19,18 @@ export interface Board {
 }
 
 const OVERVIEW: Board = {
-        id: 'overview',
-        title: 'Overview',
-        widgets: [
-            'tiles',
-            'chart-memory',
-            'chart-keyspace',
-            'chart-hitrate',
-            'chart-ops',
-            'commands',
-            'slowlog',
-            'patterns'
-        ]
-    }
+    id: 'overview',
+    title: 'Overview',
+    widgets: [
+        'tiles',
+        'chart-memory',
+        'chart-keyspace',
+        'chart-hitrate',
+        'chart-ops',
+        'commands',
+        'slowlog',
+        'patterns'
+    ]
 };
 
 export const BOARDS: Board[] = [
