@@ -1,14 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import Chart from 'chart.js/auto';
 import type { Plugin } from 'chart.js';
 import { formatBytes } from '@/utils/formatter';
 import type { HistoryDataPoint } from '@/types';
-
-interface ChartsSectionProps {
-    data: HistoryDataPoint[];
-    hours: number;
-    loading: boolean;
-}
 
 interface SeriesDef {
     label: string;
@@ -20,6 +14,38 @@ interface SeriesDef {
 const cssVar = (name: string, fallback: string) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim() ||
     fallback;
+
+interface Colors {
+    c1: string;
+    c2: string;
+    ok: string;
+}
+
+const readColors = (): Colors => ({
+    c1: cssVar('--c1', '#4a8ae8'),
+    c2: cssVar('--c2', '#da7232'),
+    ok: cssVar('--ok', '#4ade80')
+});
+
+/** Bumps whenever the theme (data-theme attr or dark-theme class) changes. */
+let themeVersion = 0;
+function subscribeTheme(cb: () => void) {
+    const mo = new MutationObserver(() => {
+        themeVersion += 1;
+        cb();
+    });
+    mo.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme', 'class']
+    });
+    return () => mo.disconnect();
+}
+const useThemeVersion = () =>
+    useSyncExternalStore(
+        subscribeTheme,
+        () => themeVersion,
+        () => 0
+    );
 
 /** Vertical line under the pointer, drawn from the tooltip's active point. */
 const crosshair: Plugin<'line'> = {
@@ -69,10 +95,11 @@ function LineChart({
     data: HistoryDataPoint[];
     hours: number;
     loading: boolean;
-    series: (d: HistoryDataPoint[]) => SeriesDef[];
+    series: (d: HistoryDataPoint[], c: Colors) => SeriesDef[];
     format: (v: number) => string;
 }) {
     const canvas = useRef<HTMLCanvasElement>(null);
+    const themeV = useThemeVersion();
 
     useEffect(() => {
         const el = canvas.current;
@@ -86,7 +113,7 @@ function LineChart({
             plugins: [crosshair],
             data: {
                 labels: data.map((p) => formatTick(p.timestamp, hours)),
-                datasets: series(data).map((s) => ({
+                datasets: series(data, readColors()).map((s) => ({
                     label: s.label,
                     data: s.values,
                     borderColor: s.color,
@@ -136,7 +163,7 @@ function LineChart({
         });
         return () => chart.destroy();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data, hours]);
+    }, [data, hours, themeV]);
 
     return (
         <div className="charts-section" data-testid={`chart-${id}`}>
@@ -156,80 +183,72 @@ function LineChart({
     );
 }
 
-export function ChartsSection({ data, hours, loading }: ChartsSectionProps) {
-    const c1 = cssVar('--c1', '#4a8ae8');
-    const c2 = cssVar('--c2', '#da7232');
-    const ok = cssVar('--ok', '#4ade80');
-    const props = { data, hours, loading };
-    return (
-        <>
-            <div className="wrow">
-                <LineChart
-                    {...props}
-                    id="memory"
-                    title="Memory usage"
-                    format={formatBytes}
-                    series={(d) => [
-                        {
-                            label: 'Used',
-                            values: d.map((p) => p.memory_used),
-                            color: c1
-                        },
-                        {
-                            label: 'Peak',
-                            values: d.map((p) => p.memory_peak),
-                            color: c2,
-                            dashed: true
-                        }
-                    ]}
-                />
-                <LineChart
-                    {...props}
-                    id="keyspace"
-                    title="Keyspace"
-                    format={(v) => Math.round(v).toLocaleString()}
-                    series={(d) => [
-                        {
-                            label: 'Keys',
-                            values: d.map((p) => p.total_keys),
-                            color: ok
-                        }
-                    ]}
-                />
-            </div>
-            <div className="wrow">
-                <LineChart
-                    {...props}
-                    id="hitrate"
-                    title="Hit rate"
-                    format={(v) => `${v.toFixed(1)}%`}
-                    series={(d) => [
-                        {
-                            label: 'Hit rate',
-                            values: d.map((p) => {
-                                const t = p.keyspace_hits + p.keyspace_misses;
-                                return t > 0
-                                    ? (p.keyspace_hits / t) * 100
-                                    : 100;
-                            }),
-                            color: c1
-                        }
-                    ]}
-                />
-                <LineChart
-                    {...props}
-                    id="ops"
-                    title="Operations/sec"
-                    format={(v) => Math.round(v).toLocaleString()}
-                    series={(d) => [
-                        {
-                            label: 'Ops/sec',
-                            values: d.map((p) => p.instantaneous_ops_per_sec),
-                            color: c2
-                        }
-                    ]}
-                />
-            </div>
-        </>
-    );
-}
+type ChartProps = Pick<
+    Parameters<typeof LineChart>[0],
+    'data' | 'hours' | 'loading'
+>;
+
+export const MemoryChart = (p: ChartProps) => (
+    <LineChart
+        {...p}
+        id="memory"
+        title="Memory usage"
+        format={formatBytes}
+        series={(d, c) => [
+            { label: 'Used', values: d.map((x) => x.memory_used), color: c.c1 },
+            {
+                label: 'Peak',
+                values: d.map((x) => x.memory_peak),
+                color: c.c2,
+                dashed: true
+            }
+        ]}
+    />
+);
+
+export const KeyspaceChart = (p: ChartProps) => (
+    <LineChart
+        {...p}
+        id="keyspace"
+        title="Keyspace"
+        format={(v) => Math.round(v).toLocaleString()}
+        series={(d, c) => [
+            { label: 'Keys', values: d.map((x) => x.total_keys), color: c.ok }
+        ]}
+    />
+);
+
+export const HitRateChart = (p: ChartProps) => (
+    <LineChart
+        {...p}
+        id="hitrate"
+        title="Hit rate"
+        format={(v) => `${v.toFixed(1)}%`}
+        series={(d, c) => [
+            {
+                label: 'Hit rate',
+                values: d.map((x) => {
+                    const t = x.keyspace_hits + x.keyspace_misses;
+                    return t > 0 ? (x.keyspace_hits / t) * 100 : 100;
+                }),
+                color: c.c1
+            }
+        ]}
+    />
+);
+
+export const OpsChart = (p: ChartProps) => (
+    <LineChart
+        {...p}
+        id="ops"
+        title="Operations/sec"
+        format={(v) => Math.round(v).toLocaleString()}
+        series={(d, c) => [
+            {
+                label: 'Ops/sec',
+                values: d.map((x) => x.instantaneous_ops_per_sec),
+                color: c.c2
+            }
+        ]}
+    />
+);

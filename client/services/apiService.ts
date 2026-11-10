@@ -93,6 +93,63 @@ export async function testConnectionConfig(
     return result.success;
 }
 
+/** Test an unsaved or edited Connection; a saved `id` with no password uses the stored one. */
+export async function testConnectionDraft(
+    connection: RedisConnection
+): Promise<{ success: boolean; message: string }> {
+    try {
+        const response = await fetch(`${API_BASE}/connections/test`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(connection)
+        });
+        const body = (await response.json()) as {
+            success?: boolean;
+            message?: string;
+            error?: string;
+        };
+        return {
+            success: Boolean(body.success),
+            message: body.error ?? body.message ?? 'Connection failed'
+        };
+    } catch (error) {
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : 'Test failed'
+        };
+    }
+}
+
+export async function reorderConnections(ids: string[]): Promise<void> {
+    const response = await fetch(`${API_BASE}/connections/order`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionIds: ids })
+    });
+    await handleResponse<unknown>(response);
+}
+
+export function connectionsExportUrl(includePasswords: boolean): string {
+    return `${API_BASE}/connections/export${includePasswords ? '?includePasswords=true' : ''}`;
+}
+
+export async function importConnections(
+    connections: unknown[]
+): Promise<{ imported: number; errors: number }> {
+    const response = await fetch(`${API_BASE}/connections/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connections })
+    });
+    const result = await handleResponse<{
+        results: { imported: unknown[]; errors: unknown[] };
+    }>(response);
+    return {
+        imported: result.results.imported.length,
+        errors: result.results.errors.length
+    };
+}
+
 export async function searchKeys(
     pattern: string,
     cursors: string[],

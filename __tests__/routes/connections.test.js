@@ -282,9 +282,9 @@ describe('Connection Routes', () => {
             expect(response.body.connections.length).toBeGreaterThan(0);
         });
 
-        test('should include passwords in export', async () => {
+        test('should include passwords in export when requested', async () => {
             const response = await request(app)
-                .get('/api/connections/export')
+                .get('/api/connections/export?includePasswords=true')
                 .expect(200);
 
             const conn = response.body.connections[0];

@@ -8,8 +8,8 @@ import { showToast } from '@/utils/toast';
 jest.mock('@/pages/Keys/KeysPage', () => ({
     KeysPage: () => <div>KEYS PAGE</div>
 }));
-jest.mock('@/pages/Settings/SettingsApp', () => ({
-    SettingsApp: () => <div>CONNECTIONS PAGE</div>
+jest.mock('@/pages/Connections/ConnectionsPage', () => ({
+    ConnectionsPage: () => <div>CONNECTIONS PAGE</div>
 }));
 jest.mock('@/pages/Statistics/StatisticsApp', () => ({
     StatisticsApp: () => <div>STATS PAGE</div>
