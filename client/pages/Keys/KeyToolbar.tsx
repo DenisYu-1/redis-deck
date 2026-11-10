@@ -55,6 +55,13 @@ export function KeyToolbar({
     const [draft, setDraft] = useState(pattern);
     const input = useRef<HTMLInputElement>(null);
 
+    // A pattern applied from outside (a saved search) replaces the draft.
+    const [seen, setSeen] = useState(pattern);
+    if (seen !== pattern) {
+        setSeen(pattern);
+        setDraft(pattern);
+    }
+
     // Debounced apply; Enter applies at once.
     useEffect(() => {
         if (draft === pattern) return;

@@ -20,7 +20,10 @@ jest.mock('@/services/apiService', () => ({
         { id: 'prod', host: 'h2', port: 6380, tls: true, cluster: false }
     ]),
     getKeyCount: jest.fn().mockResolvedValue({ count: 42 }),
-    getServerStatus: jest.fn().mockResolvedValue({ version: '7.2.0', pingMs: 3 })
+    getServerStatus: jest
+        .fn()
+        .mockResolvedValue({ version: '7.2.0', pingMs: 3 }),
+    listSavedSearches: jest.fn().mockResolvedValue([])
 }));
 
 function Path() {
@@ -59,10 +62,13 @@ describe('routes', () => {
         expect(screen.getByTestId('path')).toHaveTextContent('/connections');
     });
 
-    it.each(['/stats', '/stats/memory'])('renders statistics at %s', async (p) => {
-        renderAt(p);
-        expect(await screen.findByText('STATS PAGE')).toBeInTheDocument();
-    });
+    it.each(['/stats', '/stats/memory'])(
+        'renders statistics at %s',
+        async (p) => {
+            renderAt(p);
+            expect(await screen.findByText('STATS PAGE')).toBeInTheDocument();
+        }
+    );
 });
 
 describe('sidebar', () => {
@@ -73,7 +79,9 @@ describe('sidebar', () => {
         await user.click(switcher);
         await user.click(screen.getByRole('menuitem', { name: /prod/ }));
         expect(useAppStore.getState().currentEnvironment).toBe('prod');
-        expect(screen.getByRole('button', { name: /prod/ })).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: /prod/ })
+        ).toBeInTheDocument();
     });
 
     it('offers Manage connections in the switcher menu', async () => {
@@ -90,7 +98,9 @@ describe('sidebar', () => {
     it('navigates with Keys and Statistics links', async () => {
         const user = userEvent.setup();
         renderAt('/keys');
-        await user.click(await screen.findByRole('link', { name: /statistics/i }));
+        await user.click(
+            await screen.findByRole('link', { name: /statistics/i })
+        );
         expect(await screen.findByText('STATS PAGE')).toBeInTheDocument();
         expect(screen.getByTestId('path')).toHaveTextContent('/stats');
     });
