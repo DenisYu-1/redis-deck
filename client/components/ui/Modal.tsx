@@ -1,4 +1,4 @@
-import { useEffect, useId, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 
 interface ModalProps {
     title: string;
@@ -7,16 +7,29 @@ interface ModalProps {
     footer?: ReactNode;
 }
 
+// Open modals, oldest first; only the last one reacts to Escape.
+const stack: symbol[] = [];
+
 export function Modal({ title, onClose, children, footer }: ModalProps) {
     const titleId = useId();
 
+    const [token] = useState(() => Symbol('modal'));
+    useEffect(() => {
+        stack.push(token);
+        return () => {
+            stack.splice(stack.indexOf(token), 1);
+        };
+    }, [token]);
+
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape' && stack[stack.length - 1] === token) {
+                onClose();
+            }
         };
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
-    }, [onClose]);
+    }, [onClose, token]);
 
     return (
         <div

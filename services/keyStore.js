@@ -224,6 +224,7 @@ async function copyKey(connectionId, key, targetConnectionId, targetKey) {
 }
 
 module.exports = {
+    run,
     readKey,
     readMeta,
     keyExists,

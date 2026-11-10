@@ -2,6 +2,7 @@
 // Connection is Read-only; 428 when it asks for confirmation and the
 // X-Confirm-Connection header does not equal the connection id.
 const { getConnection } = require('../services/database');
+const { tokenize } = require('../services/redis');
 
 const CONFIRM_HEADER = 'x-confirm-connection';
 
@@ -37,7 +38,12 @@ const WRITE_SUBCOMMANDS = {
         'RESET',
         'REPLICATE',
         'SETSLOT',
-        'FLUSHSLOTS'
+        'FLUSHSLOTS',
+        'ADDSLOTSRANGE',
+        'DELSLOTSRANGE',
+        'BUMPEPOCH',
+        'SET-CONFIG-EPOCH',
+        'SAVECONFIG'
     ]),
     MEMORY: new Set(['PURGE']),
     LATENCY: new Set(['RESET']),
@@ -49,7 +55,7 @@ function firstTokens(command) {
     if (c.startsWith('--raw ')) {
         c = c.slice(6).trim();
     }
-    const [cmd = '', sub = ''] = c.split(/\s+/);
+    const [cmd = '', sub = ''] = tokenize(c);
     return [cmd.toUpperCase(), sub.toUpperCase()];
 }
 

@@ -36,7 +36,10 @@ export function KeysPage() {
 
     const query = useMemo(() => ({ pattern, type, ttl }), [pattern, type, ttl]);
     const data = useKeysQuery(env ?? null, query);
-    const selection = useKeySelection(data.keys);
+    const selection = useKeySelection(
+        data.keys,
+        `${env ?? ''}\u0000${pattern}\u0000${type}\u0000${ttl}`
+    );
     const detail = useKeyDetail(env ?? null, selectedKey);
 
     const rows: TreeRow[] = useMemo(

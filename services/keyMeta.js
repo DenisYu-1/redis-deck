@@ -1,5 +1,6 @@
 // Per-page key metadata (type, TTL, memory) for the Keys list.
-const { isClusterMode, execArgv } = require('./redis');
+const { isClusterMode } = require('./redis');
+const { run } = require('./keyStore');
 const { getClient } = require('./redisClient');
 
 const TYPES = ['string', 'hash', 'list', 'set', 'zset', 'stream', 'json'];
@@ -35,10 +36,13 @@ async function fetchPipelined(connectionId, keys) {
 async function fetchCluster(connectionId, keys) {
     const out = [];
     for (const key of keys) {
+        // MOVED-safe: the first call finds the owning node, the rest reuse it.
+        const first = await run(connectionId, ['TYPE', key]);
+        const { node } = first;
         out.push(
-            String(await execArgv(['TYPE', key], connectionId)),
-            await execArgv(['TTL', key], connectionId),
-            await execArgv(['MEMORY', 'USAGE', key], connectionId)
+            String(first.result),
+            (await run(connectionId, ['TTL', key], node)).result,
+            (await run(connectionId, ['MEMORY', 'USAGE', key], node)).result
         );
     }
     return out;

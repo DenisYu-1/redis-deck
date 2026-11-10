@@ -6,7 +6,7 @@ Goal: new look and shell, functionality roughly unchanged, same module/separatio
 
 ## 1. Principles
 - Logic on the backend; UI reflects it. Read-only and Confirm-writes are enforced server-side.
-- Styled-components stays. Design tokens live in one `client/styles/theme.css` (CSS vars, `data-theme` on `<html>`); components use `var(--…)`. No new UI library. Fonts: Geist / Geist Mono (Google Fonts).
+- Plain CSS with tokens (deviation: `styled-components` was never used and the dependency was removed). Design tokens live in one `client/styles/theme.css` (CSS vars, `data-theme` on `<html>`); components use `var(--…)`. No new UI library. Fonts: Geist / Geist Mono (Google Fonts).
 - Theme: Auto (system) default, Light, Dark; persisted in localStorage via existing `useTheme`.
 - Responsive: breakpoints 1100 / 860 / 480 as in the design; panes stack on phones; `prefers-reduced-motion` respected.
 - Naming: `env`/`environment` query param stays = connection id (no rename in v2). The design's env badge is **Tier** (`tier`).

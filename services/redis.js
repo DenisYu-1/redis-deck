@@ -459,6 +459,7 @@ async function execRedisPipelinedCommands(
 
 module.exports = {
     connArgs,
+    tokenize,
     execRedisCommand,
     execRedisCommandWithConfig,
     execRedisPipelinedCommands,

@@ -13,6 +13,8 @@ const {
     execRedisCommand,
     execRedisCommandWithConfig
 } = require('../services/redis');
+const { resolveTestPassword } = require('../services/connectionTest');
+const { dropClient } = require('../services/redisClient');
 
 // Get all connections
 router.get('/connections', (req, res) => {
@@ -162,7 +164,7 @@ router.put('/connections/order', (req, res) => {
 });
 
 // Update an existing connection
-router.put('/connections/:id', (req, res) => {
+router.put('/connections/:id', async (req, res) => {
     try {
         const id = req.params.id;
         const connection = req.body;
@@ -196,6 +198,7 @@ router.put('/connections/:id', (req, res) => {
         }
 
         const success = updateConnection(id, connection);
+        await dropClient(id);
 
         if (success) {
             // Don't send the password back to the client
@@ -214,7 +217,7 @@ router.put('/connections/:id', (req, res) => {
 });
 
 // Delete a connection
-router.delete('/connections/:id', (req, res) => {
+router.delete('/connections/:id', async (req, res) => {
     try {
         const id = req.params.id;
 
@@ -227,6 +230,7 @@ router.delete('/connections/:id', (req, res) => {
         }
 
         const success = deleteConnection(id);
+        await dropClient(id);
 
         if (success) {
             res.json({ message: `Connection '${id}' deleted successfully` });
@@ -285,8 +289,10 @@ router.post('/connections/test', async (req, res) => {
 
         // Blank password for a saved Connection: fall back to the stored one
         if (!connection.password && connection.id) {
-            const saved = getConnection(connection.id);
-            if (saved) connection.password = saved.password;
+            connection.password = resolveTestPassword(
+                connection,
+                getConnection(connection.id)
+            );
         }
 
         const config = {

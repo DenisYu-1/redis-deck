@@ -34,6 +34,29 @@ describe('useKeySelection', () => {
         expect(result.current.allSelected).toBe(true);
     });
 
+    it('clears the selection when the scope (connection or query) changes', () => {
+        const { result, rerender } = renderHook(
+            ({ scope }) => useKeySelection(visible, scope),
+            { initialProps: { scope: 'c1|*' } }
+        );
+        act(() => result.current.toggleAll());
+        rerender({ scope: 'c2|*' });
+        expect(result.current.count).toBe(0);
+        rerender({ scope: 'c1|*' });
+        expect(result.current.count).toBe(0);
+    });
+
+    it('does not resurrect keys that left the list and came back', () => {
+        const { result, rerender } = renderHook(
+            ({ keys }) => useKeySelection(keys, 's'),
+            { initialProps: { keys: visible } }
+        );
+        act(() => result.current.toggleAll());
+        rerender({ keys: ['a'] });
+        rerender({ keys: visible });
+        expect(result.current.keys).toEqual(['a']);
+    });
+
     it('clear empties the selection', () => {
         const { result } = renderHook(() => useKeySelection(visible));
         act(() => result.current.toggleAll());

@@ -10,7 +10,7 @@ module.exports = {
         'plugin:react-hooks/recommended',
         'plugin:prettier/recommended',
     ],
-    ignorePatterns: ['dist', 'node_modules', '*.cjs', '__tests__'],
+    ignorePatterns: ['client/plugins/plugins/extensions', 'dist', 'node_modules', '*.cjs', '__tests__'],
     parser: '@typescript-eslint/parser',
     parserOptions: {
         ecmaVersion: 'latest',

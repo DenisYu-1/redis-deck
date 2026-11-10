@@ -26,8 +26,17 @@ export const useAppStore = create<AppState>((set) => ({
     keyPattern: '*',
     setKeyPattern: (pattern) => set({ keyPattern: pattern }),
     setConnections: (connections) => set({ connections }),
+    // A key belongs to one connection: switching drops the open key and its details.
     setCurrentEnvironment: (environment) =>
-        set({ currentEnvironment: environment }),
+        set((s) =>
+            s.currentEnvironment === environment
+                ? s
+                : {
+                      currentEnvironment: environment,
+                      selectedKey: null,
+                      keyDetails: null
+                  }
+        ),
     setSelectedKey: (key) => set({ selectedKey: key }),
     setKeyDetails: (details) => set({ keyDetails: details }),
     setIsLoading: (loading) => set({ isLoading: loading })

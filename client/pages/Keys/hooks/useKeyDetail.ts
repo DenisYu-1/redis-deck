@@ -3,13 +3,23 @@ import { getKeyDetails, getKeyInfo } from '@/services/apiService';
 import type { KeyDetails, KeyInfo } from '@/types';
 
 interface State {
+    /** Connection + key these results belong to. */
+    env: string | null;
+    key: string | null;
     details: KeyDetails | null;
     info: KeyInfo | null;
     loading: boolean;
     error: string | null;
 }
 
-const IDLE: State = { details: null, info: null, loading: false, error: null };
+const IDLE: State = {
+    env: null,
+    key: null,
+    details: null,
+    info: null,
+    loading: false,
+    error: null
+};
 
 /** Loads value + metadata for the selected key; `reload` re-reads both. */
 export function useKeyDetail(env: string | null, key: string | null) {
@@ -31,6 +41,8 @@ export function useKeyDetail(env: string | null, key: string | null) {
                 const meta = await info;
                 if (!stale) {
                     setState({
+                        env,
+                        key,
                         details,
                         info: meta,
                         loading: false,
@@ -42,6 +54,8 @@ export function useKeyDetail(env: string | null, key: string | null) {
                 if (!stale) {
                     setState({
                         ...IDLE,
+                        env,
+                        key,
                         error: e instanceof Error ? e.message : String(e)
                     });
                 }
@@ -52,5 +66,17 @@ export function useKeyDetail(env: string | null, key: string | null) {
     }, [env, key, tick]);
 
     const reload = useCallback(() => setTick((t) => t + 1), []);
-    return { ...state, reload };
+
+    // Results from another connection or key never leak into this one.
+    const view =
+        state.env === env && state.key === key
+            ? state
+            : { ...IDLE, loading: Boolean(env && key) };
+    return {
+        details: view.details,
+        info: view.info,
+        loading: view.loading,
+        error: view.error,
+        reload
+    };
 }

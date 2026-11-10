@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import {
     applyThemePref,
     getThemePref,
@@ -9,29 +9,45 @@ import {
     type ThemePref
 } from '@/utils/theme';
 
+// One shared preference for every useTheme() caller (AppShell, ThemeToggle, ...),
+// so an OS scheme change can never re-apply a stale copy over the user's choice.
+let currentPref: ThemePref | null = null;
+const listeners = new Set<() => void>();
+
+const readPref = (): ThemePref => (currentPref ??= getThemePref());
+const subscribePref = (fn: () => void) => {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+};
+
+const subscribeSystem = (fn: () => void) => {
+    if (typeof window.matchMedia !== 'function') return () => undefined;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', fn);
+    return () => mq.removeEventListener('change', fn);
+};
+
+/** Test hook: forget the cached preference so it is re-read from storage. */
+export function resetThemeStore(): void {
+    currentPref = null;
+}
+
 export function useTheme(): {
     pref: ThemePref;
     theme: Theme;
     setPref: (pref: ThemePref) => void;
 } {
-    const [pref, setPrefState] = useState<ThemePref>(getThemePref);
-    const [systemDark, setSystemDark] = useState(systemPrefersDark);
+    const pref = useSyncExternalStore(subscribePref, readPref);
+    const systemDark = useSyncExternalStore(subscribeSystem, systemPrefersDark);
 
     useEffect(() => {
         applyThemePref(pref);
     }, [pref, systemDark]);
 
-    useEffect(() => {
-        if (typeof window.matchMedia !== 'function') return;
-        const mq = window.matchMedia('(prefers-color-scheme: dark)');
-        const onChange = () => setSystemDark(mq.matches);
-        mq.addEventListener('change', onChange);
-        return () => mq.removeEventListener('change', onChange);
-    }, []);
-
     const setPref = useCallback((next: ThemePref) => {
         setThemePref(next);
-        setPrefState(next);
+        currentPref = next;
+        listeners.forEach((fn) => fn());
     }, []);
 
     return { pref, theme: resolveTheme(pref, systemDark), setPref };

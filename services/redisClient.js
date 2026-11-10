@@ -60,4 +60,21 @@ async function getClient(connectionId) {
     }
 }
 
-module.exports = { getClient };
+// Close and forget a connection's cached client (config changed or deleted).
+async function dropClient(connectionId) {
+    const existing = clients.get(connectionId);
+    clients.delete(connectionId);
+    if (!existing) {
+        return;
+    }
+    try {
+        const client = await existing;
+        if (client.isOpen) {
+            await client.close();
+        }
+    } catch {
+        // never connected or already gone
+    }
+}
+
+module.exports = { getClient, dropClient };

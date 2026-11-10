@@ -37,6 +37,7 @@ export function useStatsData(
         ts: number;
     } | null>(null);
     const historyKey = `${env ?? ''}:${String(hours)}`;
+    const [failedKey, setFailedKey] = useState<string | null>(null);
 
     useEffect(() => {
         if (!env) return;
@@ -51,6 +52,7 @@ export function useStatsData(
                 }
             })
             .catch((error: unknown) => {
+                if (!cancelled) setFailedKey(`${env}:${String(hours)}`);
                 showToast('Failed to load statistics history', 'error');
                 console.error('Error loading history:', error);
             });
@@ -104,7 +106,8 @@ export function useStatsData(
         () => (loaded?.key === historyKey ? loaded.data : []),
         [loaded, historyKey]
     );
-    const loadingHistory = !!env && loaded?.key !== historyKey;
+    const loadingHistory =
+        !!env && loaded?.key !== historyKey && failedKey !== historyKey;
 
     const tiles = useMemo(() => {
         const samples = historyToSamples(history);
