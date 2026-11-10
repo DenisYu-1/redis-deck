@@ -1,4 +1,26 @@
 import type { ConnectionTier, RedisConnection } from '@/types';
+import type { ParsedRedisUri } from './uriParser';
+
+/** Fill a draft from a parsed URI; a new draft with no name takes the host's first label. */
+export function applyParsedUri(
+    draft: ConnectionDraft,
+    parsed: ParsedRedisUri
+): ConnectionDraft {
+    return {
+        ...draft,
+        tls: parsed.tls,
+        username: parsed.username,
+        password: parsed.password || draft.password,
+        host: parsed.host,
+        port: String(parsed.port),
+        db: String(parsed.db),
+        id:
+            draft.id ||
+            (draft.isNew
+                ? (parsed.host.split('.')[0] ?? parsed.host)
+                : draft.id)
+    };
+}
 
 /** Form state for a Connection. Numbers are strings while being typed. */
 export interface ConnectionDraft {

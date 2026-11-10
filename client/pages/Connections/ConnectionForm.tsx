@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ConnectionTier } from '@/types';
 import { Button } from '@/components/ui/Button';
-import type { ConnectionDraft } from './connectionDraft';
+import { applyParsedUri, type ConnectionDraft } from './connectionDraft';
 import { parseRedisUri } from './uriParser';
 
 export interface TestResult {
@@ -50,20 +50,7 @@ export function ConnectionForm({
         setUri(value);
         const parsed = parseRedisUri(value);
         if (!parsed) return;
-        onChange({
-            ...draft,
-            tls: parsed.tls,
-            username: parsed.username,
-            password: parsed.password || draft.password,
-            host: parsed.host,
-            port: String(parsed.port),
-            db: String(parsed.db),
-            id:
-                draft.id ||
-                (draft.isNew
-                    ? (parsed.host.split('.')[0] ?? parsed.host)
-                    : draft.id)
-        });
+        onChange(applyParsedUri(draft, parsed));
     };
     const uriInvalid = uri.trim() !== '' && !parseRedisUri(uri);
 

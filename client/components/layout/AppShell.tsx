@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Welcome } from '@/pages/Welcome/Welcome';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ProdBanner } from './ProdBanner';
@@ -12,6 +13,8 @@ import { showToast } from '@/utils/toast';
 export function AppShell() {
     const { setConnections, setCurrentEnvironment, setIsLoading } =
         useAppStore();
+    const connections = useAppStore((s) => s.connections);
+    const [loaded, setLoaded] = useState(false);
     useTheme(); // applies the stored theme on startup
 
     useEffect(() => {
@@ -21,6 +24,7 @@ export function AppShell() {
             .then((conns) => {
                 if (cancelled) return;
                 setConnections(conns);
+                setLoaded(true);
                 const current = useAppStore.getState().currentEnvironment;
                 if (!conns.some((c) => c.id === current)) {
                     setCurrentEnvironment(conns[0]?.id ?? '');
@@ -36,12 +40,20 @@ export function AppShell() {
         };
     }, [setConnections, setCurrentEnvironment, setIsLoading]);
 
+    const welcome = loaded && connections.length === 0;
+
     return (
-        <div className="app">
-            <Sidebar />
+        <div className={`app ${welcome ? 'bare' : ''}`}>
+            {!welcome && <Sidebar />}
             <div className="main scroll">
-                <ProdBanner />
-                <Outlet />
+                {welcome ? (
+                    <Welcome />
+                ) : (
+                    <>
+                        <ProdBanner />
+                        <Outlet />
+                    </>
+                )}
             </div>
             <Toast />
         </div>
