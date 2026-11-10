@@ -24,7 +24,8 @@ jest.mock('@/services/apiService', () => ({
     testConnectionDraft: jest.fn(),
     listSavedSearches: jest.fn().mockResolvedValue([]),
     getKeyCount: jest.fn().mockResolvedValue({ count: 0 }),
-    getServerStatus: jest.fn().mockResolvedValue({ version: '7', pingMs: 1 })
+    getServerStatus: jest.fn().mockResolvedValue({ version: '7', pingMs: 1 }),
+    getWorkflows: jest.fn().mockResolvedValue([])
 }));
 
 const load = loadEnvironments as jest.Mock;
