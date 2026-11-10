@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { ChartsSection } from './components/ChartsSection';
-import { CommandStatsTable } from './components/CommandStatsTable';
-import { SlowLogTable } from './components/SlowLogTable';
-import { MemoryPatternAnalysis } from './components/MemoryPatternAnalysis';
-import { StatTile } from './StatTile';
+import { useParams } from 'react-router-dom';
+import { boardById, loadRemoved, saveRemoved, WIDGET_TITLES } from './boards';
+import { renderWidget } from './widgets';
 import { useStatsData } from './useStatsData';
 import { useAppStore } from '@/store/useAppStore';
 import './statistics.css';
@@ -20,6 +18,21 @@ export function StatisticsApp() {
     const { currentEnvironment } = useAppStore();
     const [hours, setHours] = useState(24);
     const [live, setLive] = useState(true);
+    const [editing, setEditing] = useState(false);
+    const board = boardById(useParams().board);
+    const env = currentEnvironment ?? '';
+    const layoutKey = `${env}:${board.id}`;
+    const [stored, setStored] = useState<{ key: string; ids: string[] }>({
+        key: layoutKey,
+        ids: loadRemoved(env, board.id)
+    });
+    const removed =
+        stored.key === layoutKey ? stored.ids : loadRemoved(env, board.id);
+    const updateRemoved = (ids: string[]) => {
+        saveRemoved(env, board.id, ids);
+        setStored({ key: layoutKey, ids });
+    };
+    const visible = board.widgets.filter((w) => !removed.includes(w));
     const { history, tiles, loadingHistory } = useStatsData(
         currentEnvironment,
         hours,
@@ -30,7 +43,7 @@ export function StatisticsApp() {
         <div className="stats-page">
             <div className="viewhead">
                 <div className="titles">
-                    <h1>Overview</h1>
+                    <h1>{board.title}</h1>
                     <span className="mono xs mu">
                         Snapshots every 5 min · 30-day retention
                         {currentEnvironment ? ` · ${currentEnvironment}` : ''}
@@ -48,6 +61,23 @@ export function StatisticsApp() {
                         </button>
                     ))}
                 </div>
+                {removed.length > 0 && (
+                    <button
+                        type="button"
+                        className="btn"
+                        onClick={() => updateRemoved([])}
+                    >
+                        Restore removed
+                    </button>
+                )}
+                <button
+                    type="button"
+                    className="btn"
+                    aria-pressed={editing}
+                    onClick={() => setEditing((v) => !v)}
+                >
+                    {editing ? 'Done' : 'Edit layout'}
+                </button>
                 <button
                     type="button"
                     className={`btn live ${live ? '' : 'off'}`}
@@ -59,22 +89,40 @@ export function StatisticsApp() {
                 </button>
             </div>
             <div className="board">
-                <div className="tiles">
-                    {tiles.map((t) => (
-                        <StatTile key={t.id} tile={t} />
+                {visible.length === 0 && (
+                    <div className="empty-board" data-testid="empty-board">
+                        No widgets on this board. Use Restore removed to bring
+                        them back.
+                    </div>
+                )}
+                <div className="wgrid">
+                    {visible.map((w) => (
+                        <div
+                            key={w}
+                            className={`widget ${w === 'tiles' ? 'full' : ''} ${editing ? 'editing' : ''}`}
+                            data-widget={w}
+                        >
+                            {editing && (
+                                <button
+                                    type="button"
+                                    className="widget-remove"
+                                    aria-label={`Remove ${WIDGET_TITLES[w]}`}
+                                    onClick={() =>
+                                        updateRemoved([...removed, w])
+                                    }
+                                >
+                                    ×
+                                </button>
+                            )}
+                            {renderWidget(w, {
+                                history,
+                                hours,
+                                loading: loadingHistory,
+                                tiles,
+                                tileIds: board.tiles
+                            })}
+                        </div>
                     ))}
-                </div>
-                <ChartsSection
-                    data={history}
-                    hours={hours}
-                    loading={loadingHistory}
-                />
-                <div className="wrow">
-                    <CommandStatsTable />
-                    <SlowLogTable />
-                </div>
-                <div className="wrow">
-                    <MemoryPatternAnalysis />
                 </div>
             </div>
         </div>
