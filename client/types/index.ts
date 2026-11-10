@@ -177,6 +177,8 @@ export interface HistoryDataPoint {
     total_net_input_bytes: number;
     total_net_output_bytes: number;
     connected_clients: number;
+    used_cpu_sys: number;
+    used_cpu_user: number;
 }
 
 export interface HistoryResponse {
