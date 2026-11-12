@@ -41,6 +41,33 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Wor
 3. Access the UI at http://localhost:2222
 4. Go to Settings (⚙️) to add your Redis connections
 
+### Desktop app (macOS, Linux)
+
+1. Download the `.dmg` for your Mac from the [GitHub Releases](https://github.com/DenisYu-1/redis-deck/releases) page: `arm64` for Apple Silicon (M1 and later), `x64` for Intel Macs.
+2. Open the `.dmg` and drag Redis Deck to Applications.
+3. The app is not signed or notarized, so Gatekeeper blocks the first launch. Right-click (or Control-click) the app, choose **Open**, then confirm **Open** in the dialog. If macOS still refuses, clear the quarantine flag and start it again:
+    ```bash
+    xattr -cr "/Applications/Redis Deck.app"
+    ```
+
+**Linux (AppImage, best effort, x64 only):** download the `.AppImage` from the Releases page, then:
+
+```bash
+chmod +x Redis-Deck-*.AppImage
+./Redis-Deck-*.AppImage
+```
+
+It is built on Ubuntu 22.04, so it needs glibc 2.35 or newer. AppImages need FUSE 2 (`sudo apt install libfuse2`); without it, run with `--appimage-extract-and-run`. The app keeps Chromium's sandbox on. If it fails to start because unprivileged user namespaces are restricted (Ubuntu 24.04+), prefer allowing them (`sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`); `--no-sandbox` also works but disables the sandbox, so use it only as a last resort. Data lives in `~/.config/`. The Linux build is untested on CI hardware beyond the packaged smoke check.
+
+Connections, saved searches and statistics are stored in the per-user app data folder (`~/Library/Application Support/` on macOS), so they stay out of the app bundle. `redis-cli` is bundled, so you do not need to install Redis.
+
+For contributors:
+
+```bash
+yarn electron:dev    # run the desktop app against the dev setup
+yarn electron:build  # build the .dmg into `dist-electron/`
+```
+
 ### Running Locally (Development)
 
 1. Clone the repository
@@ -49,13 +76,15 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Wor
     yarn install
     ```
 3. Start the development server:
+
     ```bash
     yarn dev
     ```
-   This will start:
-   - Vite dev server at http://localhost:5173 (frontend)
-   - Node.js backend at http://localhost:3000 (API)
-   - Vite proxies API calls to the backend automatically
+
+    This will start:
+    - Vite dev server at http://localhost:5173 (frontend)
+    - Node.js backend at http://localhost:3000 (API)
+    - Vite proxies API calls to the backend automatically
 
 4. Open http://localhost:5173
 5. Go to Settings (⚙️) to add your Redis connections
@@ -196,8 +225,13 @@ cp client/plugins/config/config.override.json.example client/plugins/config/conf
 
 ```js
 module.exports = {
-    async plan(inputs, ctx) { return { text: 'Would do X' }; },
-    async run(inputs, ctx) { await ctx.exec('SET k v'); return { text: 'Did X' }; }
+    async plan(inputs, ctx) {
+        return { text: 'Would do X' };
+    },
+    async run(inputs, ctx) {
+        await ctx.exec('SET k v');
+        return { text: 'Did X' };
+    }
 };
 ```
 

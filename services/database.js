@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure the data directory exists
-const dataDir = path.join(__dirname, '..', 'data');
+const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -242,7 +242,7 @@ function safetyFields(row) {
 function getAllConnections() {
     return db
         .prepare(
-            'SELECT id, host, port, username, (password != \'\') AS has_password, tls, cluster, `order`, tier, db, verify_tls, read_only, confirm_writes FROM connections ORDER BY `order` ASC'
+            "SELECT id, host, port, username, (password != '') AS has_password, tls, cluster, `order`, tier, db, verify_tls, read_only, confirm_writes FROM connections ORDER BY `order` ASC"
         )
         .all()
         .map(

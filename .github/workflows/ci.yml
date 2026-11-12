@@ -1,43 +1,43 @@
 name: CI
 
 on:
-  pull_request:
-  push:
-    branches: [main, master]
+    pull_request:
+    push:
+        branches: [main, master]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+    test:
+        runs-on: ubuntu-latest
 
-    services:
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
+        services:
+            redis:
+                image: redis:7-alpine
+                ports:
+                    - 6379:6379
+                options: >-
+                    --health-cmd "redis-cli ping"
+                    --health-interval 5s
+                    --health-timeout 3s
+                    --health-retries 10
 
-    steps:
-      - uses: actions/checkout@v4
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: yarn
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '22'
+                  cache: yarn
 
-      # backend shells out to redis-cli
-      - run: sudo apt-get update && sudo apt-get install -y redis-tools
+            # backend shells out to redis-cli
+            - run: sudo apt-get update && sudo apt-get install -y redis-tools
 
-      - run: yarn install --frozen-lockfile
+            - run: yarn install --frozen-lockfile
 
-      - run: yarn lint
+            - run: yarn lint
 
-      - run: yarn build
+            - run: yarn build
 
-      - run: yarn test
-        env:
-          REDIS_TEST_HOST: 127.0.0.1
-          REDIS_TEST_PORT: 6379
+            - run: yarn test
+              env:
+                  REDIS_TEST_HOST: 127.0.0.1
+                  REDIS_TEST_PORT: 6379

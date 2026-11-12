@@ -29,4 +29,3 @@
     "exclude": ["client/plugins/plugins/extensions"],
     "references": [{ "path": "./tsconfig.node.json" }]
 }
-

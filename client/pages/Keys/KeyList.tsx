@@ -45,7 +45,6 @@ function Row({
 }: RowComponentProps<RowProps>) {
     const row = rows[index];
     if (!row) return null;
-    const pad = 4 + row.depth * 14;
 
     if (row.kind === 'folder') {
         return (
@@ -74,20 +73,29 @@ function Row({
     const m = meta[row.key];
     const on = activeKey === row.key;
     return (
-        <div style={style} className={`krow ${on ? 'on' : ''}`} role="treeitem">
+        <div
+            style={{ ...style, paddingLeft: 16 + row.depth * 14 }}
+            className={`krow ${on ? 'on' : ''}`}
+            role="treeitem"
+            onClick={() => onPick(row.key)}
+        >
             <input
                 type="checkbox"
                 className="check"
                 checked={isSelected(row.key)}
+                onClick={(e) => e.stopPropagation()}
                 onChange={() => onToggleSelect(row.key)}
                 aria-label={`Select ${row.key}`}
             />
             <button
                 type="button"
                 className="kname"
-                style={{ paddingLeft: pad }}
+                style={{ paddingLeft: 4 }}
                 title={row.key}
-                onClick={() => onPick(row.key)}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onPick(row.key);
+                }}
             >
                 <span className="leaf">
                     <Highlighted pattern={pattern} text={row.name} />

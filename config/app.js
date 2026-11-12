@@ -10,8 +10,11 @@ const searchRoutes = require('../routes/searches');
 const statsRoutes = require('../routes/stats');
 const workflowRoutes = require('../routes/workflows');
 
-function createApp() {
+function createApp({ middleware = [] } = {}) {
     const app = express();
+
+    // Optional leading middleware (e.g. the embedded-server Host guard)
+    middleware.forEach((m) => app.use(m));
 
     // Middleware
     app.use(express.json());

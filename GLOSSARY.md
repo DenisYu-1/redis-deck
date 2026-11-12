@@ -42,6 +42,10 @@ _Avoid_: Query, filter
 **Saved search**:
 A named Key pattern the user can re-run from the sidebar.
 
+**Desktop app**:
+The app installed and run as a regular program on the user's computer, without a separate server to start.
+_Avoid_: Native app, standalone, client
+
 **Plugin**:
 An optional module that adds UI and/or Workflows to the app.
 

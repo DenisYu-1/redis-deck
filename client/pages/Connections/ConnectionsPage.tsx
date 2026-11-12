@@ -129,6 +129,7 @@ export function ConnectionsPage() {
             draft.isNew ? { ...payload, id: '' } : payload
         );
         setTestResult(result);
+        showToast(result.message, result.success ? 'success' : 'error');
         setTesting(false);
     };
 

@@ -72,7 +72,7 @@ function connArgs(config, nodeOverride = null) {
 function runRedisCli(args, { input = null, timeout = 10000 } = {}) {
     return new Promise((resolve, reject) => {
         const child = execFile(
-            'redis-cli',
+            process.env.REDIS_CLI_PATH || 'redis-cli',
             args,
             { encoding: 'utf8', timeout, maxBuffer: 64 * 1024 * 1024 },
             (err, stdout, stderr) => {
@@ -103,6 +103,14 @@ function looksLikeRedisError(text) {
 
 // Turn a failed redis-cli spawn into the {message, command, code} error shape.
 function cliError(error, command) {
+    if (error.code === 'ENOENT') {
+        return {
+            message:
+                'redis-cli not found. Install redis-cli or set REDIS_CLI_PATH to its location.',
+            command,
+            code: 'CLI_NOT_FOUND'
+        };
+    }
     const text = `${error.stdout || ''}${error.stderr || ''}`.trim();
     if (text.includes('Connection refused')) {
         return {

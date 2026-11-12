@@ -101,13 +101,18 @@ function Body({ details }: { details: KeyDetails }) {
                         type={type}
                         rows={shown}
                         activeId={picked}
-                        onPick={setPicked}
-                    />
-                )}
-                {active && (
-                    <ValueInspector
-                        label={active.label ?? active.value}
-                        value={active.value}
+                        onPick={(id) =>
+                            setPicked((p) => (p === id ? null : id))
+                        }
+                        detail={
+                            active && (
+                                <ValueInspector
+                                    label={active.label ?? active.value}
+                                    value={active.value}
+                                    onClose={() => setPicked(null)}
+                                />
+                            )
+                        }
                     />
                 )}
             </div>

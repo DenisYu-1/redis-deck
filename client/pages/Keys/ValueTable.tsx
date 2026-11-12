@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react';
 import { scoreDateHint, type ValueRow } from './valueRows';
 
 interface Props {
@@ -5,6 +6,7 @@ interface Props {
     rows: ValueRow[];
     activeId: string | null;
     onPick: (id: string) => void;
+    detail?: ReactNode;
 }
 
 const HEAD: Record<string, string[]> = {
@@ -36,7 +38,7 @@ function Cells({ type, row }: { type: string; row: ValueRow }) {
     );
 }
 
-export function ValueTable({ type, rows, activeId, onPick }: Props) {
+export function ValueTable({ type, rows, activeId, onPick, detail }: Props) {
     return (
         <table className="vtable">
             <thead>
@@ -48,17 +50,25 @@ export function ValueTable({ type, rows, activeId, onPick }: Props) {
             </thead>
             <tbody>
                 {rows.map((r) => (
-                    <tr
-                        key={r.id}
-                        className={`pick ${activeId === r.id ? 'on' : ''}`}
-                        tabIndex={0}
-                        onClick={() => onPick(r.id)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') onPick(r.id);
-                        }}
-                    >
-                        <Cells type={type} row={r} />
-                    </tr>
+                    <Fragment key={r.id}>
+                        <tr
+                            className={`pick ${activeId === r.id ? 'on' : ''}`}
+                            tabIndex={0}
+                            onClick={() => onPick(r.id)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') onPick(r.id);
+                            }}
+                        >
+                            <Cells type={type} row={r} />
+                        </tr>
+                        {activeId === r.id && detail && (
+                            <tr className="vdetail">
+                                <td colSpan={(HEAD[type] ?? []).length}>
+                                    {detail}
+                                </td>
+                            </tr>
+                        )}
+                    </Fragment>
                 ))}
             </tbody>
         </table>

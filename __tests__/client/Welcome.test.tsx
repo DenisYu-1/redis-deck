@@ -22,7 +22,6 @@ jest.mock('@/services/apiService', () => ({
     loadEnvironments: jest.fn(),
     addConnection: jest.fn().mockResolvedValue(undefined),
     testConnectionDraft: jest.fn(),
-    listSavedSearches: jest.fn().mockResolvedValue([]),
     getKeyCount: jest.fn().mockResolvedValue({ count: 0 }),
     getServerStatus: jest.fn().mockResolvedValue({ version: '7', pingMs: 1 }),
     getWorkflows: jest.fn().mockResolvedValue([])
@@ -111,7 +110,8 @@ describe('Welcome', () => {
         renderAt('/keys');
         await user.type(await screen.findByLabelText('Host'), 'localhost');
         await user.click(screen.getByRole('button', { name: /^test/i }));
-        expect(await screen.findByText('PONG ok')).toBeInTheDocument();
+        // Shown both inline (callout) and as a toast.
+        expect(await screen.findAllByText('PONG ok')).toHaveLength(2);
         expect(testConn).toHaveBeenCalledWith(
             expect.objectContaining({ host: 'localhost', id: '' })
         );

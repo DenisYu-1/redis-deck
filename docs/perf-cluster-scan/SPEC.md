@@ -18,43 +18,51 @@ On clustered Connections every Redis call goes through `redis-cli`. The persiste
 ## Requirements
 
 ### R1. Batched Page meta per Node (clustered)
+
 - Group a page's Keys by the Node whose SCAN returned them. Send each Node's TYPE / TTL / MEMORY commands through **one** `redis-cli --json` stdin session. `--json` over stdin prints one line per reply (`null` for nil), so replies align one-to-one with commands; no marker commands needed.
 - No MOVED handling on this path: the owner is known. If a Key was moved by a reshard (reply is a MOVED error), retry that Key once through the existing owner-discovery path.
 - `GET /keys` returns each Key's Node id alongside its meta.
 
 ### R2. Parallel Node scans
+
 - Scan Nodes concurrently with `Promise.all`, at most **4** `redis-cli` processes at once per Connection (constant).
 - The Scan cursor set stays one cursor per Node; its order and shape do not change.
 
 ### R3. Topology cache
+
 - Cache `CLUSTER NODES` for **30 s** per Connection. Drop the entry on connection-refused or MOVED errors and when the Connection is edited or deleted.
 
 ### R4. Lazy size (clustered Connections only)
+
 - On clustered Connections `GET /keys` returns type and TTL but no size; the Size column shows a placeholder.
 - New `POST /keys/sizes` takes `{ env, keys: [{ key, node }] }` and returns sizes, using one batched `redis-cli --json` call per Node. The client requests sizes for visible rows only.
 - Non-clustered Connections keep returning size inline (the pipelined persistent socket is already cheap).
 
 ### R5. Deep search responsiveness
+
 - Replace `MAX_ITERATIONS = 60` with a per-request **time budget of 2 s**. When it runs out the response is partial: `hasMore: true`, the current Scan cursor set, and scan stats (`iterations`, `returned`, `matched`, `ms`).
 - The client continues automatically and shows "scanned N…". No SSE or websockets; the server stays stateless.
 
 ### R6. Node failure is visible and resumable
+
 - A Node whose scan fails keeps its previous cursor (not reset to `0`). The response includes `failedNodes: [{ id, error }]`.
 - The UI shows a warning banner naming the failed Nodes; the next continue/retry resumes them.
 
 ### R7. Bulk operations as in-memory jobs
+
 - Bulk delete and export become server jobs: `{ id, kind, progress, state }`, processing one scan page at a time (constant memory), pollable, cancellable. Lost on restart (no persistence).
 - Creating a job goes through `writeGuard` where the operation writes. `/allkeys` is removed if nothing in the client needs it.
 - Existing `MAX_EXPORT` cap stays.
 
 ### R8. Load budgets by Tier
+
 Constants in code, keyed by the Connection's Tier. No new setting.
 
-| Tier | Pause between SCAN hops | Max COUNT per hop |
-|---|---|---|
-| local | none | 20,000 |
-| staging | 5 ms | 20,000 |
-| production | 20 ms | 5,000 |
+| Tier       | Pause between SCAN hops | Max COUNT per hop |
+| ---------- | ----------------------- | ----------------- |
+| local      | none                    | 20,000            |
+| staging    | 5 ms                    | 20,000            |
+| production | 20 ms                   | 5,000             |
 
 Applies to every scan loop (search and jobs).
 
