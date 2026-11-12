@@ -8,6 +8,18 @@ A web UI for browsing, editing and monitoring keys on saved Redis servers.
 A saved definition of one Redis server (host, port, credentials, TLS, cluster flag). Everything the UI does is scoped to the current Connection.
 _Avoid_: Environment, server, instance, profile
 
+**Node**:
+One Redis server inside a clustered Connection, holding a share of the Keys. A non-clustered Connection has exactly one.
+_Avoid_: Shard, master, instance
+
+**Scan cursor set**:
+The page position the UI hands back to continue a Key search: one cursor per Node.
+_Avoid_: Offset, page token
+
+**Page meta**:
+The type, TTL and size shown on each Key row of a result page.
+_Avoid_: Key info, row data
+
 **Tier**:
 A label on a Connection saying how dangerous it is: `local`, `staging` or `production`. Shown as a badge.
 _Avoid_: Environment, env, stage
