@@ -28,8 +28,8 @@ beforeAll(async () => {
     if (!hasTestConnection) {
         db.prepare(
             `
-            INSERT INTO connections (id, host, port, username, password, tls, cluster, \`order\`)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO connections (id, host, port, username, password, tls, cluster, \`order\`, db)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `
         ).run(
             TEST_CONNECTION_ID,
@@ -39,7 +39,9 @@ beforeAll(async () => {
             process.env.REDIS_TEST_PASSWORD || '',
             process.env.REDIS_TEST_TLS === 'true' ? 1 : 0,
             process.env.REDIS_TEST_CLUSTER === 'true' ? 1 : 0,
-            999
+            999,
+            // one Redis DB per jest worker so parallel FLUSHDBs don't collide
+            (parseInt(process.env.JEST_WORKER_ID || '1') - 1) % 16
         );
     }
 });

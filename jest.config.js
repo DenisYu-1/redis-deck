@@ -28,6 +28,7 @@ export default {
         ],
         '^.+\.jsx?$': 'babel-jest'
     },
+    setupFiles: ['<rootDir>/__tests__/workerDb.js'],
     setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
     collectCoverageFrom: [
         'client/**/*.{ts,tsx}',

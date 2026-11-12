@@ -9,7 +9,9 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // Create or open the SQLite database
-const db = new Database(path.join(dataDir, 'redis-config.sqlite'));
+// Tests run in parallel jest workers; each gets its own file via REDIS_DECK_DB_FILE
+const dbFile = process.env.REDIS_DECK_DB_FILE || 'redis-config.sqlite';
+const db = new Database(path.join(dataDir, dbFile));
 
 // Initialize database schema
 function initializeDatabase() {
