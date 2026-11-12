@@ -72,7 +72,7 @@ function connArgs(config, nodeOverride = null) {
 function runRedisCli(args, { input = null, timeout = 10000 } = {}) {
     return new Promise((resolve, reject) => {
         const child = execFile(
-            'redis-cli',
+            process.env.REDIS_CLI_PATH || 'redis-cli',
             args,
             { encoding: 'utf8', timeout, maxBuffer: 64 * 1024 * 1024 },
             (err, stdout, stderr) => {
