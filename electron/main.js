@@ -6,6 +6,7 @@ const { app, BrowserWindow, dialog, shell } = require('electron');
 const { execFile } = require('child_process');
 const path = require('path');
 const { applyBundledRedisCli } = require('./redisCli');
+const { isSafeExternalUrl, isSameOrigin } = require('./navGuard');
 
 const ROOT = path.join(__dirname, '..');
 const isDev = process.env.ELECTRON_DEV === '1';
@@ -14,11 +15,13 @@ const isSmoke = process.argv.includes('--smoke');
 
 let server;
 let viteServer;
+let mainWindow;
 
+// Resolves with null when redis-cli runs, else the spawn error.
 function checkRedisCli() {
     const bin = process.env.REDIS_CLI_PATH || 'redis-cli';
     return new Promise((resolve) => {
-        execFile(bin, ['--version'], (err) => resolve(!err));
+        execFile(bin, ['--version'], (err) => resolve(err || null));
     });
 }
 
@@ -47,16 +50,28 @@ async function boot() {
         resourcesPath: process.resourcesPath
     });
 
-    if (!(await checkRedisCli()) && !isSmoke) {
-        dialog.showErrorBox(
-            'redis-cli not found',
-            'Redis Deck needs redis-cli. Install it (e.g. brew install redis) or set REDIS_CLI_PATH to its location, then restart.'
-        );
+    const cliError = await checkRedisCli();
+    if (cliError && !isSmoke) {
+        if (cliError.code === 'ENOENT') {
+            dialog.showErrorBox(
+                'redis-cli not found',
+                'Redis Deck needs redis-cli. Install it (e.g. brew install redis) or set REDIS_CLI_PATH to its location, then restart.'
+            );
+        } else {
+            dialog.showErrorBox(
+                'redis-cli failed to run',
+                `redis-cli was found but could not be executed (${cliError.code || cliError.message}). Check its permissions and architecture, or set REDIS_CLI_PATH to a working binary.`
+            );
+        }
     }
 
     // Required after DATA_DIR is set: services/database reads it at load time.
     const { startServer } = require('../server');
-    server = await startServer({ port: 0, host: '127.0.0.1' });
+    server = await startServer({
+        port: 0,
+        host: '127.0.0.1',
+        embedded: true
+    });
     const apiPort = server.address().port;
 
     if (isSmoke) {
@@ -79,22 +94,43 @@ async function boot() {
         icon: path.join(__dirname, 'icon.png'),
         webPreferences: { contextIsolation: true, nodeIntegration: false }
     });
+    mainWindow = win;
     win.webContents.setWindowOpenHandler(({ url: target }) => {
-        shell.openExternal(target);
+        if (isSafeExternalUrl(target)) shell.openExternal(target);
         return { action: 'deny' };
+    });
+    // The window must never leave the local app origin (server or Vite dev).
+    win.webContents.on('will-navigate', (event, target) => {
+        if (!isSameOrigin(target, url)) {
+            event.preventDefault();
+            if (isSafeExternalUrl(target)) shell.openExternal(target);
+        }
     });
     await win.loadURL(url);
 }
 
-app.whenReady().then(() => {
-    if (process.platform === 'darwin') {
-        app.dock?.setIcon(path.join(__dirname, 'icon.png'));
-    }
-    return boot().catch((err) => {
-        dialog.showErrorBox('Redis Deck failed to start', String(err));
-        app.quit();
+if (!app.requestSingleInstanceLock()) {
+    app.quit();
+} else {
+    app.on('second-instance', () => {
+        if (!mainWindow) return;
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
     });
-});
+    start();
+}
+
+function start() {
+    app.whenReady().then(() => {
+        if (process.platform === 'darwin') {
+            app.dock?.setIcon(path.join(__dirname, 'icon.png'));
+        }
+        return boot().catch((err) => {
+            dialog.showErrorBox('Redis Deck failed to start', String(err));
+            app.quit();
+        });
+    });
+}
 
 app.on('window-all-closed', () => app.quit());
 

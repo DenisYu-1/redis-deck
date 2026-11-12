@@ -1,16 +1,15 @@
 const { createApp } = require('./config/app');
+const { hostGuard } = require('./guards/hostGuard');
 const { getAllConnections } = require('./services/database');
 const statsCollector = require('./services/statsCollector');
 
-// Starts the app + background loops. Resolves with the listening http.Server;
-// closing it also stops the loops. Electron main calls this with port 0.
-function startServer({ port = process.env.PORT || 3000, host } = {}) {
-    const app = createApp();
-    const timers = [];
-    const COLLECTION_INTERVAL = 5 * 60 * 1000;
-    const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000;
+const COLLECTION_INTERVAL = 5 * 60 * 1000;
+const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000;
 
-    timers.push(
+// Background loops; started once the server is listening. Timers are unref'd so
+// they never keep the process alive on their own.
+function startTimers() {
+    const timers = [
         setInterval(async () => {
             try {
                 console.log('Running scheduled stats collection...');
@@ -29,10 +28,7 @@ function startServer({ port = process.env.PORT || 3000, host } = {}) {
             } catch (error) {
                 console.error('Error in stats collection interval:', error);
             }
-        }, COLLECTION_INTERVAL)
-    );
-
-    timers.push(
+        }, COLLECTION_INTERVAL),
         setInterval(() => {
             try {
                 statsCollector.cleanupOldSnapshots(30);
@@ -40,10 +36,28 @@ function startServer({ port = process.env.PORT || 3000, host } = {}) {
                 console.error('Error cleaning up old snapshots:', error);
             }
         }, CLEANUP_INTERVAL)
-    );
+    ];
+    timers.forEach((t) => t.unref());
+    return () => timers.forEach(clearInterval);
+}
+
+// Starts the app + background loops. Resolves with the listening http.Server;
+// closing it also stops the loops. Electron main calls this with port 0 and
+// embedded: true, which rejects requests with a foreign Host header (DNS rebinding).
+function startServer({
+    port = process.env.PORT || 3000,
+    host,
+    embedded = false
+} = {}) {
+    let server;
+    const app = createApp({
+        middleware: embedded ? [hostGuard(() => server.address().port)] : []
+    });
 
     return new Promise((resolve, reject) => {
-        const server = app.listen(port, host, () => {
+        let stopTimers = () => {};
+        server = app.listen(port, host, () => {
+            stopTimers = startTimers();
             console.log(
                 `Server running on ${host || '0.0.0.0'}:${server.address().port}`
             );
@@ -61,10 +75,13 @@ function startServer({ port = process.env.PORT || 3000, host } = {}) {
             console.log(
                 `Stats collection running every ${COLLECTION_INTERVAL / 60000} minutes`
             );
+            resolve(server);
         });
-        server.on('close', () => timers.forEach(clearInterval));
-        server.on('error', reject);
-        server.once('listening', () => resolve(server));
+        server.on('close', () => stopTimers());
+        server.on('error', (err) => {
+            stopTimers();
+            reject(err);
+        });
     });
 }
 

@@ -53,17 +53,33 @@ async function main() {
             ? process.env.SystemRoot + '\\System32'
             : '/usr/bin:/bin';
 
-    const child = spawn(
-        exe,
-        ['--smoke', `--user-data-dir=${userData}`, '--no-sandbox'],
-        {
-            env,
-            stdio: ['ignore', 'pipe', 'pipe']
-        }
-    );
+    // The Chromium sandbox stays ON so a userns restriction shows up here as a
+    // failure instead of being masked. Opt out explicitly with SMOKE_NO_SANDBOX=1.
+    const args = ['--smoke', `--user-data-dir=${userData}`];
+    if (process.env.SMOKE_NO_SANDBOX === '1') args.push('--no-sandbox');
+    const child = spawn(exe, args, {
+        env,
+        stdio: ['ignore', 'pipe', 'pipe']
+    });
     let output = '';
+    let exited = false;
+    let onExit = () => {};
+    const exit = new Promise((resolve) => {
+        child.on('exit', (code) => {
+            exited = true;
+            onExit(code);
+            resolve();
+        });
+    });
+    // Rejects if the app dies at any point, including after SMOKE_READY.
+    const died = new Promise((_, reject) => {
+        onExit = (code) =>
+            reject(new Error(`app exited unexpectedly (${code})\n${output}`));
+    });
+    died.catch(() => {});
+    let timer;
     const ready = new Promise((resolve, reject) => {
-        const timer = setTimeout(
+        timer = setTimeout(
             () => reject(new Error(`timeout waiting for app\n${output}`)),
             TIMEOUT_MS
         );
@@ -77,14 +93,20 @@ async function main() {
         };
         child.stdout.on('data', onData);
         child.stderr.on('data', onData);
-        child.on('exit', (code) =>
-            reject(new Error(`app exited early (${code})\n${output}`))
-        );
     });
 
     try {
-        const { port, redisCli } = await ready;
+        const { port, redisCli } = await Promise.race([ready, died]);
+        await Promise.race([checks(port, redisCli), died]);
+    } finally {
+        clearTimeout(timer);
+        onExit = () => {};
+        if (!exited) child.kill();
+        await exit;
+        fs.rmSync(userData, { recursive: true, force: true });
+    }
 
+    async function checks(port, redisCli) {
         const res = await fetch(`http://127.0.0.1:${port}/api/connections`);
         if (!res.ok) throw new Error(`GET /api/connections -> ${res.status}`);
         const body = await res.json();
@@ -109,10 +131,6 @@ async function main() {
             throw new Error(`unexpected redis-cli --version: ${version}`);
         console.log(`ok  bundled ${redisCli} -> ${version}`);
         console.log('SMOKE PASS');
-    } finally {
-        child.removeAllListeners('exit');
-        child.kill();
-        fs.rmSync(userData, { recursive: true, force: true });
     }
 }
 

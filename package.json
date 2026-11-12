@@ -18,7 +18,7 @@
         "test:watch": "jest --watch",
         "type-check": "tsc --noEmit",
         "electron:dev": "ELECTRON_DEV=1 electron .",
-        "electron:build": "yarn build && ([ -x build/redis-cli/redis-cli ] || bash scripts/build-redis-cli.sh) && electron-builder",
+        "electron:build": "yarn build && bash scripts/build-redis-cli.sh && electron-builder",
         "electron:smoke": "node scripts/smoke-packaged.js"
     },
     "dependencies": {

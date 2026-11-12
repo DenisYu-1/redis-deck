@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Builds redis-cli (with TLS) from a pinned Redis source tarball for the host arch.
-# Output: build/redis-cli/redis-cli   (gitignored)
+# Output: build/redis-cli/redis-cli   (gitignored), plus .stamp (OS-arch-version);
+# a no-op when the stamp already matches, so it is safe to run on every build.
 # Needs: curl, tar, make, cc, openssl dev headers (macOS: brew install openssl@3;
 # Linux: apt install libssl-dev patchelf).
 set -euo pipefail
@@ -10,6 +11,14 @@ REDIS_SHA256="${REDIS_SHA256:-5981179706f8391f03be91d951acafaeda91af7fac56beffb2
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="$ROOT/build/redis-cli"
+# Stamp of what is in OUT_DIR; a different arch or REDIS_VERSION forces a rebuild.
+STAMP="$OUT_DIR/.stamp"
+WANT="$(uname -s)-$(uname -m)-redis-$REDIS_VERSION"
+if [[ -x "$OUT_DIR/redis-cli" && -f "$STAMP" && "$(cat "$STAMP")" == "$WANT" ]]; then
+  echo "==> redis-cli up to date ($WANT), skipping build"
+  exit 0
+fi
+rm -rf "$OUT_DIR"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/redis-cli-build.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -92,4 +101,5 @@ if grep -qi 'unrecognized option\|not built with TLS' <<<"$ERR"; then
   exit 1
 fi
 echo "TLS: OK (openssl linked, --tls accepted)"
-echo "Built: $BIN"
+echo "$WANT" >"$STAMP"
+echo "Built: $BIN ($WANT)"

@@ -57,7 +57,7 @@ chmod +x Redis-Deck-*.AppImage
 ./Redis-Deck-*.AppImage
 ```
 
-It is built on Ubuntu 22.04, so it needs glibc 2.35 or newer. AppImages need FUSE 2 (`sudo apt install libfuse2`); without it, run with `--appimage-extract-and-run`. If the Chromium sandbox fails to start (common on Ubuntu 24.04+), add `--no-sandbox`. Data lives in `~/.config/`. The Linux build is untested on CI hardware beyond the packaged smoke check.
+It is built on Ubuntu 22.04, so it needs glibc 2.35 or newer. AppImages need FUSE 2 (`sudo apt install libfuse2`); without it, run with `--appimage-extract-and-run`. The app keeps Chromium's sandbox on. If it fails to start because unprivileged user namespaces are restricted (Ubuntu 24.04+), prefer allowing them (`sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`); `--no-sandbox` also works but disables the sandbox, so use it only as a last resort. Data lives in `~/.config/`. The Linux build is untested on CI hardware beyond the packaged smoke check.
 
 Connections, saved searches and statistics are stored in the per-user app data folder (`~/Library/Application Support/` on macOS), so they stay out of the app bundle. `redis-cli` is bundled, so you do not need to install Redis.
 

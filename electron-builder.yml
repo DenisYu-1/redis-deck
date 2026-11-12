@@ -20,6 +20,9 @@ npmRebuild: true
 extraResources:
     - from: build/redis-cli
       to: redis-cli
+      filter:
+          - '**/*'
+          - '!.stamp'
 mac:
     target:
         - dmg
