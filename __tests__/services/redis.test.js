@@ -383,7 +383,10 @@ total_commands_processed:1000`;
             const result = await readKey(testConnectionId, 'test:cluster-hash');
 
             expect(result.type).toBe('hash');
-            expect(result.value).toEqual({ field1: 'value1', field2: 'value2' });
+            expect(result.value).toEqual({
+                field1: 'value1',
+                field2: 'value2'
+            });
         });
 
         test('should throw error for non-existent key', async () => {

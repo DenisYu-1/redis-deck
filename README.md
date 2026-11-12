@@ -76,13 +76,15 @@ yarn electron:build  # build the .dmg into `dist-electron/`
     yarn install
     ```
 3. Start the development server:
+
     ```bash
     yarn dev
     ```
-   This will start:
-   - Vite dev server at http://localhost:5173 (frontend)
-   - Node.js backend at http://localhost:3000 (API)
-   - Vite proxies API calls to the backend automatically
+
+    This will start:
+    - Vite dev server at http://localhost:5173 (frontend)
+    - Node.js backend at http://localhost:3000 (API)
+    - Vite proxies API calls to the backend automatically
 
 4. Open http://localhost:5173
 5. Go to Settings (⚙️) to add your Redis connections
@@ -223,8 +225,13 @@ cp client/plugins/config/config.override.json.example client/plugins/config/conf
 
 ```js
 module.exports = {
-    async plan(inputs, ctx) { return { text: 'Would do X' }; },
-    async run(inputs, ctx) { await ctx.exec('SET k v'); return { text: 'Did X' }; }
+    async plan(inputs, ctx) {
+        return { text: 'Would do X' };
+    },
+    async run(inputs, ctx) {
+        await ctx.exec('SET k v');
+        return { text: 'Did X' };
+    }
 };
 ```
 

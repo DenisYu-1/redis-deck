@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Chip } from '@/components/ui/Chip';
 import type { TtlFilter } from '@/types';
+import { usePatternHistory } from './hooks/usePatternHistory';
 
 export const TYPE_OPTIONS = [
     'string',
@@ -20,6 +21,7 @@ const TTL_OPTIONS: [TtlFilter, string][] = [
 ];
 
 interface Props {
+    env: string;
     pattern: string;
     type: string;
     ttl: TtlFilter;
@@ -46,6 +48,7 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 export function KeyToolbar({
+    env,
     pattern,
     type,
     ttl,
@@ -58,6 +61,24 @@ export function KeyToolbar({
 }: Props) {
     const [draft, setDraft] = useState(pattern);
     const input = useRef<HTMLInputElement>(null);
+    const box = useRef<HTMLLabelElement>(null);
+    const [open, setOpen] = useState(false);
+    const history = usePatternHistory(env);
+
+    const submit = (p: string) => {
+        history.push(p);
+        onPattern(p);
+    };
+
+    // Close the history dropdown on outside click.
+    useEffect(() => {
+        if (!open) return;
+        const onDown = (e: MouseEvent) => {
+            if (!box.current?.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [open]);
 
     // A pattern applied from outside (a saved search) replaces the draft.
     const [seen, setSeen] = useState(pattern);
@@ -89,8 +110,18 @@ export function KeyToolbar({
     return (
         <>
             <div className="toolbar">
-                <label className="search">
+                <label className="search" ref={box}>
                     <span className="sr">Key pattern</span>
+                    <button
+                        type="button"
+                        className="search-hist"
+                        aria-label="Recent searches"
+                        aria-expanded={open}
+                        disabled={history.items.length === 0}
+                        onClick={() => setOpen((o) => !o)}
+                    >
+                        ▾
+                    </button>
                     <input
                         ref={input}
                         type="text"
@@ -100,12 +131,39 @@ export function KeyToolbar({
                         spellCheck={false}
                         onChange={(e) => setDraft(e.target.value)}
                         onKeyDown={(e) => {
-                            if (e.key === 'Enter') onPattern(draft);
-                            if (e.key === 'Escape') input.current?.blur();
+                            if (e.key === 'Enter') {
+                                submit(draft);
+                                setOpen(false);
+                            }
+                            if (e.key === 'Escape') {
+                                setOpen(false);
+                                input.current?.blur();
+                            }
                         }}
                     />
                     <span className="mono xs mu">MATCH</span>
                     <kbd>/</kbd>
+                    {open && (
+                        <ul className="search-menu" role="listbox">
+                            {history.items.map((p) => (
+                                <li
+                                    key={p}
+                                    role="option"
+                                    aria-selected={p === pattern}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            submit(p);
+                                            setOpen(false);
+                                        }}
+                                    >
+                                        {p}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </label>
                 <label className="sr" htmlFor="ttl-filter">
                     TTL filter

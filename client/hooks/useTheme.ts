@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { syncDesktopTitleBar } from '@/utils/desktopTitleBar';
 import {
     applyThemePref,
     getThemePref,
@@ -42,6 +43,7 @@ export function useTheme(): {
 
     useEffect(() => {
         applyThemePref(pref);
+        syncDesktopTitleBar();
     }, [pref, systemDark]);
 
     const setPref = useCallback((next: ThemePref) => {

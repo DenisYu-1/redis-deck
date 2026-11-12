@@ -23,8 +23,7 @@ jest.mock('@/services/apiService', () => ({
     getKeyCount: jest.fn().mockResolvedValue({ count: 42 }),
     getServerStatus: jest
         .fn()
-        .mockResolvedValue({ version: '7.2.0', pingMs: 3 }),
-    listSavedSearches: jest.fn().mockResolvedValue([])
+        .mockResolvedValue({ version: '7.2.0', pingMs: 3 })
 }));
 
 function Path() {

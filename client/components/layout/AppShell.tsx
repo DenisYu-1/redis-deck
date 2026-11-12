@@ -9,6 +9,7 @@ import { loadEnvironments } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
+import { isDesktop } from '@/utils/desktopTitleBar';
 
 /** Sidebar + scrolling main. Also loads connections once for every page. */
 export function AppShell() {
@@ -45,6 +46,7 @@ export function AppShell() {
 
     return (
         <div className={`app ${welcome ? 'bare' : ''}`}>
+            {isDesktop() && <div className="titlebar" />}
             {!welcome && <Sidebar />}
             <div className="main scroll">
                 {welcome ? (

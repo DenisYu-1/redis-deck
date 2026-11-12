@@ -26,7 +26,6 @@ export function KeysPage() {
     );
 
     const pattern = useAppStore((s) => s.keyPattern);
-    // (pattern lives in the store so the sidebar can apply saved searches)
     const setPattern = useAppStore((s) => s.setKeyPattern);
     const [type, setType] = useState('');
     const [ttl, setTtl] = useState<TtlFilter>('any');
@@ -88,6 +87,7 @@ export function KeysPage() {
     return (
         <div className="keys-page">
             <KeyToolbar
+                env={env ?? ''}
                 pattern={pattern}
                 type={type}
                 ttl={ttl}

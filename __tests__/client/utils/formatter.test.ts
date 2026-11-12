@@ -1,4 +1,9 @@
-import { formatBytes, formatNumber, formatPercentage, escapeHTML } from '@/utils/formatter';
+import {
+    formatBytes,
+    formatNumber,
+    formatPercentage,
+    escapeHTML
+} from '@/utils/formatter';
 
 describe('formatter utilities', () => {
     describe('formatBytes', () => {
@@ -26,9 +31,12 @@ describe('formatter utilities', () => {
 
     describe('escapeHTML', () => {
         it('escapes HTML entities', () => {
-            expect(escapeHTML('<script>alert("xss")</script>')).toContain('&lt;');
-            expect(escapeHTML('<script>alert("xss")</script>')).toContain('&gt;');
+            expect(escapeHTML('<script>alert("xss")</script>')).toContain(
+                '&lt;'
+            );
+            expect(escapeHTML('<script>alert("xss")</script>')).toContain(
+                '&gt;'
+            );
         });
     });
 });
-

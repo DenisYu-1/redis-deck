@@ -24,7 +24,12 @@ The backend (`services/workflows.js`) reads both files; the frontend gets the me
                     "desc": "Shown under the title",
                     "writes": true,
                     "inputs": [
-                        { "name": "id", "label": "Marker id", "type": "int", "required": true }
+                        {
+                            "name": "id",
+                            "label": "Marker id",
+                            "type": "int",
+                            "required": true
+                        }
                     ]
                 }
             ]
@@ -42,8 +47,13 @@ Each action needs `services/workflows/<pluginId>/<actionId>.js` (private: gitign
 
 ```js
 module.exports = {
-    async plan(inputs, ctx) { return { text: 'Would do X' }; }, // dry run, must not write
-    async run(inputs, ctx) { await ctx.exec('SET k v'); return { text: 'Did X' }; }
+    async plan(inputs, ctx) {
+        return { text: 'Would do X' };
+    }, // dry run, must not write
+    async run(inputs, ctx) {
+        await ctx.exec('SET k v');
+        return { text: 'Did X' };
+    }
 };
 ```
 

@@ -33,7 +33,9 @@ describe('ui primitives', () => {
                 body text
             </Modal>
         );
-        expect(screen.getByRole('dialog', { name: 'Hello' })).toBeInTheDocument();
+        expect(
+            screen.getByRole('dialog', { name: 'Hello' })
+        ).toBeInTheDocument();
         await userEvent.keyboard('{Escape}');
         expect(onClose).toHaveBeenCalledTimes(1);
         await userEvent.click(screen.getByTestId('modal-scrim'));
@@ -42,7 +44,11 @@ describe('ui primitives', () => {
 
     it('Chip toggles via aria-pressed', async () => {
         const onClick = jest.fn();
-        render(<Chip on onClick={onClick}>hash</Chip>);
+        render(
+            <Chip on onClick={onClick}>
+                hash
+            </Chip>
+        );
         const chip = screen.getByRole('button', { name: 'hash' });
         expect(chip).toHaveAttribute('aria-pressed', 'true');
         await userEvent.click(chip);
@@ -71,7 +77,9 @@ describe('ui primitives', () => {
                 add one
             </EmptyState>
         );
-        expect(screen.getByRole('heading', { name: 'Nothing' })).toBeInTheDocument();
+        expect(
+            screen.getByRole('heading', { name: 'Nothing' })
+        ).toBeInTheDocument();
         expect(screen.getByText('add one')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Do it' })).toBeInTheDocument();
     });

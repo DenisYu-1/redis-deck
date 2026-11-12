@@ -2,7 +2,7 @@
 // 127.0.0.1 port, keeps Connections in the per-user app data folder and opens
 // the UI in a window. Dev mode (ELECTRON_DEV=1) serves the client through an
 // in-process Vite dev server for hot reload, proxying /api to the embedded server.
-const { app, BrowserWindow, dialog, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { execFile } = require('child_process');
 const path = require('path');
 const { applyBundledRedisCli } = require('./redisCli');
@@ -92,9 +92,28 @@ async function boot() {
         width: 1400,
         height: 900,
         icon: path.join(__dirname, 'icon.png'),
-        webPreferences: { contextIsolation: true, nodeIntegration: false }
+        // Custom title bar: content extends under native window buttons.
+        titleBarStyle: 'hidden',
+        titleBarOverlay: {
+            color: '#0d0e10',
+            symbolColor: '#e6e6e6',
+            height: 36
+        },
+        trafficLightPosition: { x: 14, y: 11 },
+        webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            preload: path.join(__dirname, 'preload.js')
+        }
     });
     mainWindow = win;
+    // Renderer pushes theme colors; the overlay only exists on Win/Linux.
+    ipcMain.on('titlebar-colors', (e, color, symbolColor) => {
+        if (process.platform === 'darwin' || win.isDestroyed()) return;
+        if (typeof color !== 'string' || typeof symbolColor !== 'string')
+            return;
+        win.setTitleBarOverlay({ color, symbolColor, height: 36 });
+    });
     win.webContents.setWindowOpenHandler(({ url: target }) => {
         if (isSafeExternalUrl(target)) shell.openExternal(target);
         return { action: 'deny' };

@@ -15,9 +15,10 @@ const FORMAT_LABEL = { raw: 'Raw', json: 'JSON', php: 'PHP' } as const;
 interface Props {
     label: string;
     value: string;
+    onClose?: () => void;
 }
 
-export function ValueInspector({ label, value }: Props) {
+export function ValueInspector({ label, value, onClose }: Props) {
     const [mode, setMode] = useState<DecodeMode>('auto');
     const decoded = decodeValue(value, mode);
     const detected = decodeValue(value, 'auto').format;
@@ -54,6 +55,16 @@ export function ValueInspector({ label, value }: Props) {
                 <button type="button" className="btn xs" onClick={copy}>
                     Copy
                 </button>
+                {onClose && (
+                    <button
+                        type="button"
+                        className="btn xs"
+                        aria-label="Close"
+                        onClick={onClose}
+                    >
+                        ×
+                    </button>
+                )}
             </div>
             <div className="ibody">
                 {!decoded.ok && (

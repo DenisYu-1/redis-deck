@@ -8,39 +8,47 @@ module.exports = {
         'plugin:react/recommended',
         'plugin:react/jsx-runtime',
         'plugin:react-hooks/recommended',
-        'plugin:prettier/recommended',
+        'plugin:prettier/recommended'
     ],
-    ignorePatterns: ['client/plugins/plugins/extensions', 'dist', 'node_modules', '*.cjs', '__tests__'],
+    ignorePatterns: [
+        'client/plugins/plugins/extensions',
+        'dist',
+        'node_modules',
+        '*.cjs',
+        '__tests__'
+    ],
     parser: '@typescript-eslint/parser',
     parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
         project: ['./tsconfig.json', './tsconfig.node.json'],
-        tsconfigRootDir: __dirname,
+        tsconfigRootDir: __dirname
     },
     plugins: ['react-refresh', '@typescript-eslint', 'react'],
     settings: {
         react: {
-            version: 'detect',
-        },
+            version: 'detect'
+        }
     },
     rules: {
         'react-refresh/only-export-components': [
             'warn',
-            { allowConstantExport: true },
+            { allowConstantExport: true }
         ],
         '@typescript-eslint/no-unused-vars': [
             'error',
-            { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+            { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
         ],
-        '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
+        '@typescript-eslint/consistent-type-definitions': [
+            'error',
+            'interface'
+        ],
         '@typescript-eslint/no-non-null-assertion': 'error',
         '@typescript-eslint/restrict-template-expressions': [
             'error',
-            { allowNumber: true },
+            { allowNumber: true }
         ],
         '@typescript-eslint/strict-boolean-expressions': 'off',
-        '@typescript-eslint/no-confusing-void-expression': 'off',
-    },
+        '@typescript-eslint/no-confusing-void-expression': 'off'
+    }
 };
-

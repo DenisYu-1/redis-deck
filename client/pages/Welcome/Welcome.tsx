@@ -53,9 +53,12 @@ export function Welcome() {
             return;
         }
         setTesting(true);
-        setTestResult(
-            await testConnectionDraft({ ...draftToPayload(draft), id: '' })
-        );
+        const result = await testConnectionDraft({
+            ...draftToPayload(draft),
+            id: ''
+        });
+        setTestResult(result);
+        showToast(result.message, result.success ? 'success' : 'error');
         setTesting(false);
     };
 
@@ -85,9 +88,6 @@ export function Welcome() {
         <div className="welcome">
             <div className="wtop">
                 <Logo />
-                <span className="wbrand">
-                    Redis<b>Deck</b>
-                </span>
                 <span className="grow" />
                 <ThemeToggle />
             </div>
