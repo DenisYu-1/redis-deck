@@ -41,6 +41,24 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Wor
 3. Access the UI at http://localhost:2222
 4. Go to Settings (⚙️) to add your Redis connections
 
+### Desktop app (macOS)
+
+1. Download the `.dmg` for your Mac from the [GitHub Releases](https://github.com/DenisYu-1/redis-deck/releases) page: `arm64` for Apple Silicon (M1 and later), `x64` for Intel Macs.
+2. Open the `.dmg` and drag Redis Deck to Applications.
+3. The app is not signed or notarized, so Gatekeeper blocks the first launch. Right-click (or Control-click) the app, choose **Open**, then confirm **Open** in the dialog. If macOS still refuses, clear the quarantine flag and start it again:
+    ```bash
+    xattr -cr "/Applications/Redis Deck.app"
+    ```
+
+Connections, saved searches and statistics are stored in the per-user app data folder (`~/Library/Application Support/`), so they stay out of the app bundle. `redis-cli` is bundled, so you do not need to install Redis.
+
+For contributors:
+
+```bash
+yarn electron:dev    # run the desktop app against the dev setup
+yarn electron:build  # build the .dmg into `dist-electron/`
+```
+
 ### Running Locally (Development)
 
 1. Clone the repository
