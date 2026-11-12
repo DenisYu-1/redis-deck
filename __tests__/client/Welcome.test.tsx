@@ -110,7 +110,8 @@ describe('Welcome', () => {
         renderAt('/keys');
         await user.type(await screen.findByLabelText('Host'), 'localhost');
         await user.click(screen.getByRole('button', { name: /^test/i }));
-        expect(await screen.findByText('PONG ok')).toBeInTheDocument();
+        // Shown both inline (callout) and as a toast.
+        expect(await screen.findAllByText('PONG ok')).toHaveLength(2);
         expect(testConn).toHaveBeenCalledWith(
             expect.objectContaining({ host: 'localhost', id: '' })
         );
