@@ -22,3 +22,4 @@ dump.rdb
 
 # bundled redis-cli build output
 build/
+dist-electron/

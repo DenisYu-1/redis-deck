@@ -1,0 +1,30 @@
+# Desktop packaging. Run via `yarn electron:build`. Unsigned, no auto-update.
+appId: io.github.denisyu-1.redisdeck
+productName: Redis Deck
+directories:
+    output: dist-electron
+files:
+    - package.json
+    - server.js
+    - electron/**
+    - config/**
+    - guards/**
+    - routes/**
+    - services/**
+    - public/**
+    - dist/**
+    - client/plugins/config/**
+# better-sqlite3 is rebuilt against Electron's ABI by electron-builder (npmRebuild).
+npmRebuild: true
+# Bundled redis-cli (+ its dylibs) from scripts/build-redis-cli.sh.
+extraResources:
+    - from: build/redis-cli
+      to: redis-cli
+mac:
+    target:
+        - dmg
+    icon: electron/icon.png
+    category: public.app-category.developer-tools
+    identity: null
+dmg:
+    title: Redis Deck

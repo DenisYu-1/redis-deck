@@ -5,9 +5,12 @@
 const { app, BrowserWindow, dialog, shell } = require('electron');
 const { execFile } = require('child_process');
 const path = require('path');
+const { applyBundledRedisCli } = require('./redisCli');
 
 const ROOT = path.join(__dirname, '..');
 const isDev = process.env.ELECTRON_DEV === '1';
+// --smoke: headless check for packaged builds (see scripts/smoke-packaged.js).
+const isSmoke = process.argv.includes('--smoke');
 
 let server;
 let viteServer;
@@ -39,8 +42,12 @@ async function startVite(apiPort) {
 
 async function boot() {
     process.env.DATA_DIR = path.join(app.getPath('userData'), 'data');
+    applyBundledRedisCli({
+        packaged: app.isPackaged,
+        resourcesPath: process.resourcesPath
+    });
 
-    if (!(await checkRedisCli())) {
+    if (!(await checkRedisCli()) && !isSmoke) {
         dialog.showErrorBox(
             'redis-cli not found',
             'Redis Deck needs redis-cli. Install it (e.g. brew install redis) or set REDIS_CLI_PATH to its location, then restart.'
@@ -51,6 +58,16 @@ async function boot() {
     const { startServer } = require('../server');
     server = await startServer({ port: 0, host: '127.0.0.1' });
     const apiPort = server.address().port;
+
+    if (isSmoke) {
+        console.log(
+            `SMOKE_READY ${JSON.stringify({
+                port: apiPort,
+                redisCli: process.env.REDIS_CLI_PATH || 'redis-cli'
+            })}`
+        );
+        return;
+    }
 
     const url = isDev
         ? await startVite(apiPort)

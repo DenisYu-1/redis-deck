@@ -35,6 +35,32 @@ cp "$WORK/src/src/redis-cli" "$OUT_DIR/redis-cli"
 chmod +x "$OUT_DIR/redis-cli"
 BIN="$OUT_DIR/redis-cli"
 
+if [[ "$(uname)" == "Darwin" ]]; then
+  # Make the binary self-contained: copy the OpenSSL dylibs next to it and point
+  # every reference at @executable_path, so no Homebrew path is needed at runtime.
+  echo "==> Bundling OpenSSL dylibs"
+  for dep in $(otool -L "$BIN" | awk 'NR>1 {print $1}' | grep -E '/lib(ssl|crypto)\.[0-9.]*dylib$'); do
+    name="$(basename "$dep")"
+    cp -f "$dep" "$OUT_DIR/$name"
+    chmod u+w "$OUT_DIR/$name"
+    install_name_tool -id "@executable_path/$name" "$OUT_DIR/$name"
+    install_name_tool -change "$dep" "@executable_path/$name" "$BIN"
+  done
+  # libssl references libcrypto by absolute path too.
+  for lib in "$OUT_DIR"/*.dylib; do
+    for dep in $(otool -L "$lib" | awk 'NR>1 {print $1}' | grep -E '^/(opt|usr/local)/'); do
+      install_name_tool -change "$dep" "@executable_path/$(basename "$dep")" "$lib"
+    done
+    codesign --force --sign - "$lib" >/dev/null 2>&1
+  done
+  codesign --force --sign - "$BIN" >/dev/null 2>&1
+  if otool -L "$BIN" "$OUT_DIR"/*.dylib | grep -Eq '/opt/|/usr/local/'; then
+    echo "Self-containment check failed: non-system dylib refs remain" >&2
+    otool -L "$BIN" "$OUT_DIR"/*.dylib >&2
+    exit 1
+  fi
+fi
+
 echo "==> Verifying"
 "$BIN" --version
 # TLS-enabled builds link OpenSSL; non-TLS builds do not.
