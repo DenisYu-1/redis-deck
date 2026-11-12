@@ -1,6 +1,6 @@
 <img src="client/assets/logo.svg" alt="RedisDeck Logo" width="500">
 
-A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Plugin system allows adding custom flows and commands.
+A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Workflows let you add custom, guarded flows.
 
 ## Features
 
@@ -21,13 +21,13 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Plu
 - 🎨 **Modern UI**: Clean, responsive interface with polished interactions
 - 🎯 **Empty State**: Helpful onboarding when no connections are configured
 - 💾 **Import/Export**: Backup and restore connection configurations
-- 🔄 **Drag & Drop**: Reorder connections in settings
+- 🔄 **Drag & Drop**: Reorder connections
 
 ### **Plugin System**
 
-- 🧩 **Extensible Architecture**: Config-based plugin system
-- ⚡ **Built-in Plugins**: Custom searches, booking management, batch operations
-- 🔧 **Easy Integration**: Simple plugin development with base classes
+- 🧩 **Workflows**: Config-declared actions with typed inputs, dry-run plan and run history
+- 🛡️ **Server-enforced safety**: Read-only and confirm-writes connections are enforced by the backend
+- 🔧 **Easy Integration**: A handler module per action
 
 ## Quick Start
 
@@ -108,7 +108,7 @@ Supports all Redis data types:
 
 ### Statistics Dashboard
 
-Comprehensive monitoring and analytics available at `/statistics`:
+Comprehensive monitoring and analytics available at `/stats`:
 
 **Real-Time Metrics (12 KPIs)**:
 
@@ -163,7 +163,7 @@ Comprehensive monitoring and analytics available at `/statistics`:
 - **Frontend**: React 18 with TypeScript and modern hooks
 - **Build Tool**: Vite for fast development and optimized production builds
 - **State Management**: Zustand for lightweight, hook-based state management
-- **Plugin System**: Extensible React-based plugin architecture
+- **Workflows**: Config-declared plugin actions with server-side handlers
 - **Backend**: Node.js with Express and comprehensive REST API
 - **Type Safety**: Strict TypeScript configuration with comprehensive type checking
 - **Code Quality**: ESLint with TypeScript and React plugins, Prettier for formatting
@@ -176,242 +176,29 @@ Comprehensive monitoring and analytics available at `/statistics`:
 
 This project is licensed under the Apache License 2.0. See the `LICENSE` file for details.
 
-## Plugin System
+## Workflows (plugins)
 
-RedisDeck includes a flexible plugin system that allows you to extend the UI with custom functionality. The plugin system is built with React and TypeScript, allowing you to create type-safe, reusable components that integrate seamlessly with the main application.
+Plugins contribute **Workflows**: named actions with typed inputs, a dry-run plan, a run, and per-connection run history. Handlers run on the Express server, so Read-only / Confirm-writes connections are enforced there (see `docs/adr/0001-server-side-workflows-and-enforced-read-only.md`). Workflows appear in the sidebar and open at `/workflows/<pluginId>.<actionId>`.
 
-### Setup
+### Configuration
 
-The plugin system uses a base configuration with optional overrides:
-
-- **`client/plugins/config/config.json`** (tracked in git): Base configuration with built-in plugins
-- **`client/plugins/config/config.override.json`** (gitignored): Optional file to add custom plugins or override base settings
-
-To add your own plugins, create an override file:
+- **`client/plugins/config/config.json`** (tracked): built-in plugins (currently the `examples` plugin).
+- **`client/plugins/config/config.override.json`** (gitignored): your own plugins. Entries merge by plugin `id`; override wins; `"enabled": false` disables one.
 
 ```bash
 cp client/plugins/config/config.override.json.example client/plugins/config/config.override.json
 ```
 
-Then customize `config.override.json` to add your custom plugins. The override file can:
+### Adding a Workflow
 
-- Add new plugins
-- Override existing plugin settings by matching the plugin `id`
-- Disable built-in plugins by setting `"enabled": false`
+1. Declare the plugin and its `actions` (id, title, desc, `writes`, `inputs`) in the config. Input types include `int`, `uuid`, `select`, and more; see `config.json` for examples.
+2. Add a handler module `services/workflows/<pluginId>/<actionId>.js` (private ones go in the gitignored `services/workflows/extensions/<pluginId>/`) exporting:
 
-### Architecture
-
-The plugin system consists of:
-
-- **Plugin Registry**: Manages plugin loading and initialization
-- **Plugin Components**: React components that integrate with the main UI
-- **Event System**: Pub/sub system for inter-plugin communication
-- **Configuration**: JSON-based configuration for plugin registration
-- **TypeScript Types**: Comprehensive type definitions for plugin development
-
-### Creating a New Plugin
-
-#### 1. Create Plugin Directory Structure
-
-Create a new directory for your plugin:
-
-**For custom/private plugins** (not tracked in git):
-
-```
-client/plugins/plugins/extensions/your-plugin/
-├── yourPlugin.tsx
-├── components/
-└── hooks/
-```
-
-**For built-in plugins** (tracked in git):
-
-```
-client/plugins/plugins/your-plugin/
-├── yourPlugin.tsx
-├── components/
-├── hooks/
-└── utils/
-```
-
-#### 2. Create Plugin Components
-
-Create your plugin components using React and TypeScript. Create a main plugin file `yourPlugin.tsx`:
-
-```tsx
-import React from 'react';
-import { PluginComponentProps } from '../../types';
-
-const YourPlugin: React.FC<PluginComponentProps> = ({
-    context,
-    emit,
-    on
-}) => {
-    const handleAction = () => {
-        // Your plugin logic here
-        emit({
-            type: 'toast:show',
-            payload: { message: 'Action completed!', type: 'success' }
-        });
-    };
-
-    return (
-        <section className="your-plugin-section">
-            <h2>Your Plugin Title</h2>
-            <div className="form-group">
-                <label htmlFor="your-input">Input Label:</label>
-                <input
-                    type="text"
-                    id="your-input"
-                    placeholder="Enter value"
-                />
-            </div>
-            <button
-                className="secondary-btn"
-                onClick={handleAction}
-            >
-                Execute Action
-            </button>
-        </section>
-    );
+```js
+module.exports = {
+    async plan(inputs, ctx) { return { text: 'Would do X' }; },
+    async run(inputs, ctx) { await ctx.exec('SET k v'); return { text: 'Did X' }; }
 };
-
-export default YourPlugin;
 ```
 
-#### 4. Register the Plugin
-
-**For custom extension plugins**, add to `client/plugins/config/config.override.json`:
-
-```json
-{
-    "plugins": [
-        {
-            "id": "your-plugin",
-            "name": "Your Plugin",
-            "enabled": true,
-            "path": "extensions/yourPlugin/yourPlugin.tsx",
-            "priority": 10,
-            "config": {
-                "someSetting": "value"
-            }
-        }
-    ]
-}
-```
-
-**For built-in plugins**, add directly to `client/plugins/config/config.json`:
-
-```json
-{
-    "plugins": [
-        {
-            "id": "your-plugin",
-            "name": "Your Plugin",
-            "enabled": true,
-            "path": "yourPlugin/yourPlugin.tsx",
-            "priority": 10,
-            "config": {
-                "someSetting": "value"
-            }
-        }
-    ]
-}
-```
-
-**Configuration Options:**
-
-- `id`: Unique plugin identifier
-- `name`: Display name for the plugin
-- `enabled`: Set to `false` to disable the plugin
-- `path`: Path to the plugin module (relative to `/js/plugins/`)
-- `priority`: Display order (higher numbers load first)
-- `config`: Plugin-specific configuration (accessible via `this.config`)
-
-### Plugin Context
-
-The `context` object passed to plugins provides access to:
-
-- `context.getCurrentEnvironment()`: Get the currently selected environment ID
-- `context.onOperationComplete()`: Callback to refresh the UI after operations
-- `context.showToast(message, type)`: Display toast notifications
-
-### Available APIs
-
-**API Service** (`client/services/apiService.ts`):
-
-- `searchKeys(pattern, cursor, count, environment)` - Search for keys by pattern
-- `getKeyDetails(key, environment)` - Get details for a specific key
-- `saveKey(key, value, expiry, environment)` - Save or update a key
-- `deleteKey(key, environment)` - Delete a key
-- `addToSortedSet(key, members, expiry, environment)` - Add to sorted set
-
-**Toast Service** (`client/hooks/useToast.ts`):
-
-- `showToast(message, type)` - Display toast notification (types: 'success', 'error', 'warning')
-- `escapeHTML(str)` - Escape HTML special characters
-
-### Managing Plugins
-
-To customize built-in plugins or add your own, use `client/plugins/config/config.override.json`:
-
-**Disable a Built-in Plugin:**
-
-```json
-{
-    "plugins": [
-        {
-            "id": "batch-delete",
-            "enabled": false
-        }
-    ]
-}
-```
-
-**Override Plugin Settings:**
-
-```json
-{
-    "plugins": [
-        {
-            "id": "key-operations",
-            "config": {
-                "timeout": 5000,
-                "maxRetries": 3
-            }
-        }
-    ]
-}
-```
-
-**Add Custom Plugin:**
-
-```json
-{
-    "plugins": [
-        {
-            "id": "your-plugin",
-            "name": "Your Plugin",
-            "enabled": true,
-            "path": "extensions/yourPlugin/yourPlugin.tsx",
-            "priority": 10,
-            "config": {}
-        }
-    ]
-}
-```
-
-Access configuration in your plugin via `this.config.timeout`.
-
-### Built-in Plugins
-
-- **Key Operations** (priority: 100): Common key operations (TTL, rename, copy, delete)
-- **Batch Delete** (priority: 50): Bulk delete operations by pattern
-
-### Styling
-
-Plugins inherit the application's CSS. Use existing classes for consistent styling:
-
-- `.form-group` - Form field wrapper
-- `.secondary-btn` - Secondary button style
-- `.danger-btn` - Danger/delete button style
+See `services/workflows/examples/` for working examples. Actions with `"writes": true` are refused on Read-only connections.

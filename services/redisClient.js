@@ -11,11 +11,12 @@ function makeClient(cfg) {
     const client = createClient({
         username: cfg.username || undefined,
         password: cfg.password || undefined,
+        database: cfg.db || undefined,
         socket: {
             host: cfg.host,
             port: Number(cfg.port),
             tls: cfg.tls ? true : undefined,
-            rejectUnauthorized: cfg.tls ? false : undefined, // mirrors redis-cli --insecure
+            rejectUnauthorized: cfg.tls ? cfg.verifyTls !== false : undefined, // mirrors redis-cli --insecure when verify is off
             connectTimeout: 10000,
             reconnectStrategy: (retries) => Math.min(retries * 200, 2000)
         }
@@ -59,4 +60,21 @@ async function getClient(connectionId) {
     }
 }
 
-module.exports = { getClient };
+// Close and forget a connection's cached client (config changed or deleted).
+async function dropClient(connectionId) {
+    const existing = clients.get(connectionId);
+    clients.delete(connectionId);
+    if (!existing) {
+        return;
+    }
+    try {
+        const client = await existing;
+        if (client.isOpen) {
+            await client.close();
+        }
+    } catch {
+        // never connected or already gone
+    }
+}
+
+module.exports = { getClient, dropClient };

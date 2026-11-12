@@ -5,9 +5,10 @@ const path = require('path');
 const environmentRoutes = require('../routes/environment');
 const keysRoutes = require('../routes/keys');
 const infoRoutes = require('../routes/info');
-const customRoutes = require('../routes/custom');
 const connectionRoutes = require('../routes/connections');
+const searchRoutes = require('../routes/searches');
 const statsRoutes = require('../routes/stats');
+const workflowRoutes = require('../routes/workflows');
 
 function createApp() {
     const app = express();
@@ -27,7 +28,8 @@ function createApp() {
     app.use('/api', keysRoutes);
     app.use('/api', infoRoutes);
     app.use('/api', connectionRoutes);
-    app.use('/api/custom', customRoutes);
+    app.use('/api', searchRoutes);
+    app.use('/api', workflowRoutes);
     app.use('/api/stats', statsRoutes);
 
     // SPA fallback routes

@@ -1,11 +1,20 @@
+export type ConnectionTier = 'local' | 'staging' | 'production';
+
 export interface RedisConnection {
     id: string;
     host: string;
     port: number;
     username?: string;
     password?: string;
+    /** Server-reported: a password is stored. The password itself never reaches the client. */
+    hasPassword?: boolean;
     tls: boolean;
     cluster: boolean;
+    tier?: ConnectionTier;
+    db?: number;
+    verifyTls?: boolean;
+    readOnly?: boolean;
+    confirmWrites?: boolean;
     displayOrder?: number;
 }
 
@@ -22,11 +31,41 @@ export interface KeyDetails {
     size?: number;
 }
 
+/** `GET /keys/:key/meta`; null where Redis cannot answer. */
+export interface KeyInfo {
+    type: string;
+    encoding: string | null;
+    /** Seconds since last access. */
+    idle: number | null;
+    memory: number | null;
+    length: number | null;
+}
+
+export interface KeyMeta {
+    type: string;
+    /** Seconds; -1 no expiry, -2 gone. */
+    ttl: number;
+    /** MEMORY USAGE in bytes, null when unavailable. */
+    size: number | null;
+}
+
+export interface ScanStats {
+    iterations: number;
+    /** Keys SCAN returned before the TTL filter. */
+    returned: number;
+    matched: number;
+    ms: number;
+}
+
+export type TtlFilter = 'any' | 'has' | 'none' | 'lt1h';
+
 export interface SearchKeysResponse {
     keys: string[];
     cursors: string[];
     hasMore: boolean;
     total: string;
+    meta?: Record<string, KeyMeta>;
+    scan?: ScanStats;
 }
 
 export interface KeyCountResponse {
@@ -34,31 +73,11 @@ export interface KeyCountResponse {
 }
 
 export type RedisValueType =
-    | 'string'
-    | 'list'
-    | 'set'
-    | 'zset'
-    | 'hash'
-    | 'none';
+    'string' | 'list' | 'set' | 'zset' | 'hash' | 'none';
 
 export interface ToastMessage {
     message: string;
     type: 'success' | 'error' | 'warning' | 'info';
-}
-
-export interface PluginConfig {
-    id: string;
-    name: string;
-    enabled: boolean;
-    path: string;
-    priority: number;
-    config?: Record<string, unknown>;
-}
-
-export interface PluginContext {
-    getCurrentEnvironment: () => string;
-    onOperationComplete: () => void;
-    showToast: (message: string, type: ToastMessage['type']) => void;
 }
 
 export interface StatsSnapshot {
@@ -175,6 +194,8 @@ export interface HistoryDataPoint {
     total_net_input_bytes: number;
     total_net_output_bytes: number;
     connected_clients: number;
+    used_cpu_sys: number;
+    used_cpu_user: number;
 }
 
 export interface HistoryResponse {

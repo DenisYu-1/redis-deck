@@ -6,12 +6,15 @@ const {
     createConnection,
     updateConnection,
     deleteConnection,
-    updateConnectionOrder
+    updateConnectionOrder,
+    safetyFields
 } = require('../services/database');
 const {
     execRedisCommand,
     execRedisCommandWithConfig
 } = require('../services/redis');
+const { resolveTestPassword } = require('../services/connectionTest');
+const { dropClient } = require('../services/redisClient');
 
 // Get all connections
 router.get('/connections', (req, res) => {
@@ -27,6 +30,9 @@ router.get('/connections', (req, res) => {
 // Export all connections
 router.get('/connections/export', (req, res) => {
     try {
+        // Passwords are only included when explicitly requested, so a default
+        // backup file is safe to share.
+        const includePasswords = req.query.includePasswords === 'true';
         const allConnections = getAllConnections();
         const connectionsWithPasswords = allConnections.map((conn) => {
             const fullConnection = getConnection(conn.id);
@@ -35,9 +41,12 @@ router.get('/connections/export', (req, res) => {
                 host: fullConnection.host,
                 port: fullConnection.port,
                 username: fullConnection.username || '',
-                password: fullConnection.password || '',
+                ...(includePasswords && {
+                    password: fullConnection.password || ''
+                }),
                 tls: fullConnection.tls === 1,
                 cluster: fullConnection.cluster === 1,
+                ...safetyFields(fullConnection),
                 order: fullConnection.order || 0
             };
         });
@@ -67,6 +76,7 @@ router.get('/connections/:id', (req, res) => {
         }
 
         // Don't send the password back to the client
+        connection.hasPassword = Boolean(connection.password);
         delete connection.password;
 
         res.json({ connection });
@@ -154,7 +164,7 @@ router.put('/connections/order', (req, res) => {
 });
 
 // Update an existing connection
-router.put('/connections/:id', (req, res) => {
+router.put('/connections/:id', async (req, res) => {
     try {
         const id = req.params.id;
         const connection = req.body;
@@ -179,7 +189,16 @@ router.put('/connections/:id', (req, res) => {
             connection.password = existing.password;
         }
 
+        // Omitted safety fields keep their stored values
+        const stored = safetyFields(existing);
+        for (const key of Object.keys(stored)) {
+            if (connection[key] === undefined) {
+                connection[key] = stored[key];
+            }
+        }
+
         const success = updateConnection(id, connection);
+        await dropClient(id);
 
         if (success) {
             // Don't send the password back to the client
@@ -198,7 +217,7 @@ router.put('/connections/:id', (req, res) => {
 });
 
 // Delete a connection
-router.delete('/connections/:id', (req, res) => {
+router.delete('/connections/:id', async (req, res) => {
     try {
         const id = req.params.id;
 
@@ -211,6 +230,7 @@ router.delete('/connections/:id', (req, res) => {
         }
 
         const success = deleteConnection(id);
+        await dropClient(id);
 
         if (success) {
             res.json({ message: `Connection '${id}' deleted successfully` });
@@ -267,12 +287,23 @@ router.post('/connections/test', async (req, res) => {
                 .json({ error: 'Connection host and port are required' });
         }
 
+        // Blank password for a saved Connection: fall back to the stored one
+        if (!connection.password && connection.id) {
+            connection.password = resolveTestPassword(
+                connection,
+                getConnection(connection.id)
+            );
+        }
+
         const config = {
             host: connection.host,
             port: connection.port,
             username: connection.username,
             password: connection.password,
-            tls: Boolean(connection.tls)
+            tls: Boolean(connection.tls),
+            cluster: Boolean(connection.cluster),
+            db: Number(connection.db) || 0,
+            verifyTls: connection.verifyTls !== false
         };
 
         const result = await execRedisCommandWithConfig('PING', config);
@@ -348,6 +379,11 @@ router.post('/connections/import', (req, res) => {
                     password: conn.password || '',
                     tls: conn.tls ? 1 : 0,
                     cluster: conn.cluster ? 1 : 0,
+                    tier: conn.tier,
+                    db: conn.db,
+                    verifyTls: conn.verifyTls,
+                    readOnly: conn.readOnly,
+                    confirmWrites: conn.confirmWrites,
                     order: finalOrder
                 };
 

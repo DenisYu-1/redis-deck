@@ -27,6 +27,8 @@ RUN yarn install --production --frozen-lockfile
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/config ./config
+COPY --from=builder /app/guards ./guards
+COPY --from=builder /app/client/plugins/config ./client/plugins/config
 COPY --from=builder /app/routes ./routes
 COPY --from=builder /app/services ./services
 COPY --from=builder /app/server.js ./server.js

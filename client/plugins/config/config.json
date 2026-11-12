@@ -1,28 +1,65 @@
 {
     "plugins": [
         {
-            "id": "keys-manager",
-            "name": "Keys Manager",
+            "id": "examples",
+            "name": "Examples",
             "enabled": true,
-            "path": "keysManager/keysManager.tsx",
-            "priority": 100,
-            "config": {}
-        },
-        {
-            "id": "key-operations",
-            "name": "Key Operations",
-            "enabled": false,
-            "path": "keyOperations/keyOperations.tsx",
-            "priority": 90,
-            "config": {}
-        },
-        {
-            "id": "batch-delete",
-            "name": "Batch Delete Keys",
-            "enabled": true,
-            "path": "batchDelete/batchDelete.tsx",
-            "priority": 50,
-            "config": {}
+            "priority": 10,
+            "config": {},
+            "actions": [
+                {
+                    "id": "set-marker",
+                    "title": "Set marker key",
+                    "desc": "Sets workflow:example:<id> with an expiry. Example of a write Workflow.",
+                    "writes": true,
+                    "inputs": [
+                        {
+                            "name": "id",
+                            "label": "Marker id",
+                            "type": "int",
+                            "required": true,
+                            "placeholder": "7",
+                            "hint": "Whole number"
+                        },
+                        {
+                            "name": "token",
+                            "label": "Token",
+                            "type": "uuid",
+                            "required": false,
+                            "placeholder": "123e4567-e89b-42d3-a456-426614174000",
+                            "hint": "Optional UUID stored as the value"
+                        },
+                        {
+                            "name": "ttl",
+                            "label": "Expires in",
+                            "type": "select",
+                            "required": true,
+                            "def": "60",
+                            "options": [
+                                {
+                                    "value": "60",
+                                    "label": "1 minute"
+                                },
+                                {
+                                    "value": "300",
+                                    "label": "5 minutes"
+                                },
+                                {
+                                    "value": "3600",
+                                    "label": "1 hour"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "count-keys",
+                    "title": "Count keys",
+                    "desc": "Reports the number of keys. Example of a read-only Workflow.",
+                    "writes": false,
+                    "inputs": []
+                }
+            ]
         }
     ]
 }

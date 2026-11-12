@@ -5,13 +5,14 @@ import { getMemoryByPattern } from '@/services/apiService';
 import { formatBytes, formatNumber } from '@/utils/formatter';
 import type { MemoryByPatternResponse } from '@/types';
 import Chart from 'chart.js/auto';
+import type { TooltipItem } from 'chart.js';
 
 export function MemoryPatternAnalysis() {
     const [data, setData] = useState<MemoryByPatternResponse | null>(null);
     const [sampleSize, setSampleSize] = useState(200);
     const [fastMode, setFastMode] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
-    const [charts, setCharts] = useState<Record<string, any>>({});
+    const [charts, setCharts] = useState<Record<string, Chart>>({});
     const { currentEnvironment } = useAppStore();
     const { showToast } = useToast();
 
@@ -43,7 +44,7 @@ export function MemoryPatternAnalysis() {
         updatePieChart(result);
 
         // Clear any existing charts
-        Object.values(charts).forEach((chart: any) => chart?.destroy());
+        Object.values(charts).forEach((chart) => chart.destroy());
         setCharts({});
     };
 
@@ -96,7 +97,7 @@ export function MemoryPatternAnalysis() {
                     },
                     tooltip: {
                         callbacks: {
-                            label: (context: any) => {
+                            label: (context: TooltipItem<'pie'>) => {
                                 const pattern =
                                     result.patterns[context.dataIndex];
                                 if (!pattern) return '';
@@ -119,18 +120,20 @@ export function MemoryPatternAnalysis() {
 
     const handleAnalyzeCounts = () => {
         setFastMode(true);
-        fetchMemoryPatterns(true);
+        void fetchMemoryPatterns(true);
     };
 
     const handleAnalyzeMemory = () => {
         setFastMode(false);
-        fetchMemoryPatterns(false);
+        void fetchMemoryPatterns(false);
     };
 
     useEffect(() => {
         if (currentEnvironment) {
-            fetchMemoryPatterns(true);
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on connection change
+            void fetchMemoryPatterns(true);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when the connection changes
     }, [currentEnvironment]);
 
     const infoText = data

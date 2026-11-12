@@ -1,10 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const { execRedisCommand, scanClusterNodes } = require('../services/redis');
+const keyStore = require('../services/keyStore');
+const bulkKeys = require('../services/bulkKeys');
+const { writeGuard } = require('../guards/writeGuard');
 const {
-    execRedisCommand,
-    scanClusterNodes,
-    getKeyFromCluster
-} = require('../services/redis');
+    pageMeta,
+    matchesTtl,
+    TYPES,
+    TTL_FILTERS
+} = require('../services/keyMeta');
+
+const fail = (res, error) =>
+    res
+        .status(error.status || 500)
+        .json(error instanceof Error ? { error: error.message } : error);
 
 // Search keys by pattern with pagination using SCAN
 router.get('/keys', async (req, res) => {
@@ -12,6 +22,19 @@ router.get('/keys', async (req, res) => {
         const env = req.query.env;
         const pattern = req.query.pattern || '*';
         const count = parseInt(req.query.count) || 50;
+        const type = req.query.type || null;
+        const ttlFilter = req.query.ttl || 'any';
+        if (type && !TYPES.includes(type)) {
+            return res.status(400).json({ error: `Unknown type "${type}"` });
+        }
+        if (!TTL_FILTERS.includes(ttlFilter)) {
+            return res
+                .status(400)
+                .json({ error: `Unknown ttl filter "${ttlFilter}"` });
+        }
+        const started = Date.now();
+        const meta = {};
+        let returned = 0;
 
         // Get cursors array from frontend
         let cursors = ['0'];
@@ -46,10 +69,19 @@ router.get('/keys', async (req, res) => {
                 pattern,
                 nextCursors,
                 scanCount,
-                env
+                env,
+                type
             );
 
-            keys = keys.concat(result.keys);
+            // SCAN may repeat a key across calls; metadata is per page.
+            const fresh = [...new Set(result.keys)];
+            returned += fresh.length;
+            const pageKeys = await pageMeta(env, fresh);
+            const kept = fresh.filter((k) => {
+                meta[k] = pageKeys[k];
+                return matchesTtl(ttlFilter, pageKeys[k].ttl);
+            });
+            keys = keys.concat(kept);
             nextCursors = result.cursors;
             hasMore = result.hasMore;
             iterations++;
@@ -61,11 +93,49 @@ router.get('/keys', async (req, res) => {
             keys,
             cursors: nextCursors, // Array of cursors (one for each node)
             hasMore,
-            total: keys.length + (hasMore ? '?' : 0)
+            total: keys.length + (hasMore ? '?' : 0),
+            meta: Object.fromEntries(keys.map((k) => [k, meta[k]])),
+            scan: {
+                iterations,
+                returned,
+                matched: keys.length,
+                ms: Date.now() - started
+            }
         });
     } catch (error) {
         console.error('Error scanning keys:', error);
         res.status(500).json(error);
+    }
+});
+
+// Bulk operations on a selection of keys. Registered before /keys/:key routes.
+router.post('/keys/ttl', writeGuard(), async (req, res) => {
+    try {
+        const { keys, seconds } = req.body; // seconds: n > 0, or null to PERSIST
+        res.json({
+            updated: await bulkKeys.setTtl(req.query.env, keys, seconds)
+        });
+    } catch (error) {
+        fail(res, error);
+    }
+});
+
+router.post('/keys/delete', writeGuard(), async (req, res) => {
+    try {
+        res.json({
+            deleted: await bulkKeys.deleteKeys(req.query.env, req.body.keys)
+        });
+    } catch (error) {
+        fail(res, error);
+    }
+});
+
+// A read, so no guard.
+router.post('/keys/export', async (req, res) => {
+    try {
+        res.json(await bulkKeys.exportKeys(req.query.env, req.body.keys));
+    } catch (error) {
+        fail(res, error);
     }
 });
 
@@ -93,74 +163,56 @@ router.get('/allkeys', async (req, res) => {
     }
 });
 
-// Get value for a key
+// Get value for a key. value shape depends on type: string -> string,
+// hash -> {field: value}, list/set -> string[], zset -> [{member, score}],
+// stream -> [{id, fields}].
 router.get('/keys/:key', async (req, res) => {
     try {
-        const env = req.query.env;
-        const key = req.params.key;
-
-        try {
-            // Use cluster-aware key retrieval
-            const result = await getKeyFromCluster(key, env);
-
-            // Format hash values as clean key-value pairs if needed
-            if (
-                result.type === 'hash' &&
-                typeof result.value === 'string' &&
-                !result.value.includes(':')
-            ) {
-                const lines = result.value
-                    .split('\n')
-                    .filter((line) => line.trim() !== '');
-                if (lines.length > 0 && lines.length % 2 === 0) {
-                    const formattedResult = {};
-                    for (let i = 0; i < lines.length; i += 2) {
-                        formattedResult[lines[i].trim()] = lines[i + 1].trim();
-                    }
-                    result.value = formattedResult;
-                }
-            }
-
-            res.json(result);
-        } catch {
+        res.json(await keyStore.readKey(req.query.env, req.params.key));
+    } catch (error) {
+        if (error.code === 'KEY_NOT_FOUND') {
             return res.status(404).json({
                 error: 'Key not found',
                 message:
                     'This key was found in search results but does not actually exist (ghost key)',
-                key
+                key: req.params.key
             });
         }
-    } catch (error) {
         console.error(`Error retrieving key ${req.params.key}:`, error);
-        res.status(500).json(error);
+        fail(res, error);
+    }
+});
+
+// Encoding, idle time, memory and length for the detail header.
+router.get('/keys/:key/meta', async (req, res) => {
+    try {
+        res.json(await keyStore.readMeta(req.query.env, req.params.key));
+    } catch (error) {
+        if (error.code === 'KEY_NOT_FOUND') {
+            return res.status(404).json({ error: 'Key not found' });
+        }
+        console.error(`Error reading meta for ${req.params.key}:`, error);
+        fail(res, error);
     }
 });
 
 // Check if a key exists
 router.get('/keys/:key/exists', async (req, res) => {
     try {
-        const env = req.query.env;
-        const key = req.params.key;
-
-        try {
-            // Use cluster-aware key checking - if it doesn't throw, key exists
-            await getKeyFromCluster(key, env);
-            res.json({ exists: true });
-        } catch {
-            // Key not found
-            res.json({ exists: false });
-        }
+        res.json({
+            exists: await keyStore.keyExists(req.query.env, req.params.key)
+        });
     } catch (error) {
         console.error('Error checking key existence:', error);
-        res.status(500).json(error);
+        fail(res, error);
     }
 });
 
-// Set a key (string value)
-router.post('/keys', async (req, res) => {
+// Create/replace a key. type defaults to string; value shape as in GET.
+router.post('/keys', writeGuard(), async (req, res) => {
     try {
         const env = req.query.env;
-        const { key, value, expiry } = req.body;
+        const { key, value, expiry, type = 'string' } = req.body;
 
         if (!key || value === undefined) {
             return res
@@ -168,132 +220,32 @@ router.post('/keys', async (req, res) => {
                 .json({ error: 'Key and value are required' });
         }
 
-        // Handle different value types
-        let strValue;
-        if (typeof value === 'object') {
-            strValue = JSON.stringify(value);
-        } else {
-            strValue = String(value);
-        }
-
-        // Escape quotes and special characters in the value
-        const escapedValue = strValue
-            .replace(/"/g, '\\"') // Escape double quotes
-            .replace(/(\r\n|\n|\r)/g, '\\n'); // Escape newlines
-
-        let command = `SET "${key}" "${escapedValue}"`;
-
-        if (expiry) {
-            command += ` EX ${expiry}`;
-        }
-
-        // Execute SET with proper cluster handling
-        let result;
-        let targetNode = null;
-
-        try {
-            result = await execRedisCommand(command, env);
-
-            // Check for MOVED response
-            if (result.includes('MOVED')) {
-                // Parse the MOVED response: "MOVED slot target-host:target-port"
-                const movedMatch = result.match(/MOVED\s+\d+\s+([^:]+):(\d+)/);
-                if (movedMatch) {
-                    const targetHost = movedMatch[1];
-                    const targetPort = parseInt(movedMatch[2]);
-
-                    targetNode = {
-                        id: `${targetHost}:${targetPort}`,
-                        host: targetHost,
-                        port: targetPort
-                    };
-
-                    // Retry SET on the correct node
-                    result = await execRedisCommand(command, env, targetNode);
-                }
-            }
-        } catch (error) {
-            console.error('Error executing SET:', error);
-            throw error;
-        }
-
-        // Verify the key was set successfully, using the same target node if redirected
-        const existsCommand = `EXISTS "${key}"`;
-        let exists;
-        if (targetNode) {
-            exists = await execRedisCommand(existsCommand, env, targetNode);
-        } else {
-            exists = await execRedisCommand(existsCommand, env);
-        }
-        const keyExists = parseInt(exists.trim()) === 1;
-
+        await keyStore.writeKey(env, key, type, value, parseInt(expiry) || 0);
         res.json({
-            result,
+            result: 'OK',
             key,
-            success: result === 'OK' || keyExists,
-            valueLength: strValue.length
+            success: true,
+            valueLength: JSON.stringify(value).length
         });
     } catch (error) {
         console.error('Error setting key:', error);
-        res.status(500).json(error);
+        fail(res, error);
     }
 });
 
 // Delete a key
-router.delete('/keys/:key', async (req, res) => {
+router.delete('/keys/:key', writeGuard(), async (req, res) => {
     try {
-        const env = req.query.env;
-        const key = req.params.key;
-
-        // Delete the key with cluster handling
-        let result;
-        let targetNode = null;
-
-        try {
-            result = await execRedisCommand(`DEL "${key}"`, env);
-
-            // Check for MOVED response
-            if (result.includes('MOVED')) {
-                // Parse the MOVED response: "MOVED slot target-host:target-port"
-                const movedMatch = result.match(/MOVED\s+\d+\s+([^:]+):(\d+)/);
-                if (movedMatch) {
-                    const targetHost = movedMatch[1];
-                    const targetPort = parseInt(movedMatch[2]);
-
-                    targetNode = {
-                        id: `${targetHost}:${targetPort}`,
-                        host: targetHost,
-                        port: targetPort
-                    };
-
-                    // Retry DEL on the correct node
-                    result = await execRedisCommand(
-                        `DEL "${key}"`,
-                        env,
-                        targetNode
-                    );
-                }
-            }
-        } catch (error) {
-            console.error('Error executing DEL:', error);
-            throw error;
-        }
-
-        const deletedCount = parseInt(result.trim());
-
-        res.json({
-            deleted: deletedCount > 0,
-            count: deletedCount,
-            key
-        });
+        const count = await keyStore.deleteKey(req.query.env, req.params.key);
+        res.json({ deleted: count > 0, count, key: req.params.key });
     } catch (error) {
         console.error(`Error deleting key ${req.params.key}:`, error);
-        res.status(500).json(error);
+        fail(res, error);
     }
 });
 
 // Delete keys by pattern
-router.delete('/allkeys', async (req, res) => {
+router.delete('/allkeys', writeGuard(), async (req, res) => {
     try {
         const env = req.query.env;
         const pattern = req.query.pattern;
@@ -324,41 +276,10 @@ router.delete('/allkeys', async (req, res) => {
             });
         }
 
-        // Delete each key individually instead of using Promise.all
         let deletedCount = 0;
         for (const key of keys) {
             try {
-                let delResult;
-                try {
-                    delResult = await execRedisCommand(`DEL "${key}"`, env);
-                    // Check for MOVED response
-                    if (delResult.includes('MOVED')) {
-                        const movedMatch = delResult.match(
-                            /MOVED\s+\d+\s+([^:]+):(\d+)/
-                        );
-                        if (movedMatch) {
-                            const targetHost = movedMatch[1];
-                            const targetPort = parseInt(movedMatch[2]);
-                            const targetNode = {
-                                id: `${targetHost}:${targetPort}`,
-                                host: targetHost,
-                                port: targetPort
-                            };
-                            delResult = await execRedisCommand(
-                                `DEL "${key}"`,
-                                env,
-                                targetNode
-                            );
-                        }
-                    }
-                } catch (delError) {
-                    console.error(
-                        `Error executing DEL for "${key}":`,
-                        delError
-                    );
-                    continue;
-                }
-                deletedCount += parseInt(delResult.trim()) || 0;
+                deletedCount += (await keyStore.deleteKey(env, key)) || 0;
             } catch (e) {
                 console.error(`Error deleting key "${key}":`, e);
             }
@@ -398,303 +319,122 @@ router.get('/keycount', async (req, res) => {
 });
 
 // Rename a key
-router.post('/keys/:key/rename', async (req, res) => {
+router.post('/keys/:key/rename', writeGuard(), async (req, res) => {
     try {
-        const env = req.query.env;
-        const oldKey = req.params.key;
         const { newKey } = req.body;
-
         if (!newKey) {
             return res.status(400).json({ error: 'New key name is required' });
         }
-
-        const result = await execRedisCommand(
-            `RENAME "${oldKey}" "${newKey}"`,
-            env
+        const result = await keyStore.renameKey(
+            req.query.env,
+            req.params.key,
+            newKey
         );
-        res.json({ result, oldKey, newKey });
+        res.json({ result, oldKey: req.params.key, newKey });
     } catch (error) {
-        res.status(500).json(error);
+        fail(res, error);
     }
 });
 
-// Set expiry on a key
-router.post('/keys/:key/expire', async (req, res) => {
+// Set expiry on a key (negative seconds removes it)
+router.post('/keys/:key/expire', writeGuard(), async (req, res) => {
     try {
-        const env = req.query.env;
-        const key = req.params.key;
         const { seconds } = req.body;
-
         if (seconds === undefined) {
             return res
                 .status(400)
                 .json({ error: 'Expiry seconds are required' });
         }
-
-        let result;
-        if (parseInt(seconds) < 0) {
-            // Remove expiry
-            result = await execRedisCommand(`PERSIST "${key}"`, env);
-        } else {
-            // Set expiry
-            result = await execRedisCommand(`EXPIRE "${key}" ${seconds}`, env);
-        }
-
-        res.json({ result, key, ttl: parseInt(seconds) });
+        const result = await keyStore.expireKey(
+            req.query.env,
+            req.params.key,
+            parseInt(seconds)
+        );
+        res.json({ result, key: req.params.key, ttl: parseInt(seconds) });
     } catch (error) {
-        res.status(500).json(error);
+        fail(res, error);
     }
 });
 
-// Copy a key to another environment
-router.post('/keys/:key/copy', async (req, res) => {
-    try {
-        const env = req.query.env;
-        const key = req.params.key;
-        const { targetKey, targetEnv } = req.body;
-
-        if (!targetKey) {
-            return res
-                .status(400)
-                .json({ error: 'Target key name is required' });
-        }
-
-        const targetEnvironment = targetEnv || env;
-
-        // Get the source key details using cluster-aware retrieval
-        const sourceKeyData = await getKeyFromCluster(key, env);
-        const { type, ttl, value } = sourceKeyData;
-
-        // Use the DUMP/RESTORE method to copy keys
+// Copy a key, optionally to another environment
+router.post(
+    '/keys/:key/copy',
+    writeGuard((req) => req.body?.targetEnv || req.query.env),
+    async (req, res) => {
         try {
-            // For simple string keys, use the value we already retrieved
-            if (type === 'string') {
-                let setCmd = `SET "${targetKey}" "${value.replace(/"/g, '\\"')}"`;
-
-                if (ttl > 0) {
-                    setCmd += ` EX ${ttl}`;
-                }
-
-                await execRedisCommand(setCmd, targetEnvironment);
-
-                res.json({
-                    result: 'Key copied successfully',
-                    sourceKey: key,
-                    targetKey,
-                    targetEnv: targetEnvironment
-                });
-            } else {
-                // Use DUMP and RESTORE for complex data types
-                // We need to get the DUMP from the same node that has the key
-                let dumpResult;
-
-                try {
-                    // Try to find which node has the key and dump from there
-                    const clusterMode =
-                        await require('../services/redis').isClusterMode(env);
-
-                    if (clusterMode) {
-                        const nodes =
-                            await require('../services/redis').getClusterNodes(
-                                env
-                            );
-                        for (const node of nodes) {
-                            try {
-                                const existsResult = await execRedisCommand(
-                                    `EXISTS "${key}"`,
-                                    env,
-                                    node
-                                );
-                                if (parseInt(existsResult.trim()) === 1) {
-                                    dumpResult = await execRedisCommand(
-                                        `--raw DUMP "${key}"`,
-                                        env,
-                                        node
-                                    );
-                                    break;
-                                }
-                            } catch {
-                                // Continue to next node
-                            }
-                        }
-                    } else {
-                        dumpResult = await execRedisCommand(
-                            `--raw DUMP "${key}"`,
-                            env
-                        );
-                    }
-                } catch {
-                    dumpResult = await execRedisCommand(
-                        `--raw DUMP "${key}"`,
-                        env
-                    );
-                }
-
-                if (dumpResult) {
-                    // Escape any quotes in dumpResult for command line safety
-                    const escapedDump = dumpResult.replace(/"/g, '\\"');
-
-                    let restoreCmd = `RESTORE "${targetKey}" `;
-
-                    // If TTL is -1 (no expiry), use 0, otherwise use the remaining TTL
-                    if (ttl === -1) {
-                        restoreCmd += '0 ';
-                    } else {
-                        restoreCmd += `${ttl * 1000} `; // RESTORE takes milliseconds
-                    }
-
-                    restoreCmd += `"${escapedDump}" REPLACE`;
-
-                    // Restore to target environment
-                    await execRedisCommand(restoreCmd, targetEnvironment);
-
-                    res.json({
-                        result: 'Key copied successfully',
-                        sourceKey: key,
-                        targetKey,
-                        targetEnv: targetEnvironment
-                    });
-                } else {
-                    res.status(500).json({ error: 'Failed to dump key' });
-                }
+            const env = req.query.env;
+            const key = req.params.key;
+            const { targetKey, targetEnv } = req.body;
+            if (!targetKey) {
+                return res
+                    .status(400)
+                    .json({ error: 'Target key name is required' });
             }
+            const targetEnvironment = targetEnv || env;
+            await keyStore.copyKey(env, key, targetEnvironment, targetKey);
+            res.json({
+                result: 'Key copied successfully',
+                sourceKey: key,
+                targetKey,
+                targetEnv: targetEnvironment
+            });
         } catch (error) {
             console.error('Error copying key:', error);
-            res.status(500).json(error);
+            fail(res, error);
         }
-    } catch (error) {
-        console.error('Error copying key:', error);
-        res.status(500).json(error);
     }
-});
+);
 
-// Add members to a sorted set (ZSET)
-router.post('/keys/:key/zadd', async (req, res) => {
+// Replace a sorted set. members: [{ value, score }] (kept for older clients;
+// POST /keys with type "zset" and [{member, score}] does the same).
+router.post('/keys/:key/zadd', writeGuard(), async (req, res) => {
     try {
-        const env = req.query.env;
         const key = req.params.key;
         const { members, expiry } = req.body;
-
-        if (
-            !key ||
-            !members ||
-            !Array.isArray(members) ||
-            members.length === 0
-        ) {
+        if (!Array.isArray(members) || members.length === 0) {
             return res
                 .status(400)
                 .json({ error: 'Key and members array are required' });
         }
-
-        // Build ZADD command with score-member pairs
-        let command = `ZADD "${key}"`;
-
-        for (const member of members) {
-            if (
-                typeof member.score !== 'number' ||
-                member.value === undefined
-            ) {
-                return res.status(400).json({
-                    error: 'Each member must have score (number) and value properties'
-                });
-            }
-
-            const memberValue = String(member.value);
-
-            // Escape quotes and backslashes for Redis command
-            const escapedValue = memberValue
-                .replace(/\\/g, '\\\\')
-                .replace(/"/g, '\\"');
-            command += ` ${member.score} "${escapedValue}"`;
+        if (
+            members.some(
+                (m) => typeof m.score !== 'number' || m.value === undefined
+            )
+        ) {
+            return res.status(400).json({
+                error: 'Each member must have score (number) and value properties'
+            });
         }
-
-        // Delete existing key if it exists to ensure clean update
-        // This prevents old members from remaining when editing a zset
-        let targetNode = null;
-        try {
-            const delResult = await execRedisCommand(`DEL "${key}"`, env);
-
-            // Check for MOVED response on DEL
-            if (delResult.includes('MOVED')) {
-                const movedMatch = delResult.match(
-                    /MOVED\s+\d+\s+([^:]+):(\d+)/
-                );
-                if (movedMatch) {
-                    const targetHost = movedMatch[1];
-                    const targetPort = parseInt(movedMatch[2]);
-
-                    targetNode = {
-                        id: `${targetHost}:${targetPort}`,
-                        host: targetHost,
-                        port: targetPort
-                    };
-
-                    // Retry DEL on the correct node
-                    await execRedisCommand(`DEL "${key}"`, env, targetNode);
-                }
-            }
-        } catch {
-            // Key might not exist, which is fine
-        }
-
-        // Execute ZADD with proper cluster handling
-        let result;
-
-        try {
-            result = await execRedisCommand(command, env, targetNode);
-
-            // Check for MOVED response
-            if (result.includes('MOVED')) {
-                // Parse the MOVED response: "MOVED slot target-host:target-port"
-                const movedMatch = result.match(/MOVED\s+\d+\s+([^:]+):(\d+)/);
-                if (movedMatch) {
-                    const targetHost = movedMatch[1];
-                    const targetPort = parseInt(movedMatch[2]);
-
-                    targetNode = {
-                        id: `${targetHost}:${targetPort}`,
-                        host: targetHost,
-                        port: targetPort
-                    };
-
-                    // Retry ZADD on the correct node
-                    result = await execRedisCommand(command, env, targetNode);
-                }
-            }
-        } catch (error) {
-            console.error('Error executing ZADD:', error);
-            throw error;
-        }
-
-        // Set expiry if specified, using the same target node if redirected
-        if (expiry && expiry > 0) {
-            const expireCommand = `EXPIRE "${key}" ${expiry}`;
-            if (targetNode) {
-                await execRedisCommand(expireCommand, env, targetNode);
-            } else {
-                await execRedisCommand(expireCommand, env);
-            }
-        }
-
-        // Verify the key was set successfully, using the same target node if redirected
-        const existsCommand = `EXISTS "${key}"`;
-        let exists;
-        if (targetNode) {
-            exists = await execRedisCommand(existsCommand, env, targetNode);
-        } else {
-            exists = await execRedisCommand(existsCommand, env);
-        }
-        const keyExists = parseInt(exists.trim()) === 1;
-
-        res.json({
-            result,
+        await keyStore.writeKey(
+            req.query.env,
             key,
-            success: keyExists,
-            membersAdded: parseInt(result.trim()) || 0
+            'zset',
+            members.map((m) => ({ member: m.value, score: m.score })),
+            parseInt(expiry) || 0
+        );
+        res.json({
+            result: String(members.length),
+            key,
+            success: true,
+            membersAdded: members.length
         });
     } catch (error) {
         console.error('Error adding to ZSET:', error);
-        res.status(500).json(error);
+        fail(res, error);
+    }
+});
+
+// Add one hash field ({ field, value }) or zset member ({ member, score }).
+router.post('/keys/:key/members', writeGuard(), async (req, res) => {
+    try {
+        const type = await keyStore.addMember(
+            req.query.env,
+            req.params.key,
+            req.body || {}
+        );
+        res.json({ success: true, key: req.params.key, type });
+    } catch (error) {
+        fail(res, error);
     }
 });
 

@@ -1,10 +1,11 @@
+const keyStore = require('../../services/keyStore');
+const { readKey } = keyStore;
 const {
     execRedisCommand,
     parseRedisInfo,
     isClusterMode,
     getClusterNodes,
-    scanClusterNodes,
-    getKeyFromCluster
+    scanClusterNodes
 } = require('../../services/redis');
 const {
     createTestKey,
@@ -336,7 +337,7 @@ total_commands_processed:1000`;
         });
     });
 
-    describe('getKeyFromCluster', () => {
+    describe('readKey', () => {
         test('should get key value from cluster', async () => {
             await createTestKey(
                 'test:cluster-get',
@@ -344,10 +345,7 @@ total_commands_processed:1000`;
                 testConnectionId
             );
 
-            const result = await getKeyFromCluster(
-                'test:cluster-get',
-                testConnectionId
-            );
+            const result = await readKey(testConnectionId, 'test:cluster-get');
 
             expect(result).toHaveProperty('key');
             expect(result).toHaveProperty('type');
@@ -355,7 +353,7 @@ total_commands_processed:1000`;
             expect(result).toHaveProperty('ttl');
             expect(result.key).toBe('test:cluster-get');
             expect(result.type).toBe('string');
-            expect(result.value.trim()).toBe('cluster-value');
+            expect(result.value).toBe('cluster-value');
         });
 
         test('should get key with TTL', async () => {
@@ -366,10 +364,7 @@ total_commands_processed:1000`;
                 120
             );
 
-            const result = await getKeyFromCluster(
-                'test:cluster-ttl',
-                testConnectionId
-            );
+            const result = await readKey(testConnectionId, 'test:cluster-ttl');
 
             expect(result.ttl).toBeGreaterThan(0);
             expect(result.ttl).toBeLessThanOrEqual(120);
@@ -385,18 +380,15 @@ total_commands_processed:1000`;
                 testConnectionId
             );
 
-            const result = await getKeyFromCluster(
-                'test:cluster-hash',
-                testConnectionId
-            );
+            const result = await readKey(testConnectionId, 'test:cluster-hash');
 
             expect(result.type).toBe('hash');
-            expect(result.value).toBeDefined();
+            expect(result.value).toEqual({ field1: 'value1', field2: 'value2' });
         });
 
         test('should throw error for non-existent key', async () => {
             await expect(
-                getKeyFromCluster('test:non-existent-key', testConnectionId)
+                readKey(testConnectionId, 'test:non-existent-key')
             ).rejects.toThrow('Key not found');
         });
 
@@ -404,13 +396,10 @@ total_commands_processed:1000`;
             const specialKey = 'test:special:key:with:colons';
             await createTestKey(specialKey, 'special-value', testConnectionId);
 
-            const result = await getKeyFromCluster(
-                specialKey,
-                testConnectionId
-            );
+            const result = await readKey(testConnectionId, specialKey);
 
             expect(result.key).toBe(specialKey);
-            expect(result.value.trim()).toBe('special-value');
+            expect(result.value).toBe('special-value');
         });
     });
 
@@ -429,8 +418,8 @@ total_commands_processed:1000`;
             const exists = await keyExists(key, testConnectionId);
             expect(exists).toBe(true);
 
-            const retrieved = await getKeyFromCluster(key, testConnectionId);
-            expect(retrieved.value.trim()).toBe(value);
+            const retrieved = await readKey(testConnectionId, key);
+            expect(retrieved.value).toBe(value);
 
             await deleteTestKey(key, testConnectionId);
 

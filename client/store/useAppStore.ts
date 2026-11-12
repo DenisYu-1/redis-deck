@@ -7,6 +7,9 @@ interface AppState {
     selectedKey: string | null;
     keyDetails: KeyDetails | null;
     isLoading: boolean;
+    /** Key pattern applied on the Keys page (shared so the sidebar can apply saved searches). */
+    keyPattern: string;
+    setKeyPattern: (pattern: string) => void;
     setConnections: (connections: RedisConnection[]) => void;
     setCurrentEnvironment: (environment: string) => void;
     setSelectedKey: (key: string | null) => void;
@@ -20,9 +23,20 @@ export const useAppStore = create<AppState>((set) => ({
     selectedKey: null,
     keyDetails: null,
     isLoading: false,
+    keyPattern: '*',
+    setKeyPattern: (pattern) => set({ keyPattern: pattern }),
     setConnections: (connections) => set({ connections }),
+    // A key belongs to one connection: switching drops the open key and its details.
     setCurrentEnvironment: (environment) =>
-        set({ currentEnvironment: environment }),
+        set((s) =>
+            s.currentEnvironment === environment
+                ? s
+                : {
+                      currentEnvironment: environment,
+                      selectedKey: null,
+                      keyDetails: null
+                  }
+        ),
     setSelectedKey: (key) => set({ selectedKey: key }),
     setKeyDetails: (details) => set({ keyDetails: details }),
     setIsLoading: (loading) => set({ isLoading: loading })
