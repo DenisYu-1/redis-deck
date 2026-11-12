@@ -1183,3 +1183,7 @@ body:has(.titlebar) .side {
     border-top-right-radius: 12px;
     border-top: 1px solid var(--bd);
 }
+/* The 36px title bar already gives the toolbar its top space. */
+body:has(.titlebar) .toolbar {
+    padding-top: 2px;
+}
