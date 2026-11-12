@@ -103,6 +103,14 @@ function looksLikeRedisError(text) {
 
 // Turn a failed redis-cli spawn into the {message, command, code} error shape.
 function cliError(error, command) {
+    if (error.code === 'ENOENT') {
+        return {
+            message:
+                'redis-cli not found. Install redis-cli or set REDIS_CLI_PATH to its location.',
+            command,
+            code: 'CLI_NOT_FOUND'
+        };
+    }
     const text = `${error.stdout || ''}${error.stderr || ''}`.trim();
     if (text.includes('Connection refused')) {
         return {

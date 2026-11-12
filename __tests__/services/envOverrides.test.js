@@ -73,5 +73,16 @@ describe('backend env overrides', () => {
             const out = runNode(script, { REDIS_CLI_PATH: undefined });
             expect(out).toContain('PONG');
         });
+
+        test('reports a readable error when the binary is missing', () => {
+            const out = runNode(
+                `require('./services/redis')
+                    .execRedisCommandWithConfig('PING', { host: '127.0.0.1', port: 6379 })
+                    .catch((e) => console.log(e.message));`,
+                { REDIS_CLI_PATH: path.join(tmp, 'nope-redis-cli') }
+            );
+            expect(out).toMatch(/redis-cli not found/);
+            expect(out).toContain('REDIS_CLI_PATH');
+        });
     });
 });

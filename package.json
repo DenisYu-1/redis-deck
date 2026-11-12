@@ -16,7 +16,8 @@
         "format:check": "prettier --check .",
         "test": "jest",
         "test:watch": "jest --watch",
-        "type-check": "tsc --noEmit"
+        "type-check": "tsc --noEmit",
+        "electron:dev": "ELECTRON_DEV=1 electron ."
     },
     "dependencies": {
         "@alenaksu/json-viewer": "^2.1.2",
@@ -46,6 +47,7 @@
         "@typescript-eslint/parser": "^7.0.1",
         "@vitejs/plugin-react": "^6.2.1",
         "concurrently": "^10.0.7",
+        "electron": "^45.3.1",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.7",
@@ -62,5 +64,6 @@
         "typescript": "^6.0.3",
         "vite": "^8.3.6",
         "vite-plugin-svgr": "^5.2.0"
-    }
+    },
+    "main": "electron/main.js"
 }
