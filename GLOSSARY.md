@@ -47,7 +47,10 @@ The app installed and run as a regular program on the user's computer, without a
 _Avoid_: Native app, standalone, client
 
 **Plugin**:
-An optional module that adds UI and/or Workflows to the app.
+A named bundle of Workflows, defined by a manifest and server-side handlers.
+
+**External Plugin**:
+A Plugin loaded from the user's data folder instead of shipped inside the app.
 
 **Workflow**:
 A named, form-driven action (typed inputs, validation, dry-run, run, history) provided by a Plugin.
