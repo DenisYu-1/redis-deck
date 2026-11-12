@@ -64,6 +64,9 @@ jobs:
             arch: arm64
           - runner: macos-15-intel # Intel (x64); macos-13 is retired by GitHub
             arch: x64
+          # ubuntu-22.04 (glibc 2.35) rather than latest, so the AppImage runs on older distros.
+          - runner: ubuntu-22.04
+            arch: x64
     runs-on: ${{ matrix.runner }}
     env:
       VERSION: ${{ needs.release.outputs.version }}
@@ -81,16 +84,34 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
-      - run: brew install openssl@3
+      - name: Install redis-cli build deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install openssl@3
+
+      - name: Install redis-cli build deps and xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev patchelf xvfb libfuse2
 
       - name: Build installer
         run: yarn electron:build --${{ matrix.arch }}
 
       - name: Smoke check packaged app
+        if: runner.os == 'macOS'
         run: |
           # electron-builder names the x64 dir "mac" and the arm64 dir "mac-arm64".
           APP=$(ls -d dist-electron/mac*/"Redis Deck.app" | head -n 1)
           node scripts/smoke-packaged.js "$APP"
 
+      - name: Smoke check packaged app (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node scripts/smoke-packaged.js dist-electron/linux-unpacked/redis-deck
+
       - name: Upload dmg to release
+        if: runner.os == 'macOS'
         run: gh release upload "v${VERSION}" dist-electron/*.dmg --clobber
+
+      - name: Upload AppImage to release
+        if: runner.os == 'Linux'
+        run: gh release upload "v${VERSION}" dist-electron/*.AppImage --clobber

@@ -41,7 +41,7 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Wor
 3. Access the UI at http://localhost:2222
 4. Go to Settings (⚙️) to add your Redis connections
 
-### Desktop app (macOS)
+### Desktop app (macOS, Linux)
 
 1. Download the `.dmg` for your Mac from the [GitHub Releases](https://github.com/DenisYu-1/redis-deck/releases) page: `arm64` for Apple Silicon (M1 and later), `x64` for Intel Macs.
 2. Open the `.dmg` and drag Redis Deck to Applications.
@@ -50,7 +50,16 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Wor
     xattr -cr "/Applications/Redis Deck.app"
     ```
 
-Connections, saved searches and statistics are stored in the per-user app data folder (`~/Library/Application Support/`), so they stay out of the app bundle. `redis-cli` is bundled, so you do not need to install Redis.
+**Linux (AppImage, best effort, x64 only):** download the `.AppImage` from the Releases page, then:
+
+```bash
+chmod +x Redis-Deck-*.AppImage
+./Redis-Deck-*.AppImage
+```
+
+It is built on Ubuntu 22.04, so it needs glibc 2.35 or newer. AppImages need FUSE 2 (`sudo apt install libfuse2`); without it, run with `--appimage-extract-and-run`. If the Chromium sandbox fails to start (common on Ubuntu 24.04+), add `--no-sandbox`. Data lives in `~/.config/`. The Linux build is untested on CI hardware beyond the packaged smoke check.
+
+Connections, saved searches and statistics are stored in the per-user app data folder (`~/Library/Application Support/` on macOS), so they stay out of the app bundle. `redis-cli` is bundled, so you do not need to install Redis.
 
 For contributors:
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Builds redis-cli (with TLS) from a pinned Redis source tarball for the host arch.
 # Output: build/redis-cli/redis-cli   (gitignored)
-# Needs: curl, tar, make, cc, openssl dev headers (macOS: brew install openssl@3).
+# Needs: curl, tar, make, cc, openssl dev headers (macOS: brew install openssl@3;
+# Linux: apt install libssl-dev patchelf).
 set -euo pipefail
 
 REDIS_VERSION="${REDIS_VERSION:-7.2.5}" # the single place the version is pinned
@@ -18,7 +19,7 @@ fi
 
 echo "==> Downloading redis-$REDIS_VERSION"
 curl -fsSL "https://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz" -o "$WORK/redis.tar.gz"
-echo "$REDIS_SHA256  $WORK/redis.tar.gz" | shasum -a 256 -c - >/dev/null \
+echo "$REDIS_SHA256  $WORK/redis.tar.gz" | (sha256sum -c - 2>/dev/null || shasum -a 256 -c -) >/dev/null \
   || { echo "SHA256 mismatch for redis-$REDIS_VERSION" >&2; exit 1; }
 mkdir "$WORK/src"
 tar -xzf "$WORK/redis.tar.gz" -C "$WORK/src" --strip-components=1
@@ -57,6 +58,24 @@ if [[ "$(uname)" == "Darwin" ]]; then
   if otool -L "$BIN" "$OUT_DIR"/*.dylib | grep -Eq '/opt/|/usr/local/'; then
     echo "Self-containment check failed: non-system dylib refs remain" >&2
     otool -L "$BIN" "$OUT_DIR"/*.dylib >&2
+    exit 1
+  fi
+fi
+
+if [[ "$(uname)" == "Linux" ]]; then
+  # Self-contained: copy libssl/libcrypto next to the binary and make every lookup
+  # use $ORIGIN, so the target machine needs no matching OpenSSL (only glibc).
+  echo "==> Bundling OpenSSL shared libs"
+  command -v patchelf >/dev/null || { echo "patchelf not found (apt install patchelf)" >&2; exit 1; }
+  for dep in $(ldd "$BIN" | awk '/lib(ssl|crypto)\.so/ {print $3}'); do
+    cp -fL "$dep" "$OUT_DIR/$(basename "$dep")"
+  done
+  for f in "$BIN" "$OUT_DIR"/*.so*; do
+    patchelf --set-rpath '$ORIGIN' "$f"
+  done
+  if ldd "$BIN" | grep -E 'lib(ssl|crypto)\.so' | grep -vq "$OUT_DIR"; then
+    echo "Self-containment check failed: openssl not resolved from $OUT_DIR" >&2
+    ldd "$BIN" >&2
     exit 1
   fi
 fi

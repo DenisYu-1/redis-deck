@@ -16,7 +16,7 @@ files:
     - client/plugins/config/**
 # better-sqlite3 is rebuilt against Electron's ABI by electron-builder (npmRebuild).
 npmRebuild: true
-# Bundled redis-cli (+ its dylibs) from scripts/build-redis-cli.sh.
+# Bundled redis-cli (+ its OpenSSL libs) from scripts/build-redis-cli.sh.
 extraResources:
     - from: build/redis-cli
       to: redis-cli
@@ -28,3 +28,9 @@ mac:
     identity: null
 dmg:
     title: Redis Deck
+linux:
+    target:
+        - AppImage
+    executableName: redis-deck
+    icon: electron/icon.png
+    category: Development
