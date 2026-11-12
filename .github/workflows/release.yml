@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -45,3 +47,50 @@ jobs:
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
             --generate-notes
+
+      - name: Expose version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+  installers:
+    needs: release
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14 # Apple Silicon (arm64)
+            arch: arm64
+          - runner: macos-15-intel # Intel (x64); macos-13 is retired by GitHub
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    env:
+      VERSION: ${{ needs.release.outputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.release.outputs.version }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      - run: brew install openssl@3
+
+      - name: Build installer
+        run: yarn electron:build --${{ matrix.arch }}
+
+      - name: Smoke check packaged app
+        run: |
+          # electron-builder names the x64 dir "mac" and the arm64 dir "mac-arm64".
+          APP=$(ls -d dist-electron/mac*/"Redis Deck.app" | head -n 1)
+          node scripts/smoke-packaged.js "$APP"
+
+      - name: Upload dmg to release
+        run: gh release upload "v${VERSION}" dist-electron/*.dmg --clobber
