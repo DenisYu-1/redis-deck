@@ -30,7 +30,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
               with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
+                  # PAT of a repo admin: lets the version-bump push bypass main's ruleset
+                  token: ${{ secrets.RELEASE_PAT }}
 
             - uses: actions/setup-node@v4
               with:
