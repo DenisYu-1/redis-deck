@@ -28,7 +28,9 @@ mac:
         - dmg
     icon: electron/icon.png
     category: public.app-category.developer-tools
-    identity: null
+    # Ad-hoc sign: Apple Silicon reports fully unsigned apps as "damaged". No Developer ID, so users still xattr -cr once.
+    identity: '-'
+    hardenedRuntime: false
 dmg:
     title: Redis Deck
     artifactName: Redis-Deck-${version}-${arch}.${ext}
