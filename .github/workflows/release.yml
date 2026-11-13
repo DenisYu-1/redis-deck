@@ -16,6 +16,17 @@ jobs:
         outputs:
             version: ${{ steps.version.outputs.version }}
 
+        services:
+            redis:
+                image: redis:7-alpine
+                ports:
+                    - 6379:6379
+                options: >-
+                    --health-cmd "redis-cli ping"
+                    --health-interval 5s
+                    --health-timeout 3s
+                    --health-retries 10
+
         steps:
             - uses: actions/checkout@v4
               with:
@@ -26,11 +37,17 @@ jobs:
                   node-version: '22'
                   cache: yarn
 
+            # backend tests shell out to redis-cli
+            - run: sudo apt-get update && sudo apt-get install -y redis-tools
+
             - run: yarn install --frozen-lockfile
 
             - run: yarn lint
 
             - run: yarn test
+              env:
+                  REDIS_TEST_HOST: 127.0.0.1
+                  REDIS_TEST_PORT: 6379
 
             - name: Bump version & tag
               run: |
