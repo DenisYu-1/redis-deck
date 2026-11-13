@@ -78,7 +78,7 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    - runner: macos-14 # Apple Silicon (arm64)
+                    - runner: macos-latest # Apple Silicon (arm64)
                       arch: arm64
                     - runner: macos-15-intel # Intel (x64); macos-13 is retired by GitHub
                       arch: x64
