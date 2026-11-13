@@ -64,6 +64,7 @@ jobs:
                   VERSION=$(node -p "require('./package.json').version")
                   gh release create "v${VERSION}" \
                     --title "v${VERSION}" \
+                    --notes-file .github/release-install.md \
                     --generate-notes
 
             - name: Expose version

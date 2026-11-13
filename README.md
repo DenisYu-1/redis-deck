@@ -45,7 +45,7 @@ A minimalistic web UI for Redis clusters that uses redis-cli under the hood. Wor
 
 1. Download the `.dmg` for your Mac from the [GitHub Releases](https://github.com/DenisYu-1/redis-deck/releases) page: `arm64` for Apple Silicon (M1 and later), `x64` for Intel Macs.
 2. Open the `.dmg` and drag Redis Deck to Applications.
-3. The app is not signed or notarized, so Gatekeeper blocks the first launch. Right-click (or Control-click) the app, choose **Open**, then confirm **Open** in the dialog. If macOS still refuses, clear the quarantine flag and start it again:
+3. The app is not notarized, so macOS blocks the first launch ("damaged" or "cannot verify"; the dialog only offers Move to Bin). Dismiss it, then open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Redis Deck. Or clear the quarantine flag in Terminal and start it again:
     ```bash
     xattr -cr "/Applications/Redis Deck.app"
     ```
