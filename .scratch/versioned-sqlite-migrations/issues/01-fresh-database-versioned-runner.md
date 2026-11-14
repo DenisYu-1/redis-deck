@@ -4,12 +4,12 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The data version is stored in the database's own version pragma; no separate version table
-- [ ] Migrations are ordered single-purpose modules; the runner applies pending ones in order, once each, bumping the version after each
-- [ ] A fresh file ends at version 1 with exactly today's tables, and no backup is made
-- [ ] Restarting on an up-to-date file changes nothing and makes no backup
-- [ ] The legacy table-inspection, `ALTER TABLE` and rebuild code is deleted
-- [ ] Tests (real temp SQLite files, through the database module, no mocks) cover fresh and up-to-date files
-- [ ] `yarn test`, type-check and lint on touched files pass
+- [x] The data version is stored in the database's own version pragma; no separate version table
+- [x] Migrations are ordered single-purpose modules; the runner applies pending ones in order, once each, bumping the version after each
+- [x] A fresh file ends at version 1 with exactly today's tables, and no backup is made
+- [x] Restarting on an up-to-date file changes nothing and makes no backup
+- [x] The legacy table-inspection, `ALTER TABLE` and rebuild code is deleted
+- [x] Tests (real temp SQLite files, through the database module, no mocks) cover fresh and up-to-date files
+- [x] `yarn test`, type-check and lint on touched files pass

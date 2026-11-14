@@ -4,10 +4,10 @@
 
 **Blocked by:** 01: Fresh database starts at data version 1 through the migration runner
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Loading the database module against a newer file throws a descriptive error mentioning the need to update
-- [ ] The newer file is left byte-for-byte untouched and no backup is made
-- [ ] The Desktop app shows the error in a dialog before quitting
-- [ ] `yarn start` and Docker log the error and exit with a non-zero code
-- [ ] Tests cover the throw and the untouched file
+- [x] Loading the database module against a newer file throws a descriptive error mentioning the need to update
+- [x] The newer file is left byte-for-byte untouched and no backup is made
+- [x] The Desktop app shows the error in a dialog before quitting
+- [x] `yarn start` and Docker log the error and exit with a non-zero code
+- [x] Tests cover the throw and the untouched file
