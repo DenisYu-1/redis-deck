@@ -237,8 +237,7 @@ router.get('/memory-by-pattern', async (req, res) => {
 
             cursors = scanResult.cursors;
             // A sample: skip failed Nodes instead of retrying them forever.
-            hasMore =
-                scanResult.hasMore && scanResult.failedNodes.length === 0;
+            hasMore = scanResult.hasMore && scanResult.failedNodes.length === 0;
         }
 
         if (!fastMode && collectedKeys.length > 0) {

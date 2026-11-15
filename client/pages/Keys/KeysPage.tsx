@@ -159,7 +159,9 @@ export function KeysPage() {
                         <div className="banner" role="alert">
                             {`Could not scan ${data.failedNodes
                                 .map((n) => `${n.address} (${n.error})`)
-                                .join(', ')}. Keys on these Nodes may be missing; Load more retries them.`}
+                                .join(
+                                    ', '
+                                )}. Keys on these Nodes may be missing; Load more retries them.`}
                         </div>
                     )}
                     {!data.error && !data.loading && data.keys.length === 0 ? (

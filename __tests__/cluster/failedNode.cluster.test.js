@@ -1,4 +1,4 @@
-// Opt-in cluster suite (setup and env vars: __tests__/helpers/cluster.js).
+// Opt-in cluster suite (setup and env vars: __tests__/helpers/clusterTarget.js).
 // Stops one Node's Docker container (found by its published port) and always
 // restarts it, waiting for cluster_state:ok, before the suite ends.
 //
@@ -10,7 +10,12 @@ const { createApp } = require('../../config/app');
 const keyStore = require('../../services/keyStore');
 const { scanClusterNodes, getClusterNodes } = require('../../services/redis');
 const { countRedisCliSpawns } = require('../helpers/redisCliSpawns');
-const { enabled, SEED, cli, clusterNodes } = require('../helpers/cluster');
+const {
+    enabled,
+    SEED,
+    cli,
+    clusterNodes
+} = require('../helpers/clusterTarget');
 
 const CONN = 'test-cluster-failed-node';
 const PREFIX = 'test:failnode:';
@@ -73,7 +78,13 @@ const clusterOk = () => {
         // Page meta must still read Keys on healthy Nodes once the cluster
         // notices the stopped one; restored in afterAll.
         for (const n of healthy) {
-            cli(n.reachable, 'CONFIG', 'SET', 'cluster-allow-reads-when-down', 'yes');
+            cli(
+                n.reachable,
+                'CONFIG',
+                'SET',
+                'cluster-allow-reads-when-down',
+                'yes'
+            );
         }
         db.prepare('DELETE FROM connections WHERE id = ?').run(CONN);
         const [host, port] = SEED.split(':');
@@ -88,12 +99,7 @@ const clusterOk = () => {
         for (const key of KEYS) {
             await keyStore.writeKey(CONN, key, 'string', 'v', 0);
         }
-        victimKeys = cli(
-            victim.reachable,
-            '--scan',
-            '--pattern',
-            `${PREFIX}*`
-        )
+        victimKeys = cli(victim.reachable, '--scan', '--pattern', `${PREFIX}*`)
             .split('\n')
             .filter(Boolean);
     }, 60000);
@@ -103,7 +109,13 @@ const clusterOk = () => {
             await start();
         }
         for (const n of healthy) {
-            cli(n.reachable, 'CONFIG', 'SET', 'cluster-allow-reads-when-down', 'no');
+            cli(
+                n.reachable,
+                'CONFIG',
+                'SET',
+                'cluster-allow-reads-when-down',
+                'no'
+            );
         }
         for (const key of KEYS) {
             await keyStore.deleteKey(CONN, key);
@@ -171,7 +183,11 @@ const clusterOk = () => {
             await start();
         }
         expect(second.failedNodes).toEqual([
-            { id: victim.id, address: victim.announced, error: expect.any(String) }
+            {
+                id: victim.id,
+                address: victim.announced,
+                error: expect.any(String)
+            }
         ]);
         expect(second.cursors[v]).toBe(first.cursors[v]);
         expect(second.hasMore).toBe(true);

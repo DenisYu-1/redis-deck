@@ -20,8 +20,8 @@ const cli = (addr, ...argv) => {
     }).trim();
 };
 
-// announced address -> reachable address, for Nodes the host cannot reach.
-function nodeRemap() {
+// Masters as { id, announced, reachable }.
+function clusterNodes() {
     const byId = {};
     for (const addr of REACHABLE) {
         try {
@@ -30,15 +30,23 @@ function nodeRemap() {
             // not part of this setup
         }
     }
-    const remap = {};
-    for (const line of cli(SEED, 'CLUSTER', 'NODES').split('\n')) {
-        const [id, address] = line.split(' ');
-        const announced = address.split('@')[0];
-        if (byId[id] && byId[id] !== announced) {
-            remap[announced] = byId[id];
-        }
-    }
-    return remap;
+    return cli(SEED, 'CLUSTER', 'NODES')
+        .split('\n')
+        .map((line) => line.split(' '))
+        .filter(([, , flags]) => flags.split(',').includes('master'))
+        .map(([id, address]) => {
+            const announced = address.split('@')[0];
+            return { id, announced, reachable: byId[id] || announced };
+        });
 }
 
-module.exports = { enabled, SEED, nodeRemap };
+// announced address -> reachable address, for Nodes the host cannot reach.
+function nodeRemap() {
+    return Object.fromEntries(
+        clusterNodes()
+            .filter((n) => n.reachable !== n.announced)
+            .map((n) => [n.announced, n.reachable])
+    );
+}
+
+module.exports = { enabled, SEED, cli, clusterNodes, nodeRemap };
