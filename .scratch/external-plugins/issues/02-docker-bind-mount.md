@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Base compose maps `./data` on the host to the app's data folder, replacing the named volume
-- [ ] The unused named-volume declaration is removed from base compose
-- [ ] The now-redundant data mount is removed from the override compose file, keeping its network settings
-- [ ] `docker compose config` validates for base and base+override
-- [ ] The old named volume is left untouched (no migration)
+- [x] Base compose maps `./data` on the host to the app's data folder, replacing the named volume
+- [x] The unused named-volume declaration is removed from base compose
+- [x] The now-redundant data mount is removed from the override compose file, keeping its network settings
+- [x] `docker compose config` validates for base and base+override
+- [x] The old named volume is left untouched (no migration)
