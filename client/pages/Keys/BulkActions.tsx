@@ -1,20 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import {
-    deleteKeys,
-    jobResultUrl,
-    setKeysTtl,
-    startExportJob
-} from '@/services/apiService';
-import type { ExportProgress, Job } from '@/types';
-import { formatNumber } from '@/utils/formatter';
+import { setKeysTtl } from '@/services/apiService';
 import { showToast } from '@/utils/toast';
-import { useJob } from './hooks/useJob';
+import { EXPORT_CAP } from './JobBanners';
+import type { DeleteJob, ExportJob } from './hooks/useKeysJobs';
 import { BulkTtlDialog } from './BulkTtlDialog';
 import { SelectionBar } from './SelectionBar';
-
-export const EXPORT_CAP = 1000;
 
 type Dialog = 'ttl' | 'delete' | null;
 
@@ -26,67 +18,47 @@ interface BulkActionsProps {
     onClear: () => void;
     /** Called after a write so the list can refresh. */
     onChanged: () => void;
+    deleteJob: DeleteJob;
+    exportJob: ExportJob;
 }
 
-function describe(job: Job<ExportProgress>): string {
-    const exported = `${formatNumber(job.progress.exported)} exported`;
-    switch (job.state) {
-        case 'running':
-            return `Exporting · ${exported}`;
-        case 'done':
-            return `Done · ${exported}${
-                job.progress.truncated
-                    ? ` (stopped at ${String(EXPORT_CAP)})`
-                    : ''
-            }`;
-        case 'cancelled':
-            return `Cancelled · ${exported}`;
-        default:
-            return `Export failed: ${job.error ?? 'unknown error'}`;
-    }
-}
+const report = (e: unknown) =>
+    showToast(e instanceof Error ? e.message : String(e), 'error');
 
+/** Actions on the selected Keys; delete and export run as server jobs. */
 export function BulkActions({
     env,
     readOnly,
     keys,
     matched,
     onClear,
-    onChanged
+    onChanged,
+    deleteJob,
+    exportJob
 }: BulkActionsProps) {
     const [dialog, setDialog] = useState<Dialog>(null);
     const [busy, setBusy] = useState(false);
-    const exportJob = useJob(env, 'export', startExportJob);
-    const exporting = exportJob.job;
 
-    const run = async (task: () => Promise<void>) => {
+    const applyTtl = async (seconds: number | null) => {
         setBusy(true);
         try {
-            await task();
+            const { updated } = await setKeysTtl(keys, seconds, env);
+            showToast(
+                `${seconds === null ? 'Removed expiry on' : 'Set TTL on'} ${String(updated)} keys`
+            );
+            onChanged();
         } catch (e) {
-            showToast(e instanceof Error ? e.message : String(e), 'error');
+            report(e);
         } finally {
             setBusy(false);
             setDialog(null);
         }
     };
 
-    const applyTtl = (seconds: number | null) =>
-        run(async () => {
-            const { updated } = await setKeysTtl(keys, seconds, env);
-            showToast(
-                `${seconds === null ? 'Removed expiry on' : 'Set TTL on'} ${String(updated)} keys`
-            );
-            onChanged();
-        });
-
-    const confirmDelete = () =>
-        run(async () => {
-            const { deleted } = await deleteKeys(keys, env);
-            showToast(`Deleted ${String(deleted)} keys`);
-            onClear();
-            onChanged();
-        });
+    const confirmDelete = () => {
+        setDialog(null);
+        deleteJob.start({ keys }).then(onClear).catch(report);
+    };
 
     const doExport = () => {
         if (keys.length > EXPORT_CAP) {
@@ -96,9 +68,7 @@ export function BulkActions({
             );
             return;
         }
-        exportJob.start({ keys }).catch((e: unknown) => {
-            showToast(e instanceof Error ? e.message : String(e), 'error');
-        });
+        exportJob.start({ keys }).catch(report);
     };
 
     return (
@@ -112,30 +82,6 @@ export function BulkActions({
                 onExport={doExport}
                 onDelete={() => setDialog('delete')}
             />
-            {exporting && (
-                <div className="banner" role="status">
-                    {describe(exporting)}
-                    {exporting.state === 'done' && (
-                        <a href={jobResultUrl(exporting.id)} download>
-                            Download
-                        </a>
-                    )}
-                    {exporting.state === 'running' ? (
-                        <Button
-                            size="xs"
-                            onClick={() =>
-                                void exportJob.cancel().catch(() => undefined)
-                            }
-                        >
-                            Cancel
-                        </Button>
-                    ) : (
-                        <Button size="xs" onClick={exportJob.dismiss}>
-                            Dismiss
-                        </Button>
-                    )}
-                </div>
-            )}
             {dialog === 'ttl' && (
                 <BulkTtlDialog
                     count={keys.length}
@@ -155,14 +101,15 @@ export function BulkActions({
                             <Button
                                 variant="danger"
                                 disabled={busy}
-                                onClick={() => void confirmDelete()}
+                                onClick={confirmDelete}
                             >
                                 Delete
                             </Button>
                         </>
                     }
                 >
-                    This permanently removes the selected keys from {env}.
+                    This permanently removes the selected keys from {env}. It
+                    runs on the server; you can cancel it.
                 </Modal>
             )}
         </>

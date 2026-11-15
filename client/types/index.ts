@@ -75,6 +75,9 @@ export interface FailedNode {
 export interface DeleteProgress {
     scanned: number;
     deleted: number;
+    /** Keys the job could not delete (e.g. still redirected after a reshard). */
+    failed?: number;
+    failedKeys?: { key: string; error: string }[];
 }
 
 export interface ExportProgress {

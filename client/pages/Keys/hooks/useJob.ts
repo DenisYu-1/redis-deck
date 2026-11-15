@@ -4,18 +4,28 @@ import type { Job } from '@/types';
 
 const POLL_MS = 500;
 
+export interface JobControl<P, T> {
+    /** The Connection's current job of this kind, if any. */
+    job: Job<P> | null;
+    start: (target: T) => Promise<void>;
+    cancel: () => Promise<void>;
+    dismiss: () => void;
+}
+
 /**
- * The Connection's server job of one kind (mount with key={env}): picks up a running one on mount
- * (the job lives on the server), polls while it runs, and calls onFinished once it stops.
- * start(target) creates the job through `create`.
+ * The Connection's server job of one kind: picks up a running one on mount or
+ * Connection switch (the job lives on the server), polls while it runs, and
+ * calls onFinished once it stops. start(target) creates the job through `create`.
  */
 export function useJob<P, T>(
     env: string,
     kind: string,
     create: (target: T, env: string) => Promise<Job<P>>,
     onFinished: (job: Job<P>) => void = () => undefined
-) {
-    const [job, setJob] = useState<Job<P> | null>(null);
+): JobControl<P, T> {
+    const [latest, setJob] = useState<Job<P> | null>(null);
+    // A job belongs to its Connection: after a switch it is not shown.
+    const job = latest?.env === env ? latest : null;
     const finished = useRef(onFinished);
     const creator = useRef(create);
     useEffect(() => {
@@ -29,6 +39,7 @@ export function useJob<P, T>(
     }, []);
 
     useEffect(() => {
+        if (!env) return;
         const ac = new AbortController();
         void (async () => {
             try {
@@ -72,5 +83,7 @@ export function useJob<P, T>(
         if (id) update(await cancelJob<P>(id));
     }, [id, update]);
 
-    return { job, start, cancel, dismiss: () => setJob(null) };
+    const dismiss = useCallback(() => setJob(null), []);
+
+    return { job, start, cancel, dismiss };
 }

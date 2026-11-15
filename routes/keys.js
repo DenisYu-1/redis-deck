@@ -166,16 +166,6 @@ router.post('/keys/ttl', writeGuard(), async (req, res) => {
     }
 });
 
-router.post('/keys/delete', writeGuard(), async (req, res) => {
-    try {
-        res.json({
-            deleted: await bulkKeys.deleteKeys(req.query.env, req.body.keys)
-        });
-    } catch (error) {
-        fail(res, error);
-    }
-});
-
 // Get value for a key. value shape depends on type: string -> string,
 // hash -> {field: value}, list/set -> string[], zset -> [{member, score}],
 // stream -> [{id, fields}].

@@ -6,7 +6,8 @@ import type { TtlFilter } from '@/types';
 import { buildKeyTree, flattenTree, type TreeRow } from '@/utils/keyTree';
 import { formatNumber } from '@/utils/formatter';
 import { BulkActions } from './BulkActions';
-import { DeleteMatching } from './DeleteMatching';
+import { JobBanners } from './JobBanners';
+import { MatchingActions } from './MatchingActions';
 import { KeyDetail } from './KeyDetail';
 import { KeyList } from './KeyList';
 import { KeyToolbar } from './KeyToolbar';
@@ -14,6 +15,7 @@ import { NewKeyModal } from './NewKeyModal';
 import { useKeySelection } from './hooks/useKeySelection';
 import { useKeyDetail } from './hooks/useKeyDetail';
 import { useKeysQuery } from './hooks/useKeysQuery';
+import { useKeysJobs } from './hooks/useKeysJobs';
 import { useLazySizes } from './hooks/useLazySizes';
 
 type View = 'tree' | 'flat';
@@ -43,6 +45,7 @@ export function KeysPage() {
     );
     const detail = useKeyDetail(env ?? null, selectedKey);
     const sized = useLazySizes(env ?? null, data.meta);
+    const { deleteJob, exportJob } = useKeysJobs(env ?? '', data.reload);
 
     const rows: TreeRow[] = useMemo(
         () =>
@@ -198,19 +201,24 @@ export function KeysPage() {
                         matched={data.keys.length}
                         onClear={selection.clear}
                         onChanged={data.reload}
+                        deleteJob={deleteJob}
+                        exportJob={exportJob}
                     />
+                    <JobBanners deleteJob={deleteJob} exportJob={exportJob} />
                     <div className="kfoot">
                         <span className="mono xs mu">
                             {formatNumber(data.keys.length)} loaded
                         </span>
                         {env && (
-                            <DeleteMatching
+                            <MatchingActions
                                 key={env}
                                 env={env}
                                 pattern={pattern || '*'}
                                 type={type}
-                                disabled={readOnly || ttl !== 'any'}
-                                onFinished={data.reload}
+                                readOnly={readOnly}
+                                unsupportedFilter={ttl !== 'any'}
+                                deleteJob={deleteJob}
+                                exportJob={exportJob}
                             />
                         )}
                         {data.loading && scan.iterations > 0 ? (

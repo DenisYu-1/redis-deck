@@ -77,25 +77,9 @@ describe('POST /keys/ttl', () => {
     });
 });
 
-describe('POST /keys/delete', () => {
-    test('deletes exactly the selected keys', async () => {
-        const res = await post('delete', {
-            keys: ['test:bulk:a', 'test:bulk:h']
-        }).expect(200);
-        expect(res.body.deleted).toBe(2);
-        expect(await execRedisCommand('EXISTS test:bulk:b', env)).toBe('1');
-        expect(await execRedisCommand('EXISTS test:bulk:a', env)).toBe('0');
-    });
-    test('rejects empty keys', async () => {
-        await post('delete', { keys: [] }).expect(400);
-    });
-});
-
 describe('write guard on bulk writes', () => {
-    const calls = [
-        ['ttl', { keys: ['test:bulk:a'], seconds: 100 }],
-        ['delete', { keys: ['test:bulk:a'] }]
-    ];
+    // Selection delete runs as a job: see deleteJob.test.js.
+    const calls = [['ttl', { keys: ['test:bulk:a'], seconds: 100 }]];
     test.each(calls)('%s -> 403 on read-only', async (p, body) => {
         await post(p, body, RO).expect(403);
     });
@@ -111,7 +95,7 @@ describe('write guard on bulk writes', () => {
             .expect(200);
     });
     test('refused write does not touch Redis', async () => {
-        await post('delete', { keys: ['test:bulk:a'] }, RO);
-        expect(await execRedisCommand('EXISTS test:bulk:a', env)).toBe('1');
+        await post('ttl', { keys: ['test:bulk:a'], seconds: 5 }, RO);
+        expect(await execRedisCommand('TTL test:bulk:a', env)).toBe('-1');
     });
 });

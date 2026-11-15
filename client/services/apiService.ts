@@ -422,18 +422,6 @@ export async function setKeysTtl(
     return handleResponse<{ updated: number }>(response);
 }
 
-export async function deleteKeys(
-    keys: string[],
-    environment: string
-): Promise<{ deleted: number }> {
-    const response = await writeFetch(
-        `${API_BASE}/keys/delete?env=${environment}`,
-        jsonPost({ keys }),
-        environment
-    );
-    return handleResponse<{ deleted: number }>(response);
-}
-
 /** Bulk delete as a server job: a pattern (optionally a SCAN type) or Keys. */
 export async function startDeleteJob(
     target: { pattern: string; type?: string } | { keys: string[] },

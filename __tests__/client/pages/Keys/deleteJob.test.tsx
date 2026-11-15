@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { DeleteMatching } from '@/pages/Keys/DeleteMatching';
+import { JobBanners } from '@/pages/Keys/JobBanners';
+import { MatchingActions } from '@/pages/Keys/MatchingActions';
+import { useKeysJobs } from '@/pages/Keys/hooks/useKeysJobs';
 import {
     cancelJob,
     getJob,
@@ -25,9 +27,28 @@ const props = {
     env: 'c1',
     pattern: 'user:*',
     type: '',
-    disabled: false,
+    readOnly: false,
+    unsupportedFilter: false,
     onFinished: jest.fn()
 };
+
+// MatchingActions and the banners wired like the Keys page wires them.
+function DeleteMatching({
+    onFinished,
+    ...rest
+}: typeof props & { readOnly?: boolean }) {
+    const { deleteJob, exportJob } = useKeysJobs(rest.env, onFinished);
+    return (
+        <>
+            <MatchingActions
+                {...rest}
+                deleteJob={deleteJob}
+                exportJob={exportJob}
+            />
+            <JobBanners deleteJob={deleteJob} exportJob={exportJob} />
+        </>
+    );
+}
 
 beforeEach(() => {
     jest.resetAllMocks();
@@ -44,24 +65,25 @@ it('starts a delete job for the pattern and shows its progress', async () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Delete all' }));
 
-    expect(startDeleteJob).toHaveBeenCalledWith(
-        { pattern: 'user:*' },
-        'c1'
-    );
+    expect(startDeleteJob).toHaveBeenCalledWith({ pattern: 'user:*' }, 'c1');
     expect(await screen.findByRole('status')).toHaveTextContent(
         'Deleting · 25 deleted · 40 scanned'
     );
 });
 
 it('picks up a running job after navigating back, and cancels it', async () => {
-    (listJobs as jest.Mock).mockResolvedValue([job()]);
+    (listJobs as jest.Mock).mockImplementation((env: string, kind: string) =>
+        Promise.resolve(kind === 'delete' ? [job()] : [])
+    );
     (getJob as jest.Mock).mockResolvedValue(job());
     (cancelJob as jest.Mock).mockResolvedValue(
         job({ state: 'cancelled', progress: { scanned: 40, deleted: 30 } })
     );
     render(<DeleteMatching {...props} />);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await userEvent.click(
+        await screen.findByRole('button', { name: 'Cancel' })
+    );
 
     expect(cancelJob).toHaveBeenCalledWith('j1');
     expect(await screen.findByRole('status')).toHaveTextContent(
@@ -90,7 +112,7 @@ it('reports a failed job with its error', async () => {
 });
 
 it('is disabled on a read-only Connection', () => {
-    render(<DeleteMatching {...props} disabled />);
+    render(<DeleteMatching {...props} readOnly />);
     expect(
         screen.getByRole('button', { name: 'Delete all matching…' })
     ).toBeDisabled();

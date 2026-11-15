@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BulkActions } from '@/pages/Keys/BulkActions';
+import { BulkActions as Selection } from '@/pages/Keys/BulkActions';
+import { JobBanners } from '@/pages/Keys/JobBanners';
+import { useKeysJobs } from '@/pages/Keys/hooks/useKeysJobs';
 import {
     cancelJob,
     getJob,
@@ -30,6 +32,17 @@ const props = {
     onClear: jest.fn(),
     onChanged: jest.fn()
 };
+
+// The selection actions and the banners wired like the Keys page wires them.
+function BulkActions(p: typeof props) {
+    const { deleteJob, exportJob } = useKeysJobs(p.env, p.onChanged);
+    return (
+        <>
+            <Selection {...p} deleteJob={deleteJob} exportJob={exportJob} />
+            <JobBanners deleteJob={deleteJob} exportJob={exportJob} />
+        </>
+    );
+}
 
 beforeEach(() => {
     jest.resetAllMocks();

@@ -40,7 +40,9 @@ const count = (replies) => replies.filter((r) => Number(r) > 0).length;
 async function setTtl(connectionId, keys, seconds) {
     checkKeys(keys);
     if (seconds !== null && !(Number.isInteger(seconds) && seconds > 0)) {
-        throw badRequest('seconds must be a positive integer, or null to persist');
+        throw badRequest(
+            'seconds must be a positive integer, or null to persist'
+        );
     }
     const replies = await pipelined(
         connectionId,
