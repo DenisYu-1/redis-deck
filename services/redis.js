@@ -255,6 +255,59 @@ async function execArgv(argv, connectionId, nodeOverride = null) {
     return out ? JSON.parse(out) : null;
 }
 
+// One argument as a redis-cli stdin token: double-quoted, every byte outside
+// printable ASCII (and " / \\) as \\xHH, so any binary-safe Key survives.
+function quoteArg(arg) {
+    let out = '"';
+    for (const byte of Buffer.from(String(arg), 'utf8')) {
+        out +=
+            byte >= 0x20 && byte < 0x7f && byte !== 0x22 && byte !== 0x5c
+                ? String.fromCharCode(byte)
+                : `\\x${byte.toString(16).padStart(2, '0')}`;
+    }
+    return `${out}"`;
+}
+
+// Run many commands (argv arrays) on one Node in ONE redis-cli --json stdin
+// session. --json prints one line per reply (null for nil), so replies align
+// with commands. -> [{ value } | { error }]; a Redis error (incl. MOVED) is
+// per command, a failed spawn rejects the whole batch.
+async function execArgvBatch(commands, connectionId, nodeOverride = null) {
+    if (commands.length === 0) {
+        return [];
+    }
+    const config = getConnectionConfig(connectionId);
+    console.log(
+        `redis-cli [${connectionId}]: ${commands.length} batched commands`
+    );
+    let out;
+    try {
+        out = await runRedisCli([...connArgs(config, nodeOverride), '--json'], {
+            input: `${commands.map((argv) => argv.map(quoteArg).join(' ')).join('\n')}\n`,
+            timeout: 60000
+        });
+    } catch (error) {
+        const err = cliError(error, `${commands.length} batched commands`);
+        dropTopologyOnError(connectionId, err);
+        throw err;
+    }
+    const lines = out.split('\n').filter((line) => line !== '');
+    if (lines.length !== commands.length) {
+        throw {
+            message: `Expected ${commands.length} replies, got ${lines.length}`,
+            code: 'REDIS_ERROR'
+        };
+    }
+    return lines.map((line) => {
+        if (!line.startsWith('error:')) {
+            return { value: JSON.parse(line) };
+        }
+        const error = JSON.parse(line.slice(6));
+        dropTopologyOnError(connectionId, { message: error });
+        return { error };
+    });
+}
+
 // Execute a Redis command against an unsaved config (used by "test connection").
 async function execRedisCommandWithConfig(command, config) {
     return runCommand(command, config, null, `${config.host}:${config.port}`);
@@ -491,7 +544,7 @@ async function scanClusterNodes(
             // SCAN's '0' means both "start" and "finished", so a finished Node
             // is marked DONE instead; otherwise it would be rescanned.
             if (cursor === DONE) {
-                return { cursor: DONE, keys: [] };
+                return { cursor: DONE, keys: [], node };
             }
             try {
                 await pause(cursor);
@@ -506,7 +559,11 @@ async function scanClusterNodes(
                 console.log(
                     `Node ${node.id}: found ${keys.length} keys, next cursor: ${nextCursor}`
                 );
-                return { cursor: nextCursor === '0' ? DONE : nextCursor, keys };
+                return {
+                    cursor: nextCursor === '0' ? DONE : nextCursor,
+                    keys,
+                    node
+                };
             } catch (error) {
                 // Keep the cursor so the next continue retries this Node from
                 // where it stopped; the caller shows it as failed.
@@ -525,6 +582,13 @@ async function scanClusterNodes(
     );
 
     const allKeys = results.flatMap((r) => r.keys);
+    // Which Node's SCAN returned each Key, so Page meta can batch per Node.
+    const keyNodes = {};
+    for (const r of results) {
+        for (const key of r.keys) {
+            keyNodes[key] = r.node;
+        }
+    }
     const nextCursors = results.map((r) => r.cursor);
     const failedNodes = results.filter((r) => r.failed).map((r) => r.failed);
     // A failed Node keeps a non-DONE cursor, so it counts as more to scan.
@@ -534,7 +598,13 @@ async function scanClusterNodes(
         `Cluster scan complete: ${allKeys.length} total keys across ${nodes.length} nodes`
     );
 
-    return { keys: allKeys, cursors: nextCursors, hasMore, failedNodes };
+    return {
+        keys: allKeys,
+        cursors: nextCursors,
+        hasMore,
+        failedNodes,
+        keyNodes
+    };
 }
 
 async function execRedisPipelinedCommands(
@@ -585,5 +655,6 @@ module.exports = {
     getClusterNodes,
     dropTopology,
     scanClusterNodes,
-    execArgv
+    execArgv,
+    execArgvBatch
 };

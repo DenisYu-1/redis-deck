@@ -57,6 +57,7 @@ router.get('/keys', async (req, res) => {
         let iterations = 0;
         let hasMore = false;
         let failedNodes = [];
+        const keyNodes = {}; // Key -> Node its SCAN came from (clusters)
         // Time budget (SPEC R5): proving "no match" over a huge keyspace must
         // not hold the request. When it runs out the page is partial (hasMore
         // + cursors) and the client continues from there.
@@ -79,12 +80,17 @@ router.get('/keys', async (req, res) => {
             // SCAN may repeat a key across calls; metadata is per page.
             const fresh = [...new Set(result.keys)];
             returned += fresh.length;
-            const pageKeys = await pageMeta(env, fresh);
-            const kept = fresh.filter((k) => {
-                meta[k] = pageKeys[k];
-                return matchesTtl(ttlFilter, pageKeys[k].ttl);
-            });
-            keys = keys.concat(kept);
+            Object.assign(keyNodes, result.keyNodes);
+            if (ttlFilter === 'any') {
+                keys = keys.concat(fresh); // Page meta once, after the sweep
+            } else {
+                const pageKeys = await pageMeta(env, fresh, result.keyNodes);
+                const kept = fresh.filter((k) => {
+                    meta[k] = pageKeys[k];
+                    return matchesTtl(ttlFilter, pageKeys[k].ttl);
+                });
+                keys = keys.concat(kept);
+            }
             nextCursors = result.cursors;
             hasMore = result.hasMore;
             failedNodes = result.failedNodes;
@@ -97,6 +103,15 @@ router.get('/keys', async (req, res) => {
             failedNodes.length === 0 &&
             Date.now() - started < budgetMs
         );
+
+        // Without a TTL filter, one Page meta call for the whole page: on a
+        // cluster that is one redis-cli spawn per Node, however many hops ran.
+        if (ttlFilter === 'any') {
+            Object.assign(
+                meta,
+                await pageMeta(env, [...new Set(keys)], keyNodes)
+            );
+        }
 
         // No trimming: return everything the sweep found so the cursor we hand
         // back lines up exactly with these keys (Load More must not skip any).

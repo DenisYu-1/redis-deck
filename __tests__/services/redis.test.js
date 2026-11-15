@@ -5,7 +5,8 @@ const {
     parseRedisInfo,
     isClusterMode,
     getClusterNodes,
-    scanClusterNodes
+    scanClusterNodes,
+    execArgvBatch
 } = require('../../services/redis');
 const {
     createTestKey,
@@ -23,6 +24,26 @@ describe('Redis Service', () => {
 
     afterEach(async () => {
         await deleteTestKeys('test:*', testConnectionId);
+    });
+
+    describe('execArgvBatch', () => {
+        test('one reply per command, nil and errors in place, any Key bytes', async () => {
+            const key = 'test:batch "q\\ \n é';
+            await keyStore.writeKey(testConnectionId, key, 'string', 'v', 0);
+            const replies = await execArgvBatch(
+                [
+                    ['TYPE', key],
+                    ['GET', 'test:batch:missing'],
+                    ['INCR', key],
+                    ['TTL', key]
+                ],
+                testConnectionId
+            );
+            expect(replies[0]).toEqual({ value: 'string' });
+            expect(replies[1]).toEqual({ value: null });
+            expect(replies[2].error).toMatch(/not an integer/);
+            expect(replies[3]).toEqual({ value: -1 });
+        });
     });
 
     describe('execRedisCommand', () => {

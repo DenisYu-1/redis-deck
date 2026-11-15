@@ -47,6 +47,8 @@ export interface KeyMeta {
     ttl: number;
     /** MEMORY USAGE in bytes, null when unavailable. */
     size: number | null;
+    /** Clustered Connections: id of the Node that holds the Key. */
+    node?: string;
 }
 
 export interface ScanStats {
