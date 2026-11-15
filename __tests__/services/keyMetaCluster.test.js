@@ -1,15 +1,10 @@
 jest.mock('../../services/redis', () => ({
     isClusterMode: jest.fn().mockResolvedValue(true),
-    execArgv: jest.fn(),
     execArgvBatch: jest.fn(),
     getClusterNodes: jest.fn()
 }));
 jest.mock('../../services/redisClient', () => ({ getClient: jest.fn() }));
-const {
-    execArgv,
-    execArgvBatch,
-    getClusterNodes
-} = require('../../services/redis');
+const { execArgvBatch, getClusterNodes } = require('../../services/redis');
 const { pageMeta, keySizes } = require('../../services/keyMeta');
 
 const A = { id: 'a', host: '10.0.0.1', port: 7000 };
@@ -21,14 +16,15 @@ beforeEach(() => {
 });
 
 test('cluster page meta follows MOVED redirects for a Key without a Node', async () => {
-    execArgv.mockImplementation(async (argv, id, node) => {
+    execArgvBatch.mockImplementation(async (cmds, id, node) => {
         if (!node) {
-            throw { message: 'MOVED 1 10.0.0.2:7001' };
+            return cmds.map(() => ({ error: 'MOVED 1 10.0.0.2:7001' }));
         }
-        expect(node).toEqual({ host: '10.0.0.2', port: 7001 });
-        return { TYPE: 'string', TTL: 5 }[argv[0]];
+        expect(node).toEqual(B);
+        return [{ value: 'string' }, { value: 5 }];
     });
     const meta = await pageMeta('c', ['k']);
+    expect(execArgvBatch).toHaveBeenCalledTimes(2);
     expect(meta.k).toEqual({ type: 'string', ttl: 5, node: 'b' });
 });
 
@@ -52,7 +48,6 @@ test('one batch per Node; replies align per Key', async () => {
         gone: B
     });
     expect(execArgvBatch).toHaveBeenCalledTimes(2);
-    expect(execArgv).not.toHaveBeenCalled();
     expect(meta).toEqual({
         h: { type: 'hash', ttl: -1, node: 'a' },
         s: { type: 'string', ttl: 30, node: 'b' },
@@ -60,19 +55,24 @@ test('one batch per Node; replies align per Key', async () => {
     });
 });
 
-test('a Key moved by a reshard is retried once through owner discovery', async () => {
-    execArgvBatch.mockResolvedValue([
-        { error: 'MOVED 1 10.0.0.2:7001' },
-        { error: 'MOVED 1 10.0.0.2:7001' }
-    ]);
-    execArgv.mockImplementation(async (argv, id, node) => {
-        if (!node) {
-            throw { message: 'MOVED 1 10.0.0.2:7001' };
-        }
-        return { TYPE: 'set', TTL: -1 }[argv[0]];
-    });
+test('a Key moved by a reshard is retried once on its new owner', async () => {
+    execArgvBatch.mockImplementation(async (cmds, id, node) =>
+        node === A
+            ? cmds.map(() => ({ error: 'MOVED 1 10.0.0.2:7001' }))
+            : [{ value: 'set' }, { value: -1 }]
+    );
     const meta = await pageMeta('c', ['k'], { k: A });
+    expect(execArgvBatch).toHaveBeenCalledTimes(2);
     expect(meta.k).toEqual({ type: 'set', ttl: -1, node: 'b' });
+});
+
+test('a Key still redirected after the retry is an error', async () => {
+    execArgvBatch.mockImplementation(async (cmds) =>
+        cmds.map(() => ({ error: 'MOVED 1 10.0.0.2:7001' }))
+    );
+    await expect(pageMeta('c', ['k'], { k: A })).rejects.toMatchObject({
+        message: 'MOVED 1 10.0.0.2:7001'
+    });
 });
 
 describe('lazy size on clusters (R4)', () => {
@@ -109,14 +109,11 @@ describe('lazy size on clusters (R4)', () => {
     });
 
     test('keySizes: a Key with an unknown Node id is found through MOVED', async () => {
-        execArgv.mockImplementation(async (argv, id, node) => {
-            if (!node) {
-                throw { message: 'MOVED 1 10.0.0.2:7001' };
-            }
-            return 40;
-        });
+        execArgvBatch.mockImplementation(async (cmds, id, node) =>
+            node ? [{ value: 40 }] : [{ error: 'MOVED 1 10.0.0.2:7001' }]
+        );
         const out = await keySizes('c', [{ key: 'k', node: 'stale' }]);
-        expect(execArgvBatch).not.toHaveBeenCalled();
+        expect(execArgvBatch).toHaveBeenCalledTimes(2);
         expect(out).toEqual({ k: 40 });
     });
 });

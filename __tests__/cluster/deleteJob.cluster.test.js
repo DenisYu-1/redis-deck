@@ -7,7 +7,12 @@ const { createApp } = require('../../config/app');
 const keyStore = require('../../services/keyStore');
 const { dropTopology } = require('../../services/redis');
 const { countRedisCliSpawns } = require('../helpers/redisCliSpawns');
-const { enabled, SEED, cli, clusterNodes } = require('../helpers/clusterTarget');
+const {
+    enabled,
+    SEED,
+    cli,
+    clusterNodes
+} = require('../helpers/clusterTarget');
 
 const CONN = 'test-cluster-delete-job';
 const PREFIX = 'test:deljob:';
@@ -97,6 +102,23 @@ const KEYS = Array.from({ length: 60 }, (_, i) => `${PREFIX}${i}`);
         expect(targets.length).toBeGreaterThan(0);
         expect(targets.length).toBeLessThanOrEqual(primaries.length);
         expect(targets.every((t) => primaries.includes(t))).toBe(true);
+    }, 30000);
+
+    test('a selection is deleted in batches per Node, not Key by Key', async () => {
+        const { body: job } = await request(app)
+            .post(`/api/jobs/delete?env=${CONN}`)
+            .send({ keys: [...KEYS, `${PREFIX}missing`] })
+            .expect(202);
+        const done = await waitDone(job.id);
+
+        expect(done).toMatchObject({
+            state: 'done',
+            progress: { scanned: 61, deleted: 60, failed: 0 }
+        });
+        expect(remaining()).toEqual([]);
+        // One batch on the seed, then one per owner its MOVED replies name.
+        const sessions = spawns.spawns.filter((a) => a.includes('--json'));
+        expect(sessions.length).toBeLessThanOrEqual(nodes.length);
     }, 30000);
 
     test('an unreachable Node fails the job instead of looping', async () => {

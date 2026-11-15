@@ -20,10 +20,7 @@ function prune() {
     );
     const cutoff = Date.now() - KEEP_FINISHED_MS;
     finished.forEach((e, i) => {
-        if (
-            e.job.finishedAt < cutoff ||
-            i < finished.length - MAX_FINISHED
-        ) {
+        if (e.job.finishedAt < cutoff || i < finished.length - MAX_FINISHED) {
             jobs.delete(e.job.id);
         }
     });
@@ -35,6 +32,17 @@ function prune() {
 // kept as the job's result (served by getJobResult) only if it finishes done.
 function startJob(kind, env, progress, work) {
     prune();
+    if (
+        [...jobs.values()].some(
+            ({ job }) =>
+                job.state === 'running' && job.kind === kind && job.env === env
+        )
+    ) {
+        throw Object.assign(
+            new Error(`A ${kind} job is already running on ${env}`),
+            { status: 409, code: 'JOB_RUNNING' }
+        );
+    }
     const entry = {
         job: {
             id: randomUUID(),
@@ -50,9 +58,7 @@ function startJob(kind, env, progress, work) {
     const finish = (state, extra = {}) =>
         Object.assign(entry.job, { state, finishedAt: Date.now() }, extra);
     Promise.resolve()
-        .then(() =>
-            work({ progress, cancelled: () => entry.cancelRequested })
-        )
+        .then(() => work({ progress, cancelled: () => entry.cancelRequested }))
         .then(
             (result) => {
                 if (entry.cancelRequested) return finish('cancelled');
@@ -60,25 +66,46 @@ function startJob(kind, env, progress, work) {
                 finish('done');
             },
             (error) =>
-                finish('failed', {
-                    error: error?.message || String(error),
-                    ...error?.details
-                })
+                entry.cancelRequested
+                    ? finish('cancelled')
+                    : finish('failed', {
+                          error: error?.message || String(error),
+                          ...error?.details
+                      })
         );
     return view(entry);
 }
 
+const badRequest = (message) =>
+    Object.assign(new Error(message), { status: 400, code: 'BAD_REQUEST' });
+
+// A job request body -> { keys } (a selection) or { pattern, type? }.
+function jobTarget({ pattern, type, keys } = {}) {
+    if (
+        Array.isArray(keys) &&
+        keys.length > 0 &&
+        keys.every((k) => typeof k === 'string')
+    ) {
+        return { keys };
+    }
+    if (typeof pattern === 'string' && pattern) {
+        return { pattern, type };
+    }
+    throw badRequest('Send a pattern or a non-empty keys array');
+}
+
 function getJob(id) {
+    prune();
     const entry = jobs.get(id);
     return entry ? view(entry) : null;
 }
 
 // Newest first.
 function listJobs({ env, kind } = {}) {
+    prune();
     return [...jobs.values()]
         .filter(
-            (e) =>
-                (!env || e.job.env === env) && (!kind || e.job.kind === kind)
+            (e) => (!env || e.job.env === env) && (!kind || e.job.kind === kind)
         )
         .map(view)
         .reverse();
@@ -101,4 +128,12 @@ function getJobResult(id) {
         : { job: view(entry) };
 }
 
-module.exports = { startJob, getJob, listJobs, cancelJob, getJobResult };
+module.exports = {
+    startJob,
+    getJob,
+    listJobs,
+    cancelJob,
+    getJobResult,
+    jobTarget,
+    badRequest
+};

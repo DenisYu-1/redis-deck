@@ -1,6 +1,6 @@
 // Per-page key metadata (type, TTL, memory) for the Keys list.
-const { isClusterMode, execArgvBatch, getClusterNodes } = require('./redis');
-const { run } = require('./keyStore');
+const { isClusterMode, getClusterNodes } = require('./redis');
+const { runOnOwners } = require('./perNode');
 const { getClient } = require('./redisClient');
 
 const TYPES = ['string', 'hash', 'list', 'set', 'zset', 'stream', 'json'];
@@ -40,82 +40,32 @@ const META_COMMANDS = (key) => [
 const SIZE_COMMANDS = (key) => [['MEMORY', 'USAGE', key]];
 const toSize = (size) =>
     size === null || size === undefined ? null : Number(size);
-const MOVED = /^MOVED /;
-
-// Per-Key path for a Key without a known Node, or one a reshard moved away:
-// keyStore.run finds the owner through MOVED, the rest reuse that Node.
-async function fetchOwner(connectionId, commands) {
-    const first = await run(connectionId, commands[0]);
-    const rest = [];
-    for (const argv of commands.slice(1)) {
-        rest.push((await run(connectionId, argv, first.node)).result);
-    }
-    return { replies: [first.result, ...rest], node: first.node };
-}
-
-async function nodeIdOf(connectionId, address) {
-    if (!address) {
-        return undefined;
-    }
-    const nodes = await getClusterNodes(connectionId);
-    return nodes.find(
-        (n) => n.host === address.host && Number(n.port) === address.port
-    )?.id;
-}
-
-// Run `commandsFor(key)` for every Key: one redis-cli --json session per Node
-// the Keys came from. -> { [key]: { replies: [...], node: nodeId } }.
-// keyNodes: { [key]: { id, host, port } } from scanClusterNodes.
+// Run `commandsFor(key)` for every Key on its owner: one redis-cli --json
+// session per Node (plus one per owner for Keys redirected by MOVED).
+// keyNodes: { [key]: Node } from scanClusterNodes; Keys without one start on
+// the seed. -> { [key]: { replies: [...], node: nodeId } }; throws a Key's error.
 async function fetchPerNode(connectionId, keys, keyNodes, commandsFor) {
-    const groups = new Map(); // node id -> { node, keys }
-    const out = {};
-    const orphans = [];
-    for (const key of keys) {
-        const node = keyNodes[key];
-        if (!node) {
-            orphans.push(key);
-            continue;
-        }
-        if (!groups.has(node.id)) {
-            groups.set(node.id, { node, keys: [] });
-        }
-        groups.get(node.id).keys.push(key);
-    }
-
-    await Promise.all(
-        [...groups.values()].map(async ({ node, keys: nodeKeys }) => {
-            const per = nodeKeys.map(commandsFor);
-            const replies = await execArgvBatch(per.flat(), connectionId, node);
-            let at = 0;
-            nodeKeys.forEach((key, i) => {
-                const mine = replies.slice(at, at + per[i].length);
-                at += per[i].length;
-                const failed = mine.find((r) => 'error' in r);
-                if (failed && MOVED.test(failed.error)) {
-                    orphans.push(key); // resharded since the scan
-                    return;
-                }
-                if (failed) {
-                    throw { message: failed.error, code: 'REDIS_ERROR' };
-                }
-                out[key] = { replies: mine.map((r) => r.value), node: node.id };
-            });
-        })
+    const results = await runOnOwners(
+        connectionId,
+        keys,
+        keyNodes,
+        commandsFor
     );
-
-    for (const key of orphans) {
-        const { replies, node } = await fetchOwner(
-            connectionId,
-            commandsFor(key)
-        );
-        out[key] = { replies, node: await nodeIdOf(connectionId, node) };
+    const out = {};
+    for (const key of keys) {
+        const { replies, node, error } = results[key];
+        if (error) {
+            throw { message: error, code: 'REDIS_ERROR' };
+        }
+        out[key] = { replies, node: node?.id };
     }
     return out;
 }
 
 // -> { [key]: { type, ttl, size } }  (ttl: -1 no expiry, -2 gone; size bytes|null)
-// On a cluster { type, ttl, node: nodeId } with no size (see keySizes). keyNodes: { [key]: Node } from the
-// scan; Keys without one are looked up per Key (MOVED-safe).
+// On a cluster { type, ttl, node: nodeId } with no size (see keySizes).
+// keyNodes: { [key]: Node } from the scan; Keys without one are routed by
+// MOVED from the seed.
 async function pageMeta(connectionId, keys, keyNodes = {}) {
     if (keys.length === 0) {
         return {};

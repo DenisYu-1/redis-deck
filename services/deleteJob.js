@@ -1,86 +1,70 @@
 // Bulk delete job (SPEC R7): one scan page at a time, so memory stays
-// constant. Clustered pages are deleted with one redis-cli stdin session per
-// primary Node that returned the Keys (ADR 0002).
-const { isClusterMode, execArgvBatch } = require('./redis');
+// constant. Clustered Keys are deleted with one redis-cli stdin session per
+// primary Node that owns them (ADR 0002).
+const { isClusterMode } = require('./redis');
 const { scanPages } = require('./scanPages');
+const { runOnOwners } = require('./perNode');
 const bulkKeys = require('./bulkKeys');
-const keyStore = require('./keyStore');
-const { startJob } = require('./jobs');
+const { startJob, jobTarget } = require('./jobs');
 
 const SELECTION_CHUNK = 100;
+const MAX_FAILED_KEYS = 20; // examples kept on the job; `failed` has the count
 
-// keyNodes (clustered pages only): Key -> the primary Node whose SCAN
-// returned it. -> Map(node -> keys).
-function groupByNode(keys, keyNodes) {
-    const groups = new Map();
+// Clustered: UNLINK per owner. Keys a reshard moved are retried once on the
+// new owner; any Key still not deleted is counted (and sampled) as failed.
+async function unlinkOnOwners(env, keys, keyNodes, progress) {
+    const results = await runOnOwners(env, keys, keyNodes, (key) => [
+        ['UNLINK', key]
+    ]);
     for (const key of keys) {
-        const node = keyNodes[key];
-        if (!groups.has(node)) groups.set(node, []);
-        groups.get(node).push(key);
+        const { replies, error } = results[key];
+        if (error) {
+            progress.failed++;
+            if (progress.failedKeys.length < MAX_FAILED_KEYS) {
+                progress.failedKeys.push({ key, error });
+            }
+        } else if (replies[0] === 1) {
+            progress.deleted++;
+        }
     }
-    return groups;
 }
 
-// -> number of Keys removed on this page.
-async function deletePage(env, page) {
-    if (!page.keyNodes) {
-        return page.keys.length ? bulkKeys.deleteKeys(env, page.keys) : 0;
+async function deleteKeys(env, keys, keyNodes, progress) {
+    if (keys.length === 0) return;
+    if (keyNodes) {
+        await unlinkOnOwners(env, keys, keyNodes, progress);
+    } else {
+        progress.deleted += await bulkKeys.deleteKeys(env, keys);
     }
-    let deleted = 0;
-    for (const [node, keys] of groupByNode(page.keys, page.keyNodes)) {
-        const replies = await execArgvBatch(
-            keys.map((k) => ['UNLINK', k]),
-            env,
-            node
-        );
-        deleted += replies.filter((r) => r.value === 1).length;
-    }
-    return deleted;
 }
 
 async function byPattern(env, target, { progress, cancelled }) {
     await scanPages(env, target, cancelled, async (page) => {
         progress.scanned += page.keys.length;
         if (cancelled()) return false;
-        progress.deleted += await deletePage(env, page);
+        await deleteKeys(env, page.keys, page.keyNodes, progress);
     });
 }
 
+// Selected Keys come without a Node: on a cluster they start on the seed and
+// MOVED replies route them to their owners, still batched per Node.
 async function bySelection(env, keys, { progress, cancelled }) {
-    const clustered = await isClusterMode(env);
+    const keyNodes = (await isClusterMode(env)) ? {} : null;
     for (let i = 0; i < keys.length && !cancelled(); i += SELECTION_CHUNK) {
         const chunk = keys.slice(i, i + SELECTION_CHUNK);
-        if (clustered) {
-            // Owner unknown: MOVED routes each Key to its primary.
-            for (const key of chunk) {
-                if (cancelled()) return;
-                progress.deleted += (await keyStore.deleteKey(env, key)) || 0;
-                progress.scanned++;
-            }
-        } else {
-            progress.deleted += await bulkKeys.deleteKeys(env, chunk);
-            progress.scanned += chunk.length;
-        }
+        await deleteKeys(env, chunk, keyNodes, progress);
+        progress.scanned += chunk.length;
     }
 }
 
-const bad = (message) =>
-    Object.assign(new Error(message), { status: 400, code: 'BAD_REQUEST' });
-
-// target: { pattern, type? } or { keys }. -> the job view.
-function startDeleteJob(env, { pattern, type, keys } = {}) {
-    const selection =
-        Array.isArray(keys) &&
-        keys.length > 0 &&
-        keys.every((k) => typeof k === 'string');
-    if (!selection && !(typeof pattern === 'string' && pattern)) {
-        throw bad('Send a pattern or a non-empty keys array');
-    }
-    const progress = { scanned: 0, deleted: 0 };
+// body: { pattern, type? } or { keys }. -> the job view.
+function startDeleteJob(env, body) {
+    const target = jobTarget(body);
+    const progress = { scanned: 0, deleted: 0, failed: 0, failedKeys: [] };
     return startJob('delete', env, progress, (ctx) =>
-        selection
-            ? bySelection(env, keys, ctx)
-            : byPattern(env, { pattern, type }, ctx)
+        target.keys
+            ? bySelection(env, target.keys, ctx)
+            : byPattern(env, target, ctx)
     );
 }
 

@@ -107,7 +107,10 @@ describe('delete job by pattern', () => {
 
 describe('cancel', () => {
     test('stops further deletions and reports what was already deleted', async () => {
-        const keys = Array.from({ length: 3000 }, (_, i) => `test:deljob:c${i}`);
+        const keys = Array.from(
+            { length: 3000 },
+            (_, i) => `test:deljob:c${i}`
+        );
         await execRedisCommand(
             `MSET ${keys.map((k) => `${k} v`).join(' ')}`,
             env
@@ -161,5 +164,38 @@ describe('delete job write guard', () => {
             .send({ pattern: 'test:deljob:*' })
             .expect(202);
         await waitDone(body.id);
+    });
+});
+
+describe('job routes check the Connection', () => {
+    test.each(['delete', 'export'])(
+        '%s without env -> 400, unknown env -> 404',
+        async (kind) => {
+            await request(app)
+                .post(`/api/jobs/${kind}`)
+                .send({ pattern: 'test:deljob:*' })
+                .expect(400);
+            await request(app)
+                .post(`/api/jobs/${kind}?env=no-such-connection`)
+                .send({ pattern: 'test:deljob:*' })
+                .expect(404);
+        }
+    );
+
+    test('a second delete job on the same Connection -> 409 while the first runs', async () => {
+        const keys = Array.from(
+            { length: 3000 },
+            (_, i) => `test:deljob:d${i}`
+        );
+        const { body: job } = await request(app)
+            .post(`/api/jobs/delete?env=${env}`)
+            .send({ keys })
+            .expect(202);
+        await request(app)
+            .post(`/api/jobs/delete?env=${env}`)
+            .send({ pattern: 'test:deljob:*' })
+            .expect(409);
+        await request(app).post(`/api/jobs/${job.id}/cancel`).expect(200);
+        await waitDone(job.id);
     });
 });

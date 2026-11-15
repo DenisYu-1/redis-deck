@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { writeGuard } = require('../guards/writeGuard');
+const { getConnection } = require('../services/database');
 const {
     getJob,
     listJobs,
@@ -16,8 +17,20 @@ const fail = (res, error) =>
 
 const notFound = (res) => res.status(404).json({ error: 'Job not found' });
 
+// ?env= must name a saved Connection before a job starts on it.
+function requireConnection(req, res, next) {
+    const env = req.query.env;
+    if (!env || typeof env !== 'string') {
+        return res.status(400).json({ error: 'env is required' });
+    }
+    if (!getConnection(env)) {
+        return res.status(404).json({ error: `Unknown connection '${env}'` });
+    }
+    next();
+}
+
 // body: { pattern, type? } or { keys }. Writes, so guarded at creation.
-router.post('/jobs/delete', writeGuard(), (req, res) => {
+router.post('/jobs/delete', requireConnection, writeGuard(), (req, res) => {
     try {
         res.status(202).json(startDeleteJob(req.query.env, req.body));
     } catch (error) {
@@ -26,7 +39,7 @@ router.post('/jobs/delete', writeGuard(), (req, res) => {
 });
 
 // body: { pattern, type? } or { keys }. A read, so no guard.
-router.post('/jobs/export', (req, res) => {
+router.post('/jobs/export', requireConnection, (req, res) => {
     try {
         res.status(202).json(startExportJob(req.query.env, req.body));
     } catch (error) {
