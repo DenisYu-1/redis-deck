@@ -31,11 +31,15 @@ async function fetchPipelined(connectionId, keys) {
     return multi.exec();
 }
 
+// Size is lazy on clusters (SPEC R4): the Keys list asks keySizes for the
+// visible rows only.
 const META_COMMANDS = (key) => [
     ['TYPE', key],
-    ['TTL', key],
-    ['MEMORY', 'USAGE', key]
+    ['TTL', key]
 ];
+const SIZE_COMMANDS = (key) => [['MEMORY', 'USAGE', key]];
+const toSize = (size) =>
+    size === null || size === undefined ? null : Number(size);
 const MOVED = /^MOVED /;
 
 // Per-Key path for a Key without a known Node, or one a reshard moved away:
@@ -110,7 +114,7 @@ async function fetchPerNode(connectionId, keys, keyNodes, commandsFor) {
 }
 
 // -> { [key]: { type, ttl, size } }  (ttl: -1 no expiry, -2 gone; size bytes|null)
-// On a cluster also { node: nodeId }. keyNodes: { [key]: Node } from the
+// On a cluster { type, ttl, node: nodeId } with no size (see keySizes). keyNodes: { [key]: Node } from the
 // scan; Keys without one are looked up per Key (MOVED-safe).
 async function pageMeta(connectionId, keys, keyNodes = {}) {
     if (keys.length === 0) {
@@ -119,7 +123,7 @@ async function pageMeta(connectionId, keys, keyNodes = {}) {
     const toMeta = ([type, ttl, size]) => ({
         type: String(type),
         ttl: Number(ttl),
-        size: size === null || size === undefined ? null : Number(size)
+        size: toSize(size)
     });
     const meta = {};
     if (await isClusterMode(connectionId)) {
@@ -130,8 +134,12 @@ async function pageMeta(connectionId, keys, keyNodes = {}) {
             META_COMMANDS
         );
         for (const key of keys) {
-            const { replies, node } = perKey[key];
-            meta[key] = { ...toMeta(replies), node };
+            const [type, ttl] = perKey[key].replies;
+            meta[key] = {
+                type: String(type),
+                ttl: Number(ttl),
+                node: perKey[key].node
+            };
         }
         return meta;
     }
@@ -142,4 +150,47 @@ async function pageMeta(connectionId, keys, keyNodes = {}) {
     return meta;
 }
 
-module.exports = { pageMeta, fetchPerNode, matchesTtl, TYPES, TTL_FILTERS };
+// Sizes for Keys the client shows. items: [{ key, node: nodeId }] (node may be
+// missing or stale: owner discovery through MOVED). -> { [key]: bytes|null },
+// null for a Key that no longer exists. One batched spawn per Node.
+async function keySizes(connectionId, items) {
+    const keys = [...new Set(items.map((i) => i.key))];
+    if (keys.length === 0) {
+        return {};
+    }
+    const sizes = {};
+    if (!(await isClusterMode(connectionId))) {
+        const client = await getClient(connectionId);
+        const multi = client.multi();
+        keys.forEach((key) => multi.addCommand(['MEMORY', 'USAGE', key]));
+        const flat = await multi.exec();
+        keys.forEach((key, i) => (sizes[key] = toSize(flat[i])));
+        return sizes;
+    }
+    const byId = new Map(
+        (await getClusterNodes(connectionId)).map((n) => [n.id, n])
+    );
+    const keyNodes = {};
+    for (const { key, node } of items) {
+        if (byId.has(node)) {
+            keyNodes[key] = byId.get(node);
+        }
+    }
+    const perKey = await fetchPerNode(
+        connectionId,
+        keys,
+        keyNodes,
+        SIZE_COMMANDS
+    );
+    keys.forEach((key) => (sizes[key] = toSize(perKey[key].replies[0])));
+    return sizes;
+}
+
+module.exports = {
+    pageMeta,
+    keySizes,
+    fetchPerNode,
+    matchesTtl,
+    TYPES,
+    TTL_FILTERS
+};

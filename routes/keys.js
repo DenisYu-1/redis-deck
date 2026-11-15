@@ -6,6 +6,7 @@ const bulkKeys = require('../services/bulkKeys');
 const { writeGuard } = require('../guards/writeGuard');
 const {
     pageMeta,
+    keySizes,
     matchesTtl,
     TYPES,
     TTL_FILTERS
@@ -136,6 +137,35 @@ router.get('/keys', async (req, res) => {
 });
 
 // Bulk operations on a selection of keys. Registered before /keys/:key routes.
+// Lazy sizes for the rows the Keys list shows (clusters omit size from
+// GET /keys). A read: no writeGuard. Body: { env, keys: [{ key, node? }] }.
+const MAX_SIZE_KEYS = 500;
+const isSizeItem = (i) =>
+    i &&
+    typeof i.key === 'string' &&
+    (i.node === undefined || i.node === null || typeof i.node === 'string');
+
+router.post('/keys/sizes', async (req, res) => {
+    const { env, keys } = req.body || {};
+    if (!env || typeof env !== 'string') {
+        return res.status(400).json({ error: 'env is required' });
+    }
+    if (
+        !Array.isArray(keys) ||
+        keys.length > MAX_SIZE_KEYS ||
+        !keys.every(isSizeItem)
+    ) {
+        return res.status(400).json({
+            error: `keys must be up to ${MAX_SIZE_KEYS} { key, node } items`
+        });
+    }
+    try {
+        res.json({ sizes: await keySizes(env, keys) });
+    } catch (error) {
+        fail(res, error);
+    }
+});
+
 router.post('/keys/ttl', writeGuard(), async (req, res) => {
     try {
         const { keys, seconds } = req.body; // seconds: n > 0, or null to PERSIST

@@ -14,6 +14,7 @@ import { NewKeyModal } from './NewKeyModal';
 import { useKeySelection } from './hooks/useKeySelection';
 import { useKeyDetail } from './hooks/useKeyDetail';
 import { useKeysQuery } from './hooks/useKeysQuery';
+import { useLazySizes } from './hooks/useLazySizes';
 
 type View = 'tree' | 'flat';
 
@@ -41,6 +42,7 @@ export function KeysPage() {
         `${env ?? ''}\u0000${pattern}\u0000${type}\u0000${ttl}`
     );
     const detail = useKeyDetail(env ?? null, selectedKey);
+    const sized = useLazySizes(env ?? null, data.meta);
 
     const rows: TreeRow[] = useMemo(
         () =>
@@ -178,7 +180,8 @@ export function KeysPage() {
                     ) : (
                         <KeyList
                             rows={rows}
-                            meta={data.meta}
+                            meta={sized.meta}
+                            onVisibleKeys={sized.onVisibleKeys}
                             pattern={pattern}
                             activeKey={selectedKey}
                             isSelected={selection.has}
