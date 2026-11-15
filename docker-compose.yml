@@ -8,8 +8,4 @@ services:
             - PORT=3000
         restart: unless-stopped
         volumes:
-            - redis-ui-data:/app/data
-
-volumes:
-    redis-ui-data:
-        driver: local
+            - ./data:/app/data
