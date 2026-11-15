@@ -6,6 +6,7 @@
 const { db } = require('../../services/database');
 const keyStore = require('../../services/keyStore');
 const { scanClusterNodes, getClusterNodes } = require('../../services/redis');
+const { pageMeta, keySizes } = require('../../services/keyMeta');
 const { countRedisCliSpawns } = require('../helpers/redisCliSpawns');
 const { enabled, SEED, nodeRemap } = require('../helpers/clusterTarget');
 
@@ -56,6 +57,29 @@ const CAP = 4;
         );
         expect(spawns.count).toBe(4 * order.length);
         expect(spawns.peak).toBe(CAP);
+    });
+
+    test('the 4-process cap covers every redis-cli call, not only SCAN', async () => {
+        await Promise.all(
+            Array.from({ length: 4 }, async () => {
+                const page = await scanClusterNodes(
+                    `${PREFIX}*`,
+                    ['0'],
+                    10,
+                    CONN
+                );
+                await pageMeta(CONN, page.keys, page.keyNodes);
+                await keySizes(
+                    CONN,
+                    page.keys.map((key) => ({
+                        key,
+                        node: page.keyNodes[key].id
+                    }))
+                );
+            })
+        );
+        expect(spawns.count).toBeGreaterThan(3 * order.length);
+        expect(spawns.peak).toBeLessThanOrEqual(CAP);
     });
 
     test('Load More walks every Key once, one cursor per Node in Node order', async () => {
