@@ -2,6 +2,7 @@
 const childProcess = require('child_process');
 const { getConnectionConfig } = require('./database');
 const { getClient } = require('./redisClient');
+const { scanBudget } = require('./scanBudget');
 
 // Split a redis command string into an argv array, honouring '...' / "..."
 // quoting and backslash escapes inside double quotes.
@@ -442,6 +443,16 @@ async function scanClusterNodes(
     type = null
 ) {
     const clusterMode = await isClusterMode(connectionId);
+    // Tier load budget (SPEC R8): cap COUNT, and pause before every hop that
+    // continues a scan (cursor '0' starts one, so a fresh search isn't delayed).
+    const { pauseMs, maxCount } = scanBudget(
+        getConnectionConfig(connectionId)?.tier
+    );
+    count = Math.min(count, maxCount);
+    const pause = (cursor) =>
+        pauseMs && cursor !== '0'
+            ? new Promise((r) => setTimeout(r, pauseMs))
+            : null;
 
     if (!clusterMode) {
         // Persistent socket — the route can loop SCAN hundreds of times to walk
@@ -449,6 +460,7 @@ async function scanClusterNodes(
         const cursor =
             Array.isArray(cursors) && cursors.length > 0 ? cursors[0] : '0';
         const client = await getClient(connectionId);
+        await pause(cursor);
         const reply = await client.scan(cursor, {
             MATCH: String(pattern),
             COUNT: count,
@@ -482,6 +494,7 @@ async function scanClusterNodes(
                 return { cursor: DONE, keys: [] };
             }
             try {
+                await pause(cursor);
                 const result = await limit(() =>
                     execRedisCommand(
                         `SCAN ${cursor} MATCH "${safePattern}" COUNT ${count}${type ? ` TYPE ${type}` : ''}`,
