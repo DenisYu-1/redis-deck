@@ -215,7 +215,12 @@ async function runCommand(command, config, nodeOverride, label) {
 // Execute a Redis command against a saved connection.
 async function execRedisCommand(command, connectionId, nodeOverride = null) {
     const config = getConnectionConfig(connectionId);
-    return runCommand(command, config, nodeOverride, connectionId);
+    try {
+        return await runCommand(command, config, nodeOverride, connectionId);
+    } catch (error) {
+        dropTopologyOnError(connectionId, error);
+        throw error;
+    }
 }
 
 // Run one command given as an argv array (no quoting/escaping to get wrong)
@@ -232,15 +237,19 @@ async function execArgv(argv, connectionId, nodeOverride = null) {
     try {
         out = (await runRedisCli(args)).trim();
     } catch (error) {
-        throw cliError(error, argv[0]);
+        const err = cliError(error, argv[0]);
+        dropTopologyOnError(connectionId, err);
+        throw err;
     }
     // redis-cli --json prints errors as: error:"ERR ..."
     if (out.startsWith('error:')) {
-        throw {
+        const err = {
             message: JSON.parse(out.slice(6)),
             command: argv[0],
             code: 'REDIS_ERROR'
         };
+        dropTopologyOnError(connectionId, err);
+        throw err;
     }
     return out ? JSON.parse(out) : null;
 }
@@ -290,8 +299,32 @@ async function isClusterMode(connectionId) {
     }
 }
 
+// Topology cache (SPEC R3): CLUSTER NODES per Connection id, kept 30 s.
+const TOPOLOGY_TTL_MS = 30000;
+const topologyCache = new Map(); // connectionId -> { nodes, at }
+
+function dropTopology(connectionId) {
+    topologyCache.delete(connectionId);
+}
+
+// A MOVED reply or an unreachable Node means the cached Node list may be stale.
+function dropTopologyOnError(connectionId, error) {
+    const message = String((error && error.message) || '');
+    if (
+        error?.code === 'ECONNREFUSED' ||
+        message.startsWith('Could not connect') ||
+        /^MOVED /.test(message)
+    ) {
+        dropTopology(connectionId);
+    }
+}
+
 // Get cluster nodes if in cluster mode
 async function getClusterNodes(connectionId) {
+    const cached = topologyCache.get(connectionId);
+    if (cached && Date.now() - cached.at < TOPOLOGY_TTL_MS) {
+        return cached.nodes;
+    }
     try {
         const config = getConnectionConfig(connectionId);
 
@@ -333,8 +366,9 @@ async function getClusterNodes(connectionId) {
             .filter((node) => node !== null);
 
         const masterNodes = nodes.filter((node) => node.isMaster);
-
-        return masterNodes.length > 0 ? masterNodes : nodes;
+        const resolved = masterNodes.length > 0 ? masterNodes : nodes;
+        topologyCache.set(connectionId, { nodes: resolved, at: Date.now() });
+        return resolved;
     } catch (error) {
         console.error('Error getting cluster nodes:', error);
         return [
@@ -475,6 +509,7 @@ module.exports = {
     parseRedisInfo,
     isClusterMode,
     getClusterNodes,
+    dropTopology,
     scanClusterNodes,
     execArgv
 };
