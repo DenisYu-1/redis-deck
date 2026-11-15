@@ -6,20 +6,41 @@ This document provides guidelines and instructions for contributing.
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/redis-cluster-ui.git`
+2. Clone your fork: `git clone https://github.com/your-username/redis-deck.git`
 3. Create a branch: `git checkout -b feature/your-feature-name`
-4. Install dependencies: `npm install`
-5. Make your changes
-6. Test your changes
-7. Commit your changes: `git commit -m "Add: description of your changes"`
-8. Push to your fork: `git push origin feature/your-feature-name`
-9. Create a Pull Request
+4. Install dependencies: `yarn install` (use yarn, not npm)
+5. Make your changes, then run `yarn lint`, `yarn type-check` and `yarn test`
+6. Push to your fork and open a Pull Request
 
 ## Development Setup
 
-1. Copy `.env.example` to `.env` and configure your Redis connection
-2. Run the development server: `npm run dev`
-3. Access the UI at `http://localhost:3000`
+Requires Node.js 22+ and `redis-cli` on your `PATH`.
+
+```bash
+yarn dev
+```
+
+This starts the Vite dev server at http://localhost:5173 (open this one) and the Express API at http://localhost:3000. Vite proxies `/api` to the backend. Add a Connection on the Connections page.
+
+Other commands:
+
+- `yarn build` then `yarn start`: production build, served on `:3000`
+- `yarn electron:dev`: run the Desktop app against the dev setup
+- `yarn electron:build`: build the installer into `dist-electron/`
+
+### Tests
+
+Tests open real Redis connections (no mocks), so Redis must be reachable. The default target is `127.0.0.1:6379`. Override it with `REDIS_TEST_HOST`, `REDIS_TEST_PORT`, `REDIS_TEST_USER`, `REDIS_TEST_PASSWORD`, `REDIS_TEST_TLS` and `REDIS_TEST_CLUSTER`. Test keys use the `test:*` prefix and are cleaned up after each test.
+
+```bash
+yarn test                     # all suites
+yarn test redis.test.js       # one suite
+yarn test -t "<name>"         # one case
+```
+
+### Workflows
+
+See [client/plugins/README.md](client/plugins/README.md). Any new write route or Workflow must go through `guards/writeGuard.js`.
 
 ## Code Style
 
