@@ -9,6 +9,7 @@ const connectionRoutes = require('../routes/connections');
 const searchRoutes = require('../routes/searches');
 const statsRoutes = require('../routes/stats');
 const workflowRoutes = require('../routes/workflows');
+const jobRoutes = require('../routes/jobs');
 
 function createApp({ middleware = [] } = {}) {
     const app = express();
@@ -33,6 +34,7 @@ function createApp({ middleware = [] } = {}) {
     app.use('/api', connectionRoutes);
     app.use('/api', searchRoutes);
     app.use('/api', workflowRoutes);
+    app.use('/api', jobRoutes);
     app.use('/api/stats', statsRoutes);
 
     // SPA fallback routes
