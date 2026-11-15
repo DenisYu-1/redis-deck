@@ -1,5 +1,5 @@
 // Per-page key metadata (type, TTL, memory) for the Keys list.
-const { isClusterMode } = require('./redis');
+const { isClusterMode, execArgvBatch, getClusterNodes } = require('./redis');
 const { run } = require('./keyStore');
 const { getClient } = require('./redisClient');
 
@@ -31,41 +31,115 @@ async function fetchPipelined(connectionId, keys) {
     return multi.exec();
 }
 
-// Cluster keys live on different nodes, so a single pipeline cannot serve them.
-// ponytail: per-key redis-cli calls; slow but correct. Replace with per-node pipelines if needed.
-async function fetchCluster(connectionId, keys) {
-    const out = [];
+const META_COMMANDS = (key) => [
+    ['TYPE', key],
+    ['TTL', key],
+    ['MEMORY', 'USAGE', key]
+];
+const MOVED = /^MOVED /;
+
+// Per-Key path for a Key without a known Node, or one a reshard moved away:
+// keyStore.run finds the owner through MOVED, the rest reuse that Node.
+async function fetchOwner(connectionId, commands) {
+    const first = await run(connectionId, commands[0]);
+    const rest = [];
+    for (const argv of commands.slice(1)) {
+        rest.push((await run(connectionId, argv, first.node)).result);
+    }
+    return { replies: [first.result, ...rest], node: first.node };
+}
+
+async function nodeIdOf(connectionId, address) {
+    if (!address) {
+        return undefined;
+    }
+    const nodes = await getClusterNodes(connectionId);
+    return nodes.find(
+        (n) => n.host === address.host && Number(n.port) === address.port
+    )?.id;
+}
+
+// Run `commandsFor(key)` for every Key: one redis-cli --json session per Node
+// the Keys came from. -> { [key]: { replies: [...], node: nodeId } }.
+// keyNodes: { [key]: { id, host, port } } from scanClusterNodes.
+async function fetchPerNode(connectionId, keys, keyNodes, commandsFor) {
+    const groups = new Map(); // node id -> { node, keys }
+    const out = {};
+    const orphans = [];
     for (const key of keys) {
-        // MOVED-safe: the first call finds the owning node, the rest reuse it.
-        const first = await run(connectionId, ['TYPE', key]);
-        const { node } = first;
-        out.push(
-            String(first.result),
-            (await run(connectionId, ['TTL', key], node)).result,
-            (await run(connectionId, ['MEMORY', 'USAGE', key], node)).result
+        const node = keyNodes[key];
+        if (!node) {
+            orphans.push(key);
+            continue;
+        }
+        if (!groups.has(node.id)) {
+            groups.set(node.id, { node, keys: [] });
+        }
+        groups.get(node.id).keys.push(key);
+    }
+
+    await Promise.all(
+        [...groups.values()].map(async ({ node, keys: nodeKeys }) => {
+            const per = nodeKeys.map(commandsFor);
+            const replies = await execArgvBatch(per.flat(), connectionId, node);
+            let at = 0;
+            nodeKeys.forEach((key, i) => {
+                const mine = replies.slice(at, at + per[i].length);
+                at += per[i].length;
+                const failed = mine.find((r) => 'error' in r);
+                if (failed && MOVED.test(failed.error)) {
+                    orphans.push(key); // resharded since the scan
+                    return;
+                }
+                if (failed) {
+                    throw { message: failed.error, code: 'REDIS_ERROR' };
+                }
+                out[key] = { replies: mine.map((r) => r.value), node: node.id };
+            });
+        })
+    );
+
+    for (const key of orphans) {
+        const { replies, node } = await fetchOwner(
+            connectionId,
+            commandsFor(key)
         );
+        out[key] = { replies, node: await nodeIdOf(connectionId, node) };
     }
     return out;
 }
 
 // -> { [key]: { type, ttl, size } }  (ttl: -1 no expiry, -2 gone; size bytes|null)
-async function pageMeta(connectionId, keys) {
+// On a cluster also { node: nodeId }. keyNodes: { [key]: Node } from the
+// scan; Keys without one are looked up per Key (MOVED-safe).
+async function pageMeta(connectionId, keys, keyNodes = {}) {
     if (keys.length === 0) {
         return {};
     }
-    const flat = (await isClusterMode(connectionId))
-        ? await fetchCluster(connectionId, keys)
-        : await fetchPipelined(connectionId, keys);
+    const toMeta = ([type, ttl, size]) => ({
+        type: String(type),
+        ttl: Number(ttl),
+        size: size === null || size === undefined ? null : Number(size)
+    });
     const meta = {};
+    if (await isClusterMode(connectionId)) {
+        const perKey = await fetchPerNode(
+            connectionId,
+            keys,
+            keyNodes,
+            META_COMMANDS
+        );
+        for (const key of keys) {
+            const { replies, node } = perKey[key];
+            meta[key] = { ...toMeta(replies), node };
+        }
+        return meta;
+    }
+    const flat = await fetchPipelined(connectionId, keys);
     keys.forEach((key, i) => {
-        const [type, ttl, size] = flat.slice(i * 3, i * 3 + 3);
-        meta[key] = {
-            type: String(type),
-            ttl: Number(ttl),
-            size: size === null || size === undefined ? null : Number(size)
-        };
+        meta[key] = toMeta(flat.slice(i * 3, i * 3 + 3));
     });
     return meta;
 }
 
-module.exports = { pageMeta, matchesTtl, TYPES, TTL_FILTERS };
+module.exports = { pageMeta, fetchPerNode, matchesTtl, TYPES, TTL_FILTERS };

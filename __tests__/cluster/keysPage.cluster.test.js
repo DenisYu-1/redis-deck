@@ -12,6 +12,7 @@ const { db } = require('../../services/database');
 const { createApp } = require('../../config/app');
 const keyStore = require('../../services/keyStore');
 const { countRedisCliSpawns } = require('../helpers/redisCliSpawns');
+const { clusterNodes } = require('../helpers/clusterTarget');
 
 const FLAG = process.env.REDIS_TEST_CLUSTER;
 const enabled = Boolean(FLAG) && FLAG !== 'false';
@@ -94,12 +95,17 @@ const FIXTURE = Array.from({ length: 50 }, (_, i) => ({
     // per page = 8 for scanning (2 hops x (CLUSTER NODES + 3 SCAN)) + 184 for
     // Page meta (50 TYPE on the seed, 34 MOVED retries, 50 TTL, 50 MEMORY).
     // Scan hops vary with the cluster's other data, so only Page meta is
-    // gated. Later tickets tighten this to <= 1 spawn per Node (SPEC R1).
-    const BASELINE_PAGE_META_SPAWNS = 184;
+    // gated: at most one batched spawn per Node per scan hop (SPEC R1).
     const isScanSpawn = (args) =>
         args.includes('--csv') || args.includes('CLUSTER');
 
-    test(`a 50-Key page returns the same Keys, types and TTLs with <= ${BASELINE_PAGE_META_SPAWNS} Page meta spawns`, async () => {
+    test('a 50-Key page returns the same Keys, types, TTLs and sizes as the per-Key path with <= 1 Page meta spawn per Node', async () => {
+        const masters = clusterNodes();
+        // The old per-Key path (TYPE, MOVED retry, MEMORY USAGE) as reference.
+        const expectedSize = {};
+        for (const { key } of FIXTURE) {
+            expectedSize[key] = (await keyStore.readMeta(CONN, key)).memory;
+        }
         spawns.reset();
         const { body } = await request(app)
             .get('/api/keys')
@@ -121,9 +127,12 @@ const FIXTURE = Array.from({ length: 50 }, (_, i) => ({
             }
             // Size is lazy on clusters after ticket 06; when present it is real.
             if (meta.size != null) {
-                expect(meta.size).toBeGreaterThan(0);
+                expect(meta.size).toBe(expectedSize[key]);
             }
+            expect(masters.map((n) => n.id)).toContain(meta.node);
         }
-        expect(pageMetaSpawns).toBeLessThanOrEqual(BASELINE_PAGE_META_SPAWNS);
+        expect(pageMetaSpawns).toBeLessThanOrEqual(
+            masters.length * body.scan.iterations
+        );
     });
 });

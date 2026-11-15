@@ -77,7 +77,7 @@ router.get('/keys', async (req, res) => {
             // SCAN may repeat a key across calls; metadata is per page.
             const fresh = [...new Set(result.keys)];
             returned += fresh.length;
-            const pageKeys = await pageMeta(env, fresh);
+            const pageKeys = await pageMeta(env, fresh, result.keyNodes);
             const kept = fresh.filter((k) => {
                 meta[k] = pageKeys[k];
                 return matchesTtl(ttlFilter, pageKeys[k].ttl);
