@@ -64,7 +64,7 @@ export function useKeysQuery(env: string | null, query: KeysQuery) {
             let cursors = base.cursors;
             let added = 0;
             try {
-                for (;;) {
+                while (true) {
                     const res = await searchKeys(
                         query.pattern || '*',
                         cursors,
