@@ -25,7 +25,7 @@ const props = {
     env: 'c1',
     pattern: 'user:*',
     type: '',
-    readOnly: false,
+    disabled: false,
     onFinished: jest.fn()
 };
 
@@ -45,11 +45,11 @@ it('starts a delete job for the pattern and shows its progress', async () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete all' }));
 
     expect(startDeleteJob).toHaveBeenCalledWith(
-        { pattern: 'user:*', type: undefined },
+        { pattern: 'user:*' },
         'c1'
     );
     expect(await screen.findByRole('status')).toHaveTextContent(
-        'Deleting user:* · 25 deleted · 40 scanned'
+        'Deleting · 25 deleted · 40 scanned'
     );
 });
 
@@ -90,7 +90,7 @@ it('reports a failed job with its error', async () => {
 });
 
 it('is disabled on a read-only Connection', () => {
-    render(<DeleteMatching {...props} readOnly />);
+    render(<DeleteMatching {...props} disabled />);
     expect(
         screen.getByRole('button', { name: 'Delete all matching…' })
     ).toBeDisabled();

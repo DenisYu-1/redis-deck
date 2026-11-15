@@ -8,7 +8,8 @@ import type {
     CommandStatsResponse,
     MemoryByPatternResponse,
     SlowLogResponse,
-    HistoryResponse
+    HistoryResponse,
+    Job
 } from '@/types';
 import type { WorkflowPlugin, WorkflowRun } from '@/types/workflows';
 import { useAppStore } from '@/store/useAppStore';
@@ -433,6 +434,41 @@ export async function deleteKeys(
         environment
     );
     return handleResponse<{ deleted: number }>(response);
+}
+
+/** Bulk delete as a server job: a pattern (optionally a SCAN type) or Keys. */
+export async function startDeleteJob(
+    target: { pattern: string; type?: string } | { keys: string[] },
+    environment: string
+): Promise<Job> {
+    const response = await writeFetch(
+        `${API_BASE}/jobs/delete?env=${encodeURIComponent(environment)}`,
+        jsonPost(target),
+        environment
+    );
+    return handleResponse<Job>(response);
+}
+
+export async function getJob(id: string): Promise<Job> {
+    return handleResponse<Job>(await fetch(`${API_BASE}/jobs/${id}`));
+}
+
+/** Newest first. */
+export async function listJobs(
+    environment: string,
+    kind: string
+): Promise<Job[]> {
+    const params = new URLSearchParams({ env: environment, kind });
+    const { jobs } = await handleResponse<{ jobs: Job[] }>(
+        await fetch(`${API_BASE}/jobs?${params.toString()}`)
+    );
+    return jobs;
+}
+
+export async function cancelJob(id: string): Promise<Job> {
+    return handleResponse<Job>(
+        await fetch(`${API_BASE}/jobs/${id}/cancel`, { method: 'POST' })
+    );
 }
 
 export interface ExportedKey {

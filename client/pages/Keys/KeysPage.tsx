@@ -6,6 +6,7 @@ import type { TtlFilter } from '@/types';
 import { buildKeyTree, flattenTree, type TreeRow } from '@/utils/keyTree';
 import { formatNumber } from '@/utils/formatter';
 import { BulkActions } from './BulkActions';
+import { DeleteMatching } from './DeleteMatching';
 import { KeyDetail } from './KeyDetail';
 import { KeyList } from './KeyList';
 import { KeyToolbar } from './KeyToolbar';
@@ -198,6 +199,16 @@ export function KeysPage() {
                         <span className="mono xs mu">
                             {formatNumber(data.keys.length)} loaded
                         </span>
+                        {env && (
+                            <DeleteMatching
+                                key={env}
+                                env={env}
+                                pattern={pattern || '*'}
+                                type={type}
+                                disabled={readOnly || ttl !== 'any'}
+                                onFinished={data.reload}
+                            />
+                        )}
                         {data.loading && scan.iterations > 0 ? (
                             <button
                                 type="button"

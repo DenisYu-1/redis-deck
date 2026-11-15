@@ -69,6 +69,20 @@ export interface FailedNode {
     error: string;
 }
 
+/** A server job (bulk delete, export). In memory; lost on server restart. */
+export interface Job {
+    id: string;
+    kind: string;
+    /** Connection id. */
+    env: string;
+    state: 'running' | 'done' | 'cancelled' | 'failed';
+    progress: { scanned: number; deleted: number };
+    error?: string;
+    failedNodes?: FailedNode[];
+    startedAt: number;
+    finishedAt?: number;
+}
+
 export interface SearchKeysResponse {
     keys: string[];
     cursors: string[];
