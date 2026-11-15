@@ -70,11 +70,15 @@ docker compose up -d
 
 Open http://localhost:2222 and add a Connection.
 
+Connections (including passwords), Saved searches and statistics are stored in `./data` next to `docker-compose.yml`. Keep that folder private and back it up.
+
 ### From source
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Writing a Workflow
+
+This builds the Workflow into your own build from source. To add one to the Docker image or the Desktop app without rebuilding, use an [External Plugin](#external-plugins) instead.
 
 Declare the action in `client/plugins/config/config.override.json`:
 
