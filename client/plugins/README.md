@@ -7,7 +7,9 @@ In v2 a plugin is a **manifest of Workflow actions** plus server-side handlers. 
 - `config/config.json` (tracked): built-in plugins.
 - `config/config.override.json` (gitignored, see `config.override.json.example`): private plugins and overrides. Merged by plugin `id`, override wins, `"enabled": false` disables.
 
-The backend (`services/workflows.js`) reads both files; the frontend gets the merged list from `GET /api/workflows`.
+- `$DATA_DIR/plugins/config.json` (External Plugins, loaded at runtime from the data folder; handlers in `$DATA_DIR/plugins/<pluginId>/<actionId>.js`). Merged last, so it wins. Use this to add Workflows to a Docker image or Desktop app without rebuilding; see [External plugins](../../README.md#external-plugins).
+
+The backend (`services/workflows.js`) reads all three files; the frontend gets the merged list from `GET /api/workflows`.
 
 ```json
 {
@@ -43,7 +45,7 @@ The backend (`services/workflows.js`) reads both files; the frontend gets the me
 
 ## Handlers
 
-Each action needs `services/workflows/<pluginId>/<actionId>.js` (private: gitignored `services/workflows/extensions/<pluginId>/<actionId>.js`):
+Each action needs `<pluginId>/<actionId>.js` in `$DATA_DIR/plugins/` (External), `services/workflows/` (built-in) or gitignored `services/workflows/extensions/` (private), looked up in that order:
 
 ```js
 module.exports = {
