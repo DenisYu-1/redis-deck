@@ -47,8 +47,8 @@ Two processes, one repo:
 
 **Plugins = Workflows** — there is no client-side plugin runtime any more.
 
-- Manifests: `client/plugins/config/config.json` (tracked) merged with gitignored `config.override.json` by plugin `id` (override wins, `enabled:false` disables), read by `services/workflows.js` and served via `GET /api/workflows`.
-- Handlers: `services/workflows/<pluginId>/<actionId>.js` exporting `plan` and `run`; private ones in gitignored `services/workflows/extensions/`. See `client/plugins/README.md`.
+- Manifests: `client/plugins/config/config.json` (tracked) merged with gitignored `config.override.json` by plugin `id` (override wins, `enabled:false` disables), read by `services/workflows.js` and served via `GET /api/workflows`. The External Plugins manifest `$DATA_DIR/plugins/config.json` is merged last.
+- Handlers: `services/workflows/<pluginId>/<actionId>.js` exporting `plan` and `run`; private ones in gitignored `services/workflows/extensions/`. External handlers in `$DATA_DIR/plugins/<pluginId>/<actionId>.js` are looked up first. See `client/plugins/README.md`.
 - `/api/custom/execute` was removed; do not reintroduce generic command execution.
 
 ## Notes

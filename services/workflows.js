@@ -1,11 +1,7 @@
-// Workflow registry: manifests come from the plugin config plus the External
-// Plugins manifest at $DATA_DIR/plugins/config.json; handlers from
-// $DATA_DIR/plugins/<pluginId>/<actionId>.js, then
-// services/workflows/<pluginId>/<actionId>.js, then the gitignored
-// services/workflows/extensions/<pluginId>/<actionId>.js.
 const fs = require('fs');
 const path = require('path');
-const { getDatabase, getDataDir } = require('./database');
+const { getDatabase } = require('./database');
+const { getDataDir } = require('./dataDir');
 const { execRedisCommand, execArgv } = require('./redis');
 
 const CONFIG_DIR = path.join(__dirname, '..', 'client', 'plugins', 'config');
@@ -27,12 +23,20 @@ class WorkflowError extends Error {
     }
 }
 
-// A missing or malformed manifest counts as empty.
+const isValidPlugin = (p) =>
+    typeof p === 'object' &&
+    p !== null &&
+    typeof p.id === 'string' &&
+    ID_RE.test(p.id) &&
+    (p.actions === undefined || Array.isArray(p.actions));
+
+// A manifest's valid plugin entries; a missing or malformed manifest is empty.
 function readManifest(file) {
     try {
-        return JSON.parse(fs.readFileSync(file, 'utf8'));
+        const { plugins } = JSON.parse(fs.readFileSync(file, 'utf8')) ?? {};
+        return Array.isArray(plugins) ? plugins.filter(isValidPlugin) : [];
     } catch {
-        return { plugins: [] };
+        return [];
     }
 }
 
@@ -45,8 +49,7 @@ function loadPlugins() {
         path.join(externalDir(), 'config.json')
     ];
     for (const file of manifests) {
-        const { plugins } = readManifest(file) ?? {};
-        for (const p of Array.isArray(plugins) ? plugins : []) {
+        for (const p of readManifest(file)) {
             merged.set(p.id, { ...merged.get(p.id), ...p });
         }
     }

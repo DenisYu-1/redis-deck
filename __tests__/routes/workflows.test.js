@@ -257,6 +257,29 @@ describe('External Plugins in DATA_DIR/plugins', () => {
         expect(res.body.plugins.map((p) => p.id)).toContain('examples');
     });
 
+    it('skips badly shaped entries and keeps the rest', async () => {
+        writeExternal(
+            {
+                plugins: [
+                    null,
+                    'examples',
+                    { id: 'examples', actions: {} },
+                    { id: 'examples', actions: 'x' },
+                    { name: 'No id', actions: [{ id: 'hello' }] },
+                    { id: 'ext-demo', actions: [{ id: 'hello' }] }
+                ]
+            },
+            { 'ext-demo/hello': handler('ext plan', 'ext run') }
+        );
+        const res = await request(app).get('/api/workflows');
+        expect(res.status).toBe(200);
+        const ids = res.body.plugins.map((p) => p.id);
+        expect(ids).toContain('ext-demo');
+        const examples = res.body.plugins.find((p) => p.id === 'examples');
+        expect(examples.actions.map((a) => a.fullId)).toContain(COUNT);
+        expect(res.body.plugins.find((p) => !p.id)).toBeUndefined();
+    });
+
     it('leaves a Plugin with no handler on disk unlisted', async () => {
         writeExternal({
             plugins: [{ id: 'ext-ghost', actions: [{ id: 'boo' }] }]
