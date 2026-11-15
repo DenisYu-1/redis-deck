@@ -144,7 +144,8 @@ const FIXTURE = Array.from({ length: 50 }, (_, i) => ({
         spawns.reset();
         const { body } = await request(app)
             .post('/api/keys/sizes')
-            .send({ env: CONN, keys: items })
+            .query({ env: CONN })
+            .send({ keys: items })
             .expect(200);
         expect(spawns.count).toBeLessThanOrEqual(masters.length);
         expect(body.sizes).toEqual(expectedSize);
@@ -155,7 +156,8 @@ const FIXTURE = Array.from({ length: 50 }, (_, i) => ({
         try {
             const { body: gone } = await request(app)
                 .post('/api/keys/sizes')
-                .send({ env: CONN, keys: [{ key, node }] })
+                .query({ env: CONN })
+                .send({ keys: [{ key, node }] })
                 .expect(200);
             expect(gone.sizes).toEqual({ [key]: null });
         } finally {

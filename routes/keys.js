@@ -138,7 +138,7 @@ router.get('/keys', async (req, res) => {
 
 // Bulk operations on a selection of keys. Registered before /keys/:key routes.
 // Lazy sizes for the rows the Keys list shows (clusters omit size from
-// GET /keys). A read: no writeGuard. Body: { env, keys: [{ key, node? }] }.
+// GET /keys). A read: no writeGuard. ?env=, body: { keys: [{ key, node? }] }.
 const MAX_SIZE_KEYS = 500;
 const isSizeItem = (i) =>
     i &&
@@ -146,7 +146,8 @@ const isSizeItem = (i) =>
     (i.node === undefined || i.node === null || typeof i.node === 'string');
 
 router.post('/keys/sizes', async (req, res) => {
-    const { env, keys } = req.body || {};
+    const env = req.query.env;
+    const { keys } = req.body || {};
     if (!env || typeof env !== 'string') {
         return res.status(400).json({ error: 'env is required' });
     }

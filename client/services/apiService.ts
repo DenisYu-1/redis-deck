@@ -400,8 +400,8 @@ export async function getKeySizes(
     environment: string
 ): Promise<Record<string, number | null>> {
     const response = await fetch(
-        `${API_BASE}/keys/sizes`,
-        jsonPost({ env: environment, keys })
+        `${API_BASE}/keys/sizes?env=${encodeURIComponent(environment)}`,
+        jsonPost({ keys })
     );
     return (
         await handleResponse<{ sizes: Record<string, number | null> }>(response)
