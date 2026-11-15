@@ -31,9 +31,7 @@ describe('GET /api/keys time budget', () => {
             .expect(200);
 
     test('an exhausted budget returns a partial page with cursor and stats', async () => {
-        const { body } = await search(createApp({ searchBudgetMs: 0 }), [
-            '0'
-        ]);
+        const { body } = await search(createApp({ searchBudgetMs: 0 }), ['0']);
         expect(body.hasMore).toBe(true);
         expect(body.cursors).toHaveLength(1);
         expect(body.cursors[0]).not.toBe('0');

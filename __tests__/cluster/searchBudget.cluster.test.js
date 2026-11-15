@@ -24,7 +24,9 @@ const onEveryMaster = (verb, keys) => {
     for (const { reachable } of clusterNodes()) {
         const [host, port] = reachable.split(':');
         execFileSync('redis-cli', ['-h', host, '-p', port], {
-            input: keys.map((k) => `${verb} ${k}${verb === 'SET' ? ' x' : ''}`).join('\n'),
+            input: keys
+                .map((k) => `${verb} ${k}${verb === 'SET' ? ' x' : ''}`)
+                .join('\n'),
             maxBuffer: 64 * 1024 * 1024
         });
     }

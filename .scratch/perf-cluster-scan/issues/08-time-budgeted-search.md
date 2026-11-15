@@ -4,11 +4,11 @@
 
 **Blocked by:** 04, 07
 
-**Status:** ready-for-agent
+**Status:** done
 
 Spec: `docs/perf-cluster-scan/SPEC.md`. Constraint: `redis-cli` is the only transport on clustered Connections (ADR 0002).
 
-- [ ] Request stops after the 2 s budget and returns hasMore with a valid cursor set and stats
-- [ ] Client auto-continues until the page fills or the scan ends, showing a scanned-count progress
-- [ ] User can stop an in-progress search
-- [ ] Rare pattern on a large keyspace eventually completes with no keys lost or duplicated across continues
+- [x] Request stops after the 2 s budget and returns hasMore with a valid cursor set and stats
+- [x] Client auto-continues until the page fills or the scan ends, showing a scanned-count progress
+- [x] User can stop an in-progress search
+- [x] Rare pattern on a large keyspace eventually completes with no keys lost or duplicated across continues

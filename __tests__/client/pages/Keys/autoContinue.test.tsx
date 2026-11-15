@@ -49,7 +49,13 @@ it('continues a partial search until the scan ends', async () => {
 it('shows scanned progress and lets the user stop', async () => {
     let calls = 0;
     (searchKeys as jest.Mock).mockImplementation(
-        (_p: string, _c: string[], _n: number, _e: string, signal: AbortSignal) => {
+        (
+            _p: string,
+            _c: string[],
+            _n: number,
+            _e: string,
+            signal: AbortSignal
+        ) => {
             calls++;
             if (calls === 1) return Promise.resolve(partial('11', 7));
             // Second request hangs until aborted.
@@ -69,7 +75,9 @@ it('shows scanned progress and lets the user stop', async () => {
     // Stopped: resumable from the last cursor set, no further requests.
     const more = await screen.findByRole('button', { name: 'Load more' });
     expect(more).toBeEnabled();
-    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
+    expect(
+        screen.queryByRole('button', { name: 'Stop' })
+    ).not.toBeInTheDocument();
     expect(calls).toBe(2);
 
     (searchKeys as jest.Mock).mockResolvedValue({
