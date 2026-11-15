@@ -53,6 +53,7 @@ router.get('/keys', async (req, res) => {
         let nextCursors = cursors;
         let iterations = 0;
         let hasMore = false;
+        let failedNodes = [];
         // Bounded so proving "no match" over a huge keyspace can't hang the
         // request. When we stop early, hasMore stays true and Load More resumes
         // from the cursor. ponytail: raise MAX_ITERATIONS or add a real key
@@ -84,8 +85,16 @@ router.get('/keys', async (req, res) => {
             keys = keys.concat(kept);
             nextCursors = result.cursors;
             hasMore = result.hasMore;
+            failedNodes = result.failedNodes;
             iterations++;
-        } while (keys.length < count && hasMore && iterations < MAX_ITERATIONS);
+            // A failed Node is not retried within this request: return what the
+            // healthy Nodes gave and let the user continue (which retries it).
+        } while (
+            keys.length < count &&
+            hasMore &&
+            failedNodes.length === 0 &&
+            iterations < MAX_ITERATIONS
+        );
 
         // No trimming: return everything the sweep found so the cursor we hand
         // back lines up exactly with these keys (Load More must not skip any).
@@ -93,6 +102,7 @@ router.get('/keys', async (req, res) => {
             keys,
             cursors: nextCursors, // Array of cursors (one for each node)
             hasMore,
+            failedNodes,
             total: keys.length + (hasMore ? '?' : 0),
             meta: Object.fromEntries(keys.map((k) => [k, meta[k]])),
             scan: {
@@ -152,6 +162,13 @@ router.get('/allkeys', async (req, res) => {
         // Keep scanning until we get all keys
         while (hasMore) {
             const result = await scanClusterNodes(pattern, cursors, 10000, env);
+            // A failed Node never finishes; stop rather than act on part of it.
+            if (result.failedNodes.length > 0) {
+                return res.status(502).json({
+                    error: 'Some cluster Nodes could not be scanned',
+                    failedNodes: result.failedNodes
+                });
+            }
             keys.push(...result.keys);
             cursors = result.cursors;
             hasMore = result.hasMore;
@@ -264,6 +281,13 @@ router.delete('/allkeys', writeGuard(), async (req, res) => {
         // Keep scanning until we get all keys
         while (hasMore) {
             const result = await scanClusterNodes(pattern, cursors, 10000, env);
+            // A failed Node never finishes; stop rather than act on part of it.
+            if (result.failedNodes.length > 0) {
+                return res.status(502).json({
+                    error: 'Some cluster Nodes could not be scanned',
+                    failedNodes: result.failedNodes
+                });
+            }
             keys.push(...result.keys);
             cursors = result.cursors;
             hasMore = result.hasMore;

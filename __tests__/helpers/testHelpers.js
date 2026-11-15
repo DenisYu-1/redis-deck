@@ -75,6 +75,9 @@ async function deleteTestKeys(
                 10000,
                 connectionId
             );
+            if (result.failedNodes.length > 0) {
+                throw new Error('Some cluster Nodes could not be scanned');
+            }
             keys.push(...result.keys);
             cursors = result.cursors;
             hasMore = result.hasMore;

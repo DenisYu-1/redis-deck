@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { searchKeys } from '@/services/apiService';
-import type { KeyMeta, ScanStats, TtlFilter } from '@/types';
+import type { FailedNode, KeyMeta, ScanStats, TtlFilter } from '@/types';
 
 const PAGE_SIZE = 100;
 
@@ -15,6 +15,8 @@ interface State {
     meta: Record<string, KeyMeta>;
     cursors: string[];
     hasMore: boolean;
+    /** Nodes that failed on the latest page; Load more retries them. */
+    failedNodes: FailedNode[];
     loading: boolean;
     error: string | null;
     /** Cumulative over the pages loaded for the current query. */
@@ -30,6 +32,7 @@ const INITIAL: State = {
     meta: {},
     cursors: ['0'],
     hasMore: false,
+    failedNodes: [],
     loading: false,
     error: null,
     scan: EMPTY_SCAN,
@@ -71,6 +74,7 @@ export function useKeysQuery(env: string | null, query: KeysQuery) {
                     meta: { ...(reset ? {} : s.meta), ...(res.meta ?? {}) },
                     cursors: res.cursors,
                     hasMore: res.hasMore,
+                    failedNodes: res.failedNodes ?? [],
                     loading: false,
                     scan: {
                         iterations:

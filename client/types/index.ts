@@ -59,10 +59,19 @@ export interface ScanStats {
 
 export type TtlFilter = 'any' | 'has' | 'none' | 'lt1h';
 
+/** A cluster Node whose SCAN failed; its cursor is kept so a continue retries it. */
+export interface FailedNode {
+    id: string;
+    /** host:port as the cluster announces it. */
+    address: string;
+    error: string;
+}
+
 export interface SearchKeysResponse {
     keys: string[];
     cursors: string[];
     hasMore: boolean;
+    failedNodes?: FailedNode[];
     total: string;
     meta?: Record<string, KeyMeta>;
     scan?: ScanStats;

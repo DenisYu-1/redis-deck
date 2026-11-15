@@ -357,6 +357,11 @@ function parseScanCsv(result) {
     return { nextCursor, keys };
 }
 
+// Scan cursor set entry for a Node that has finished its SCAN.
+const DONE = 'done';
+
+// -> { keys, cursors, hasMore, failedNodes: [{ id, address, error }] }.
+// A failed Node keeps its cursor and counts as hasMore, so a continue retries it.
 // ponytail: no result cache here on purpose — SCAN feeds delete-then-rescan
 // loops and post-write searches, where a stale hit is a correctness bug.
 // Duplicate rapid fires are de-duped client-side (AbortController). The cheap
@@ -385,7 +390,8 @@ async function scanClusterNodes(
         return {
             keys: reply.keys,
             cursors: [nextCursor],
-            hasMore: nextCursor !== '0'
+            hasMore: nextCursor !== '0',
+            failedNodes: []
         };
     }
 
@@ -396,11 +402,18 @@ async function scanClusterNodes(
     const nodes = await getClusterNodes(connectionId);
     let allKeys = [];
     const nextCursors = [];
+    const failedNodes = [];
     let hasMore = false;
 
     for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
         const cursor = Array.isArray(cursors) && cursors[i] ? cursors[i] : '0';
+        // SCAN's '0' means both "start" and "finished", so a finished Node is
+        // marked DONE instead; otherwise it would be rescanned from the start.
+        if (cursor === DONE) {
+            nextCursors[i] = DONE;
+            continue;
+        }
         try {
             const result = await execRedisCommand(
                 `SCAN ${cursor} MATCH "${safePattern}" COUNT ${count}${type ? ` TYPE ${type}` : ''}`,
@@ -409,7 +422,7 @@ async function scanClusterNodes(
             );
             const { nextCursor, keys } = parseScanCsv(result);
             allKeys = allKeys.concat(keys);
-            nextCursors[i] = nextCursor;
+            nextCursors[i] = nextCursor === '0' ? DONE : nextCursor;
             if (nextCursor !== '0') {
                 hasMore = true;
             }
@@ -417,8 +430,16 @@ async function scanClusterNodes(
                 `Node ${node.id}: found ${keys.length} keys, next cursor: ${nextCursor}`
             );
         } catch (error) {
+            // Keep the cursor so the next continue retries this Node from
+            // where it stopped; the caller shows it as failed.
             console.error(`Error scanning node ${node.id}:`, error);
-            nextCursors[i] = '0';
+            nextCursors[i] = cursor;
+            failedNodes.push({
+                id: node.id,
+                address: `${node.host}:${node.port}`,
+                error: error.message || String(error)
+            });
+            hasMore = true;
         }
     }
 
@@ -426,7 +447,7 @@ async function scanClusterNodes(
         `Cluster scan complete: ${allKeys.length} total keys across ${nodes.length} nodes`
     );
 
-    return { keys: allKeys, cursors: nextCursors, hasMore };
+    return { keys: allKeys, cursors: nextCursors, hasMore, failedNodes };
 }
 
 async function execRedisPipelinedCommands(
