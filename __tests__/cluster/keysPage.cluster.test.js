@@ -95,7 +95,7 @@ const FIXTURE = Array.from({ length: 50 }, (_, i) => ({
     // per page = 8 for scanning (2 hops x (CLUSTER NODES + 3 SCAN)) + 184 for
     // Page meta (50 TYPE on the seed, 34 MOVED retries, 50 TTL, 50 MEMORY).
     // Scan hops vary with the cluster's other data, so only Page meta is
-    // gated: at most one batched spawn per Node per scan hop (SPEC R1).
+    // gated: at most one batched spawn per Node per page (SPEC R1).
     const isScanSpawn = (args) =>
         args.includes('--csv') || args.includes('CLUSTER');
 
@@ -131,8 +131,6 @@ const FIXTURE = Array.from({ length: 50 }, (_, i) => ({
             }
             expect(masters.map((n) => n.id)).toContain(meta.node);
         }
-        expect(pageMetaSpawns).toBeLessThanOrEqual(
-            masters.length * body.scan.iterations
-        );
+        expect(pageMetaSpawns).toBeLessThanOrEqual(masters.length);
     });
 });
