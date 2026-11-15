@@ -13,12 +13,16 @@ One Redis server inside a clustered Connection, holding a share of the Keys. A n
 _Avoid_: Shard, master, instance
 
 **Scan cursor set**:
-The page position the UI hands back to continue a Key search: one cursor per Node.
+The page position the UI hands back to continue a Key search: one cursor per Node, in Node id order. `'0'` means the Node's scan has not started; `'done'` marks a Node that has finished (SCAN itself uses `0` for both).
 _Avoid_: Offset, page token
 
 **Page meta**:
-The type, TTL and size shown on each Key row of a result page.
+The type, TTL and size shown on each Key row of a result page. On a clustered Connection it is type, TTL and the Node holding the Key; the size is fetched later, only for the rows on screen.
 _Avoid_: Key info, row data
+
+**Job**:
+A bulk operation (delete or export) running on the server, in memory: an id, a kind, progress counters and a state (`running`, `done`, `cancelled`, `failed`). The UI polls it and can cancel it. Jobs are lost when the server restarts.
+_Avoid_: Task, background process
 
 **Tier**:
 A label on a Connection saying how dangerous it is: `local`, `staging` or `production`. Shown as a badge.
