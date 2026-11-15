@@ -394,6 +394,40 @@ function parseScanCsv(result) {
 // Scan cursor set entry for a Node that has finished its SCAN.
 const DONE = 'done';
 
+// Most redis-cli processes a Connection's Node scans run at once (SPEC R2).
+const MAX_CLI_PER_CONNECTION = 4;
+const cliLimiters = new Map(); // connectionId -> limit(fn)
+
+// Shared per Connection, so concurrent searches together stay under the cap.
+function cliLimiter(connectionId) {
+    if (!cliLimiters.has(connectionId)) {
+        let active = 0;
+        const queue = [];
+        const next = () => {
+            if (active < MAX_CLI_PER_CONNECTION && queue.length) {
+                active++;
+                queue.shift()();
+            }
+        };
+        cliLimiters.set(
+            connectionId,
+            (fn) =>
+                new Promise((resolve, reject) => {
+                    queue.push(() =>
+                        fn()
+                            .then(resolve, reject)
+                            .finally(() => {
+                                active--;
+                                next();
+                            })
+                    );
+                    next();
+                })
+        );
+    }
+    return cliLimiters.get(connectionId);
+}
+
 // -> { keys, cursors, hasMore, failedNodes: [{ id, address, error }] }.
 // A failed Node keeps its cursor and counts as hasMore, so a continue retries it.
 // ponytail: no result cache here on purpose — SCAN feeds delete-then-rescan
@@ -434,48 +468,54 @@ async function scanClusterNodes(
         .replace(/\\/g, '\\\\')
         .replace(/"/g, '\\"');
     const nodes = await getClusterNodes(connectionId);
-    let allKeys = [];
-    const nextCursors = [];
-    const failedNodes = [];
-    let hasMore = false;
+    const limit = cliLimiter(connectionId);
 
-    for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i];
-        const cursor = Array.isArray(cursors) && cursors[i] ? cursors[i] : '0';
-        // SCAN's '0' means both "start" and "finished", so a finished Node is
-        // marked DONE instead; otherwise it would be rescanned from the start.
-        if (cursor === DONE) {
-            nextCursors[i] = DONE;
-            continue;
-        }
-        try {
-            const result = await execRedisCommand(
-                `SCAN ${cursor} MATCH "${safePattern}" COUNT ${count}${type ? ` TYPE ${type}` : ''}`,
-                connectionId,
-                node
-            );
-            const { nextCursor, keys } = parseScanCsv(result);
-            allKeys = allKeys.concat(keys);
-            nextCursors[i] = nextCursor === '0' ? DONE : nextCursor;
-            if (nextCursor !== '0') {
-                hasMore = true;
+    // Nodes scan concurrently; results are assembled in Node order so the
+    // Scan cursor set and Key order match the sequential path.
+    const results = await Promise.all(
+        nodes.map(async (node, i) => {
+            const cursor =
+                Array.isArray(cursors) && cursors[i] ? cursors[i] : '0';
+            // SCAN's '0' means both "start" and "finished", so a finished Node
+            // is marked DONE instead; otherwise it would be rescanned.
+            if (cursor === DONE) {
+                return { cursor: DONE, keys: [] };
             }
-            console.log(
-                `Node ${node.id}: found ${keys.length} keys, next cursor: ${nextCursor}`
-            );
-        } catch (error) {
-            // Keep the cursor so the next continue retries this Node from
-            // where it stopped; the caller shows it as failed.
-            console.error(`Error scanning node ${node.id}:`, error);
-            nextCursors[i] = cursor;
-            failedNodes.push({
-                id: node.id,
-                address: `${node.host}:${node.port}`,
-                error: error.message || String(error)
-            });
-            hasMore = true;
-        }
-    }
+            try {
+                const result = await limit(() =>
+                    execRedisCommand(
+                        `SCAN ${cursor} MATCH "${safePattern}" COUNT ${count}${type ? ` TYPE ${type}` : ''}`,
+                        connectionId,
+                        node
+                    )
+                );
+                const { nextCursor, keys } = parseScanCsv(result);
+                console.log(
+                    `Node ${node.id}: found ${keys.length} keys, next cursor: ${nextCursor}`
+                );
+                return { cursor: nextCursor === '0' ? DONE : nextCursor, keys };
+            } catch (error) {
+                // Keep the cursor so the next continue retries this Node from
+                // where it stopped; the caller shows it as failed.
+                console.error(`Error scanning node ${node.id}:`, error);
+                return {
+                    cursor,
+                    keys: [],
+                    failed: {
+                        id: node.id,
+                        address: `${node.host}:${node.port}`,
+                        error: error.message || String(error)
+                    }
+                };
+            }
+        })
+    );
+
+    const allKeys = results.flatMap((r) => r.keys);
+    const nextCursors = results.map((r) => r.cursor);
+    const failedNodes = results.filter((r) => r.failed).map((r) => r.failed);
+    // A failed Node keeps a non-DONE cursor, so it counts as more to scan.
+    const hasMore = nextCursors.some((c) => c !== DONE);
 
     console.log(
         `Cluster scan complete: ${allKeys.length} total keys across ${nodes.length} nodes`

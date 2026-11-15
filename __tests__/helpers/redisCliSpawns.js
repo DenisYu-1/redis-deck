@@ -23,6 +23,8 @@ function rewrite(args, remap) {
 function countRedisCliSpawns({ remap = {} } = {}) {
     const real = childProcess.execFile;
     const spawns = [];
+    let inFlight = 0;
+    let peak = 0;
     const spy = jest
         .spyOn(childProcess, 'execFile')
         .mockImplementation((file, args, ...rest) => {
@@ -30,14 +32,31 @@ function countRedisCliSpawns({ remap = {} } = {}) {
                 return real.call(childProcess, file, args, ...rest);
             }
             spawns.push(args);
+            // Track processes running at once (released in the exit callback).
+            const cb = rest[rest.length - 1];
+            if (typeof cb === 'function') {
+                inFlight++;
+                peak = Math.max(peak, inFlight);
+                rest[rest.length - 1] = (...result) => {
+                    inFlight--;
+                    cb(...result);
+                };
+            }
             return real.call(childProcess, file, rewrite(args, remap), ...rest);
         });
     return {
         get count() {
             return spawns.length;
         },
+        // Most redis-cli processes running at once since the last reset.
+        get peak() {
+            return peak;
+        },
         spawns,
-        reset: () => spawns.splice(0),
+        reset: () => {
+            spawns.splice(0);
+            peak = inFlight;
+        },
         restore: () => spy.mockRestore()
     };
 }
