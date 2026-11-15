@@ -1,4 +1,5 @@
-const { execFile } = require('child_process');
+// Called as childProcess.execFile (not destructured) so tests can count spawns.
+const childProcess = require('child_process');
 const { getConnectionConfig } = require('./database');
 const { getClient } = require('./redisClient');
 
@@ -71,7 +72,7 @@ function connArgs(config, nodeOverride = null) {
 // Async, non-blocking spawn of redis-cli. No shell => no command injection.
 function runRedisCli(args, { input = null, timeout = 10000 } = {}) {
     return new Promise((resolve, reject) => {
-        const child = execFile(
+        const child = childProcess.execFile(
             process.env.REDIS_CLI_PATH || 'redis-cli',
             args,
             { encoding: 'utf8', timeout, maxBuffer: 64 * 1024 * 1024 },
