@@ -99,13 +99,8 @@ const FIXTURE = Array.from({ length: 50 }, (_, i) => ({
     const isScanSpawn = (args) =>
         args.includes('--csv') || args.includes('CLUSTER');
 
-    test('a 50-Key page returns the same Keys, types, TTLs and sizes as the per-Key path with <= 1 Page meta spawn per Node', async () => {
+    test('a 50-Key page returns the same Keys, types and TTLs as the per-Key path with <= 1 Page meta spawn per Node, and no size', async () => {
         const masters = clusterNodes();
-        // The old per-Key path (TYPE, MOVED retry, MEMORY USAGE) as reference.
-        const expectedSize = {};
-        for (const { key } of FIXTURE) {
-            expectedSize[key] = (await keyStore.readMeta(CONN, key)).memory;
-        }
         spawns.reset();
         const { body } = await request(app)
             .get('/api/keys')
@@ -125,12 +120,47 @@ const FIXTURE = Array.from({ length: 50 }, (_, i) => ({
             } else {
                 expect(meta.ttl).toBe(-1);
             }
-            // Size is lazy on clusters after ticket 06; when present it is real.
-            if (meta.size != null) {
-                expect(meta.size).toBe(expectedSize[key]);
-            }
+            expect(meta).not.toHaveProperty('size'); // lazy (SPEC R4)
             expect(masters.map((n) => n.id)).toContain(meta.node);
         }
         expect(pageMetaSpawns).toBeLessThanOrEqual(masters.length);
+    });
+
+    test('POST /keys/sizes equals the per-Key MEMORY USAGE path, null for a missing Key, <= 1 spawn per Node', async () => {
+        const masters = clusterNodes();
+        // The old per-Key path (TYPE, MOVED retry, MEMORY USAGE) as reference.
+        const expectedSize = {};
+        for (const { key } of FIXTURE) {
+            expectedSize[key] = (await keyStore.readMeta(CONN, key)).memory;
+        }
+        const { body: page } = await request(app)
+            .get('/api/keys')
+            .query({ env: CONN, pattern: `${PREFIX}*`, count: 50 })
+            .expect(200);
+        const items = page.keys.map((key) => ({
+            key,
+            node: page.meta[key].node
+        }));
+        spawns.reset();
+        const { body } = await request(app)
+            .post('/api/keys/sizes')
+            .send({ env: CONN, keys: items })
+            .expect(200);
+        expect(spawns.count).toBeLessThanOrEqual(masters.length);
+        expect(body.sizes).toEqual(expectedSize);
+
+        // A Key deleted after the page loaded: its Node answers nil.
+        const { key, node } = items[0];
+        await keyStore.deleteKey(CONN, key);
+        try {
+            const { body: gone } = await request(app)
+                .post('/api/keys/sizes')
+                .send({ env: CONN, keys: [{ key, node }] })
+                .expect(200);
+            expect(gone.sizes).toEqual({ [key]: null });
+        } finally {
+            const f = FIXTURE.find((x) => x.key === key);
+            await keyStore.writeKey(CONN, key, f.type, VALUES[f.type], f.ttl);
+        }
     });
 });

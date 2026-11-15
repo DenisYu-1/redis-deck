@@ -45,8 +45,11 @@ export interface KeyMeta {
     type: string;
     /** Seconds; -1 no expiry, -2 gone. */
     ttl: number;
-    /** MEMORY USAGE in bytes, null when unavailable. */
-    size: number | null;
+    /**
+     * MEMORY USAGE in bytes, null when unavailable. Absent on clustered
+     * Connections until fetched for visible rows (POST /keys/sizes).
+     */
+    size?: number | null;
     /** Clustered Connections: id of the Node that holds the Key. */
     node?: string;
 }

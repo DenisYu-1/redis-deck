@@ -55,3 +55,40 @@ describe('GET /api/keys page metadata, type and TTL filters', () => {
         await get({ ttl: 'bogus' }, 400);
     });
 });
+
+describe('POST /api/keys/sizes', () => {
+    const app = createApp();
+    const env = global.TEST_CONNECTION_ID;
+    const post = (body, status = 200) =>
+        request(app).post('/api/keys/sizes').send(body).expect(status);
+
+    beforeEach(async () => {
+        await deleteTestKeys('test:sizes:*', env);
+        await createTestKey('test:sizes:a', 'hello', env);
+    });
+    afterEach(() => deleteTestKeys('test:sizes:*', env));
+
+    test('returns bytes per Key, null for a missing Key', async () => {
+        const { body } = await post({
+            env,
+            keys: [{ key: 'test:sizes:a' }, { key: 'test:sizes:gone' }]
+        });
+        expect(body.sizes['test:sizes:a']).toBeGreaterThan(0);
+        expect(body.sizes['test:sizes:gone']).toBeNull();
+    });
+
+    test.each([
+        [{ keys: [{ key: 'k' }] }],
+        [{ env: 'x', keys: 'k' }],
+        [{ env: 'x', keys: [{ key: 5 }] }],
+        [{ env: 'x', keys: [{ key: 'k', node: 3 }] }],
+        [
+            {
+                env: 'x',
+                keys: Array.from({ length: 501 }, (_, i) => ({ key: `k${i}` }))
+            }
+        ]
+    ])('rejects bad input %#', async (body) => {
+        await post(body, 400);
+    });
+});

@@ -410,6 +410,20 @@ const jsonPost = (body: unknown): RequestInit => ({
     body: JSON.stringify(body)
 });
 
+/** Sizes for visible rows on clustered Connections; null = Key gone. */
+export async function getKeySizes(
+    keys: { key: string; node?: string | undefined }[],
+    environment: string
+): Promise<Record<string, number | null>> {
+    const response = await fetch(
+        `${API_BASE}/keys/sizes`,
+        jsonPost({ env: environment, keys })
+    );
+    return (
+        await handleResponse<{ sizes: Record<string, number | null> }>(response)
+    ).sizes;
+}
+
 /** seconds > 0 sets an expiry; null removes it (PERSIST). */
 export async function setKeysTtl(
     keys: string[],

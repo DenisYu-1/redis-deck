@@ -109,13 +109,18 @@ function Row({
             >
                 {m ? formatTtl(m.ttl) : ''}
             </span>
-            <span className="kv c-size">{m ? formatSize(m.size) : ''}</span>
+            <span className="kv c-size">
+                {!m ? '' : m.size === undefined ? '…' : formatSize(m.size)}
+            </span>
         </div>
     );
 }
 
 /** Virtualized rows: only the visible window is in the DOM. */
-export function KeyList(props: RowProps) {
+export function KeyList({
+    onVisibleKeys,
+    ...props
+}: RowProps & { onVisibleKeys?: (keys: string[]) => void }) {
     return (
         <div className="rows">
             <List
@@ -124,6 +129,13 @@ export function KeyList(props: RowProps) {
                 rowCount={props.rows.length}
                 rowHeight={ROW_HEIGHT}
                 rowProps={props}
+                onRowsRendered={({ startIndex, stopIndex }) =>
+                    onVisibleKeys?.(
+                        props.rows
+                            .slice(startIndex, stopIndex + 1)
+                            .flatMap((r) => (r.kind === 'key' ? [r.key] : []))
+                    )
+                }
                 role="tree"
                 aria-label="Keys"
                 style={{ height: '100%' }}
