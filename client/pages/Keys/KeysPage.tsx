@@ -75,14 +75,19 @@ export function KeysPage() {
     }, []);
 
     const { scan } = data;
+    // While a search auto-continues (SPEC R5) show how far it has got.
     const scanLine =
-        data.loading && data.keys.length === 0
+        data.loading && scan.iterations === 0
             ? 'Scanning…'
-            : `${formatNumber(scan.matched)} matched · ${formatNumber(
-                  scan.iterations
-              )} SCAN calls · ${formatNumber(scan.ms)} ms${
-                  data.hasMore ? ' · more to scan' : ''
-              }`;
+            : data.loading
+              ? `scanned ${formatNumber(scan.returned)}… · ${formatNumber(
+                    scan.matched
+                )} matched · ${formatNumber(scan.iterations)} SCAN calls`
+              : `${formatNumber(scan.matched)} matched · ${formatNumber(
+                    scan.iterations
+                )} SCAN calls · ${formatNumber(scan.ms)} ms${
+                    data.hasMore ? ' · more to scan' : ''
+                }`;
 
     return (
         <div className="keys-page">
@@ -193,15 +198,25 @@ export function KeysPage() {
                         <span className="mono xs mu">
                             {formatNumber(data.keys.length)} loaded
                         </span>
-                        {data.hasMore && (
+                        {data.loading && scan.iterations > 0 ? (
                             <button
                                 type="button"
                                 className="btn sm"
-                                disabled={data.loading}
-                                onClick={data.loadMore}
+                                onClick={data.stop}
                             >
-                                {data.loading ? 'Loading…' : 'Load more'}
+                                Stop
                             </button>
+                        ) : (
+                            data.hasMore && (
+                                <button
+                                    type="button"
+                                    className="btn sm"
+                                    disabled={data.loading}
+                                    onClick={data.loadMore}
+                                >
+                                    {data.loading ? 'Loading…' : 'Load more'}
+                                </button>
+                            )
                         )}
                     </div>
                 </section>

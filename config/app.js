@@ -11,8 +11,11 @@ const statsRoutes = require('../routes/stats');
 const workflowRoutes = require('../routes/workflows');
 const jobRoutes = require('../routes/jobs');
 
-function createApp({ middleware = [] } = {}) {
+function createApp({ middleware = [], searchBudgetMs } = {}) {
     const app = express();
+    // Tests shrink the GET /api/keys time budget instead of waiting 2 s.
+    if (searchBudgetMs !== undefined)
+        app.locals.searchBudgetMs = searchBudgetMs;
 
     // Optional leading middleware (e.g. the embedded-server Host guard)
     middleware.forEach((m) => app.use(m));
