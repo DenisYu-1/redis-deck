@@ -6,7 +6,7 @@
 
 **A desktop and web UI for Redis and Redis Cluster. Guarded writes for production, extendable with your own Workflows.**
 
-<!-- TODO: hero GIF — docs/screenshots/hero.gif (browse Keys → Workflow dry-run → write blocked on production) -->
+![Keys page: Key tree with a JSON value decoded in the inspector](docs/screenshots/keys.png)
 
 ## Why RedisDeck
 
@@ -23,7 +23,9 @@
 - **Connections**: TLS, ACL users and cluster mode. Test a Connection before saving it, reorder Connections by drag and drop, and import or export them as JSON.
 - **Light and dark theme.**
 
-<!-- TODO: screenshots — docs/screenshots/{keys,stats,workflow}.png -->
+| Workflow on a Read-only production Connection                                                              | Statistics Overview Board                                                                                       |
+| ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| ![Workflow dry-run with Run blocked on a read-only production Connection](docs/screenshots/production.png) | ![Statistics Overview Board with 24h memory, keyspace, hit rate and ops/sec charts](docs/screenshots/stats.png) |
 
 ## Install
 
