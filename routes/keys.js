@@ -37,7 +37,6 @@ router.get('/keys', async (req, res) => {
                 .json({ error: `Unknown ttl filter "${ttlFilter}"` });
         }
         const started = Date.now();
-        const meta = {};
         let returned = 0;
 
         // Get cursors array from frontend
@@ -82,16 +81,7 @@ router.get('/keys', async (req, res) => {
             const fresh = [...new Set(result.keys)];
             returned += fresh.length;
             Object.assign(keyNodes, result.keyNodes);
-            if (ttlFilter === 'any') {
-                keys = keys.concat(fresh); // Page meta once, after the sweep
-            } else {
-                const pageKeys = await pageMeta(env, fresh, result.keyNodes);
-                const kept = fresh.filter((k) => {
-                    meta[k] = pageKeys[k];
-                    return matchesTtl(ttlFilter, pageKeys[k].ttl);
-                });
-                keys = keys.concat(kept);
-            }
+            keys = keys.concat(fresh); // Page meta once, after the sweep
             nextCursors = result.cursors;
             hasMore = result.hasMore;
             failedNodes = result.failedNodes;
@@ -105,14 +95,12 @@ router.get('/keys', async (req, res) => {
             Date.now() - started < budgetMs
         );
 
-        // Without a TTL filter, one Page meta call for the whole page: on a
-        // cluster that is one redis-cli spawn per Node, however many hops ran.
-        if (ttlFilter === 'any') {
-            Object.assign(
-                meta,
-                await pageMeta(env, [...new Set(keys)], keyNodes)
-            );
-        }
+        // One Page meta call for the whole page: on a cluster that is one
+        // redis-cli spawn per Node, however many hops ran. A TTL filter is
+        // applied afterwards, so its page can come back short; hasMore and the
+        // cursors let the client continue to fill it.
+        const meta = await pageMeta(env, [...new Set(keys)], keyNodes);
+        keys = keys.filter((k) => matchesTtl(ttlFilter, meta[k].ttl));
 
         // No trimming: return everything the sweep found so the cursor we hand
         // back lines up exactly with these keys (Load More must not skip any).

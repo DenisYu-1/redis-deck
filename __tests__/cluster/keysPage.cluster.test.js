@@ -165,4 +165,55 @@ const FIXTURE = Array.from({ length: 50 }, (_, i) => ({
             await keyStore.writeKey(CONN, key, f.type, VALUES[f.type], f.ttl);
         }
     });
+
+    test('a TTL filter makes <= 1 Page meta spawn per Node per request, and continuing finds every match', async () => {
+        const masters = clusterNodes();
+        const prefix = 'test:perfttl:';
+        const withTtl = Array.from({ length: 10 }, (_, i) => `${prefix}t${i}`);
+        // Many non-matching Keys, so the sweep takes several SCAN hops.
+        const filler = Array.from(
+            { length: 2000 },
+            (_, i) => `${prefix}{fill}${i}`
+        );
+        for (const key of withTtl) {
+            await keyStore.writeKey(CONN, key, 'string', 'v', 3600);
+            await keyStore.writeKey(CONN, `${key}:none`, 'string', 'v', 0);
+        }
+        await keyStore.run(CONN, ['MSET', ...filler.flatMap((k) => [k, 'v'])]);
+        try {
+            const found = [];
+            let cursors;
+            let hasMore = true;
+            for (let i = 0; hasMore && i < 50; i++) {
+                spawns.reset();
+                const { body } = await request(app)
+                    .get('/api/keys')
+                    .query({
+                        env: CONN,
+                        pattern: `${prefix}*`,
+                        count: 50,
+                        ttl: 'has',
+                        ...(cursors && { cursors: JSON.stringify(cursors) })
+                    })
+                    .expect(200);
+                const pageMetaSpawns = spawns.spawns.filter(
+                    (args) => !isScanSpawn(args)
+                ).length;
+                expect(pageMetaSpawns).toBeLessThanOrEqual(masters.length);
+                body.keys.forEach((k) =>
+                    expect(body.meta[k].ttl).toBeGreaterThan(0)
+                );
+                found.push(...body.keys);
+                ({ cursors, hasMore } = body);
+            }
+            expect(hasMore).toBe(false);
+            expect([...new Set(found)].sort()).toEqual([...withTtl].sort());
+        } finally {
+            await keyStore.run(CONN, ['DEL', ...filler]);
+            for (const key of withTtl) {
+                await keyStore.deleteKey(CONN, key);
+                await keyStore.deleteKey(CONN, `${key}:none`);
+            }
+        }
+    }, 60000);
 });
