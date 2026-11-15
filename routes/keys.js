@@ -11,6 +11,9 @@ const {
     TTL_FILTERS
 } = require('../services/keyMeta');
 
+// Per-request search time budget; createApp({ searchBudgetMs }) overrides it.
+const SEARCH_BUDGET_MS = 2000;
+
 const fail = (res, error) =>
     res
         .status(error.status || 500)
@@ -54,11 +57,10 @@ router.get('/keys', async (req, res) => {
         let iterations = 0;
         let hasMore = false;
         let failedNodes = [];
-        // Bounded so proving "no match" over a huge keyspace can't hang the
-        // request. When we stop early, hasMore stays true and Load More resumes
-        // from the cursor. ponytail: raise MAX_ITERATIONS or add a real key
-        // index if bounded deep search isn't good enough.
-        const MAX_ITERATIONS = 60;
+        // Time budget (SPEC R5): proving "no match" over a huge keyspace must
+        // not hold the request. When it runs out the page is partial (hasMore
+        // + cursors) and the client continues from there.
+        const budgetMs = req.app.locals.searchBudgetMs ?? SEARCH_BUDGET_MS;
 
         // Auto-pagination loop - keep scanning until we have a full page of keys
         // or run out. Each iteration is one socket round-trip (not a process).
@@ -93,7 +95,7 @@ router.get('/keys', async (req, res) => {
             keys.length < count &&
             hasMore &&
             failedNodes.length === 0 &&
-            iterations < MAX_ITERATIONS
+            Date.now() - started < budgetMs
         );
 
         // No trimming: return everything the sweep found so the cursor we hand
