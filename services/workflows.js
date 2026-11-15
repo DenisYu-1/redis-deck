@@ -1,13 +1,13 @@
-// Workflow registry: manifests come from the plugin config (same files the
-// frontend merges), handlers from services/workflows/<pluginId>/<actionId>.js
-// or the gitignored services/workflows/extensions/<pluginId>/<actionId>.js.
 const fs = require('fs');
 const path = require('path');
 const { getDatabase } = require('./database');
+const { getDataDir } = require('./dataDir');
 const { execRedisCommand, execArgv } = require('./redis');
 
 const CONFIG_DIR = path.join(__dirname, '..', 'client', 'plugins', 'config');
-const HANDLER_DIRS = [
+const externalDir = () => path.join(getDataDir(), 'plugins');
+const handlerDirs = () => [
+    externalDir(),
     path.join(__dirname, 'workflows'),
     path.join(__dirname, 'workflows', 'extensions')
 ];
@@ -23,19 +23,33 @@ class WorkflowError extends Error {
     }
 }
 
-function readConfig(file) {
+const isValidPlugin = (p) =>
+    typeof p === 'object' &&
+    p !== null &&
+    typeof p.id === 'string' &&
+    ID_RE.test(p.id) &&
+    (p.actions === undefined || Array.isArray(p.actions));
+
+// A manifest's valid plugin entries; a missing or malformed manifest is empty.
+function readManifest(file) {
     try {
-        return JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, file), 'utf8'));
+        const { plugins } = JSON.parse(fs.readFileSync(file, 'utf8')) ?? {};
+        return Array.isArray(plugins) ? plugins.filter(isValidPlugin) : [];
     } catch {
-        return { plugins: [] };
+        return [];
     }
 }
 
-// Same merge as the frontend: by plugin id, override wins.
+// Merged by plugin id, last wins: built-in, config override, External.
 function loadPlugins() {
     const merged = new Map();
-    for (const file of ['config.json', 'config.override.json']) {
-        for (const p of readConfig(file).plugins ?? []) {
+    const manifests = [
+        path.join(CONFIG_DIR, 'config.json'),
+        path.join(CONFIG_DIR, 'config.override.json'),
+        path.join(externalDir(), 'config.json')
+    ];
+    for (const file of manifests) {
+        for (const p of readManifest(file)) {
             merged.set(p.id, { ...merged.get(p.id), ...p });
         }
     }
@@ -46,7 +60,7 @@ function loadHandler(pluginId, actionId) {
     if (!ID_RE.test(pluginId) || !ID_RE.test(actionId)) {
         return null;
     }
-    for (const dir of HANDLER_DIRS) {
+    for (const dir of handlerDirs()) {
         const file = path.join(dir, pluginId, `${actionId}.js`);
         if (fs.existsSync(file)) {
             return require(file);

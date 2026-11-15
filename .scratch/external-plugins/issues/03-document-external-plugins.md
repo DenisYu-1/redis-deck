@@ -4,11 +4,11 @@
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] README has an "External plugins" section: folder name, manifest and handler layout, restart required
-- [ ] Desktop app data folder path is given for macOS and Linux
-- [ ] Docker note explains the `./data` bind mount
-- [ ] Warning that handlers are arbitrary JS run by the backend, and the data folder must not be shared with untrusted users
-- [ ] The existing plugins README points to the External Plugin option
-- [ ] Wording uses the GLOSSARY terms Plugin, External Plugin, Workflow, Desktop app
+- [x] README has an "External plugins" section: folder name, manifest and handler layout, restart required
+- [x] Desktop app data folder path is given for macOS and Linux
+- [x] Docker note explains the `./data` bind mount
+- [x] Warning that handlers are arbitrary JS run by the backend, and the data folder must not be shared with untrusted users
+- [x] The existing plugins README points to the External Plugin option
+- [x] Wording uses the GLOSSARY terms Plugin, External Plugin, Workflow, Desktop app

@@ -3,9 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const { migrate } = require('./migrate');
 const migrations = require('./migrations');
+const { getDataDir } = require('./dataDir');
 
 // Ensure the data directory exists
-const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const dataDir = getDataDir();
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }

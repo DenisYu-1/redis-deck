@@ -70,11 +70,15 @@ docker compose up -d
 
 Open http://localhost:2222 and add a Connection.
 
+Connections (including passwords), Saved searches and statistics are stored in `./data` next to `docker-compose.yml`. Keep that folder private and back it up.
+
 ### From source
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Writing a Workflow
+
+This builds the Workflow into your own build from source. To add one to the Docker image or the Desktop app without rebuilding, use an [External Plugin](#external-plugins) instead.
 
 Declare the action in `client/plugins/config/config.override.json`:
 
@@ -119,6 +123,35 @@ module.exports = {
 ```
 
 The action appears in the sidebar. Because it has `"writes": true`, it is refused on Read-only Connections and asks for confirmation on Confirm-writes Connections. Input types, the handler API and the routes are documented in [client/plugins/README.md](client/plugins/README.md).
+
+## External Plugins
+
+Public builds (Docker image, Desktop app) ship only the built-in Plugins. To add your own Workflows without rebuilding, install them as an **External Plugin** in the `plugins/` folder inside the app's data folder:
+
+```
+<data folder>/plugins/
+├── config.json                  # manifest, same schema as above
+└── ops/                         # one folder per Plugin id
+    └── flush-user-cache.js      # one handler per action id (plan + run)
+```
+
+Where the data folder is:
+
+| Target             | Data folder                                     |
+| ------------------ | ----------------------------------------------- |
+| Desktop app, macOS | `~/Library/Application Support/redis-deck/data` |
+| Desktop app, Linux | `~/.config/redis-deck/data`                     |
+| Docker             | `./data` next to `docker-compose.yml`           |
+| From source        | `data/` in the repo (or `$DATA_DIR`)            |
+
+In Docker, `docker-compose.yml` bind-mounts `./data:/app/data`, so create `./data/plugins/` on the host.
+
+- **Restart** the app (or `docker compose restart`) after adding or changing files; handlers are not hot-reloaded.
+- An External Plugin entry with the same `id` as a built-in one is merged over it field by field: its fields win, so giving `actions` replaces the built-in Workflow list. `"enabled": false` hides the Plugin.
+- A missing or malformed `config.json` is ignored. A Workflow without a handler file is not listed. Plugin ids and action ids may contain only letters, digits, `_` and `-`.
+- Write Workflows still honour Read-only and Confirm-writes Connections.
+
+> **Warning:** handlers are arbitrary JavaScript run by the backend with the app's permissions. Anyone who can write to the data folder can run code as the app, so never share the data folder (in Docker, the `./data` folder on the host) with untrusted users.
 
 ## How it's built
 
