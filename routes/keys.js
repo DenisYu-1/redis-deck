@@ -6,10 +6,14 @@ const bulkKeys = require('../services/bulkKeys');
 const { writeGuard } = require('../guards/writeGuard');
 const {
     pageMeta,
+    keySizes,
     matchesTtl,
     TYPES,
     TTL_FILTERS
 } = require('../services/keyMeta');
+
+// Per-request search time budget; createApp({ searchBudgetMs }) overrides it.
+const SEARCH_BUDGET_MS = 2000;
 
 const fail = (res, error) =>
     res
@@ -33,7 +37,6 @@ router.get('/keys', async (req, res) => {
                 .json({ error: `Unknown ttl filter "${ttlFilter}"` });
         }
         const started = Date.now();
-        const meta = {};
         let returned = 0;
 
         // Get cursors array from frontend
@@ -53,11 +56,12 @@ router.get('/keys', async (req, res) => {
         let nextCursors = cursors;
         let iterations = 0;
         let hasMore = false;
-        // Bounded so proving "no match" over a huge keyspace can't hang the
-        // request. When we stop early, hasMore stays true and Load More resumes
-        // from the cursor. ponytail: raise MAX_ITERATIONS or add a real key
-        // index if bounded deep search isn't good enough.
-        const MAX_ITERATIONS = 60;
+        let failedNodes = [];
+        const keyNodes = {}; // Key -> Node its SCAN came from (clusters)
+        // Time budget (SPEC R5): proving "no match" over a huge keyspace must
+        // not hold the request. When it runs out the page is partial (hasMore
+        // + cursors) and the client continues from there.
+        const budgetMs = req.app.locals.searchBudgetMs ?? SEARCH_BUDGET_MS;
 
         // Auto-pagination loop - keep scanning until we have a full page of keys
         // or run out. Each iteration is one socket round-trip (not a process).
@@ -76,16 +80,27 @@ router.get('/keys', async (req, res) => {
             // SCAN may repeat a key across calls; metadata is per page.
             const fresh = [...new Set(result.keys)];
             returned += fresh.length;
-            const pageKeys = await pageMeta(env, fresh);
-            const kept = fresh.filter((k) => {
-                meta[k] = pageKeys[k];
-                return matchesTtl(ttlFilter, pageKeys[k].ttl);
-            });
-            keys = keys.concat(kept);
+            Object.assign(keyNodes, result.keyNodes);
+            keys = keys.concat(fresh); // Page meta once, after the sweep
             nextCursors = result.cursors;
             hasMore = result.hasMore;
+            failedNodes = result.failedNodes;
             iterations++;
-        } while (keys.length < count && hasMore && iterations < MAX_ITERATIONS);
+            // A failed Node is not retried within this request: return what the
+            // healthy Nodes gave and let the user continue (which retries it).
+        } while (
+            keys.length < count &&
+            hasMore &&
+            failedNodes.length === 0 &&
+            Date.now() - started < budgetMs
+        );
+
+        // One Page meta call for the whole page: on a cluster that is one
+        // redis-cli spawn per Node, however many hops ran. A TTL filter is
+        // applied afterwards, so its page can come back short; hasMore and the
+        // cursors let the client continue to fill it.
+        const meta = await pageMeta(env, [...new Set(keys)], keyNodes);
+        keys = keys.filter((k) => matchesTtl(ttlFilter, meta[k].ttl));
 
         // No trimming: return everything the sweep found so the cursor we hand
         // back lines up exactly with these keys (Load More must not skip any).
@@ -93,6 +108,7 @@ router.get('/keys', async (req, res) => {
             keys,
             cursors: nextCursors, // Array of cursors (one for each node)
             hasMore,
+            failedNodes,
             total: keys.length + (hasMore ? '?' : 0),
             meta: Object.fromEntries(keys.map((k) => [k, meta[k]])),
             scan: {
@@ -109,6 +125,36 @@ router.get('/keys', async (req, res) => {
 });
 
 // Bulk operations on a selection of keys. Registered before /keys/:key routes.
+// Lazy sizes for the rows the Keys list shows (clusters omit size from
+// GET /keys). A read: no writeGuard. ?env=, body: { keys: [{ key, node? }] }.
+const MAX_SIZE_KEYS = 500;
+const isSizeItem = (i) =>
+    i &&
+    typeof i.key === 'string' &&
+    (i.node === undefined || i.node === null || typeof i.node === 'string');
+
+router.post('/keys/sizes', async (req, res) => {
+    const env = req.query.env;
+    const { keys } = req.body || {};
+    if (!env || typeof env !== 'string') {
+        return res.status(400).json({ error: 'env is required' });
+    }
+    if (
+        !Array.isArray(keys) ||
+        keys.length > MAX_SIZE_KEYS ||
+        !keys.every(isSizeItem)
+    ) {
+        return res.status(400).json({
+            error: `keys must be up to ${MAX_SIZE_KEYS} { key, node } items`
+        });
+    }
+    try {
+        res.json({ sizes: await keySizes(env, keys) });
+    } catch (error) {
+        fail(res, error);
+    }
+});
+
 router.post('/keys/ttl', writeGuard(), async (req, res) => {
     try {
         const { keys, seconds } = req.body; // seconds: n > 0, or null to PERSIST
@@ -117,49 +163,6 @@ router.post('/keys/ttl', writeGuard(), async (req, res) => {
         });
     } catch (error) {
         fail(res, error);
-    }
-});
-
-router.post('/keys/delete', writeGuard(), async (req, res) => {
-    try {
-        res.json({
-            deleted: await bulkKeys.deleteKeys(req.query.env, req.body.keys)
-        });
-    } catch (error) {
-        fail(res, error);
-    }
-});
-
-// A read, so no guard.
-router.post('/keys/export', async (req, res) => {
-    try {
-        res.json(await bulkKeys.exportKeys(req.query.env, req.body.keys));
-    } catch (error) {
-        fail(res, error);
-    }
-});
-
-// Get all keys without pagination (for operations that need all keys)
-router.get('/allkeys', async (req, res) => {
-    try {
-        const env = req.query.env;
-        const pattern = req.query.pattern || '*';
-
-        const keys = [];
-        let cursors = ['0'];
-        let hasMore = true;
-
-        // Keep scanning until we get all keys
-        while (hasMore) {
-            const result = await scanClusterNodes(pattern, cursors, 10000, env);
-            keys.push(...result.keys);
-            cursors = result.cursors;
-            hasMore = result.hasMore;
-        }
-
-        res.json({ keys });
-    } catch (error) {
-        res.status(500).json(error);
     }
 });
 
@@ -241,58 +244,6 @@ router.delete('/keys/:key', writeGuard(), async (req, res) => {
     } catch (error) {
         console.error(`Error deleting key ${req.params.key}:`, error);
         fail(res, error);
-    }
-});
-
-// Delete keys by pattern
-router.delete('/allkeys', writeGuard(), async (req, res) => {
-    try {
-        const env = req.query.env;
-        const pattern = req.query.pattern;
-
-        if (!pattern) {
-            return res
-                .status(400)
-                .json({ error: 'Pattern parameter is required' });
-        }
-
-        // First get all keys matching the pattern using cluster-aware scanning
-        const keys = [];
-        let cursors = ['0'];
-        let hasMore = true;
-
-        // Keep scanning until we get all keys
-        while (hasMore) {
-            const result = await scanClusterNodes(pattern, cursors, 10000, env);
-            keys.push(...result.keys);
-            cursors = result.cursors;
-            hasMore = result.hasMore;
-        }
-
-        if (keys.length === 0) {
-            return res.json({
-                count: 0,
-                message: 'No keys found matching the pattern'
-            });
-        }
-
-        let deletedCount = 0;
-        for (const key of keys) {
-            try {
-                deletedCount += (await keyStore.deleteKey(env, key)) || 0;
-            } catch (e) {
-                console.error(`Error deleting key "${key}":`, e);
-            }
-        }
-
-        res.json({
-            count: deletedCount,
-            totalFound: keys.length,
-            message: `Deleted ${deletedCount} of ${keys.length} keys`
-        });
-    } catch (error) {
-        console.error('Error deleting keys by pattern:', error);
-        res.status(500).json(error);
     }
 });
 

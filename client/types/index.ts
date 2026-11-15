@@ -45,8 +45,13 @@ export interface KeyMeta {
     type: string;
     /** Seconds; -1 no expiry, -2 gone. */
     ttl: number;
-    /** MEMORY USAGE in bytes, null when unavailable. */
-    size: number | null;
+    /**
+     * MEMORY USAGE in bytes, null when unavailable. Absent on clustered
+     * Connections until fetched for visible rows (POST /keys/sizes).
+     */
+    size?: number | null;
+    /** Clustered Connections: id of the Node that holds the Key. */
+    node?: string;
 }
 
 export interface ScanStats {
@@ -59,10 +64,48 @@ export interface ScanStats {
 
 export type TtlFilter = 'any' | 'has' | 'none' | 'lt1h';
 
+/** A cluster Node whose SCAN failed; its cursor is kept so a continue retries it. */
+export interface FailedNode {
+    id: string;
+    /** host:port as the cluster announces it. */
+    address: string;
+    error: string;
+}
+
+export interface DeleteProgress {
+    scanned: number;
+    deleted: number;
+    /** Keys the job could not delete (e.g. still redirected after a reshard). */
+    failed?: number;
+    failedKeys?: { key: string; error: string }[];
+}
+
+export interface ExportProgress {
+    scanned: number;
+    exported: number;
+    /** Stopped at the export cap; more Keys matched. */
+    truncated: boolean;
+}
+
+/** A server job (bulk delete, export). In memory; lost on server restart. */
+export interface Job<P = DeleteProgress> {
+    id: string;
+    kind: string;
+    /** Connection id. */
+    env: string;
+    state: 'running' | 'done' | 'cancelled' | 'failed';
+    progress: P;
+    error?: string;
+    failedNodes?: FailedNode[];
+    startedAt: number;
+    finishedAt?: number;
+}
+
 export interface SearchKeysResponse {
     keys: string[];
     cursors: string[];
     hasMore: boolean;
+    failedNodes?: FailedNode[];
     total: string;
     meta?: Record<string, KeyMeta>;
     scan?: ScanStats;

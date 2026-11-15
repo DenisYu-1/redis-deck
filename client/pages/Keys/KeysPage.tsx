@@ -6,6 +6,8 @@ import type { TtlFilter } from '@/types';
 import { buildKeyTree, flattenTree, type TreeRow } from '@/utils/keyTree';
 import { formatNumber } from '@/utils/formatter';
 import { BulkActions } from './BulkActions';
+import { JobBanners } from './JobBanners';
+import { MatchingActions } from './MatchingActions';
 import { KeyDetail } from './KeyDetail';
 import { KeyList } from './KeyList';
 import { KeyToolbar } from './KeyToolbar';
@@ -13,6 +15,8 @@ import { NewKeyModal } from './NewKeyModal';
 import { useKeySelection } from './hooks/useKeySelection';
 import { useKeyDetail } from './hooks/useKeyDetail';
 import { useKeysQuery } from './hooks/useKeysQuery';
+import { useKeysJobs } from './hooks/useKeysJobs';
+import { useLazySizes } from './hooks/useLazySizes';
 
 type View = 'tree' | 'flat';
 
@@ -40,6 +44,8 @@ export function KeysPage() {
         `${env ?? ''}\u0000${pattern}\u0000${type}\u0000${ttl}`
     );
     const detail = useKeyDetail(env ?? null, selectedKey);
+    const sized = useLazySizes(env ?? null, data.meta);
+    const { deleteJob, exportJob } = useKeysJobs(env ?? '', data.reload);
 
     const rows: TreeRow[] = useMemo(
         () =>
@@ -75,14 +81,19 @@ export function KeysPage() {
     }, []);
 
     const { scan } = data;
+    // While a search auto-continues (SPEC R5) show how far it has got.
     const scanLine =
-        data.loading && data.keys.length === 0
+        data.loading && scan.iterations === 0
             ? 'Scanning…'
-            : `${formatNumber(scan.matched)} matched · ${formatNumber(
-                  scan.iterations
-              )} SCAN calls · ${formatNumber(scan.ms)} ms${
-                  data.hasMore ? ' · more to scan' : ''
-              }`;
+            : data.loading
+              ? `scanned ${formatNumber(scan.returned)}… · ${formatNumber(
+                    scan.matched
+                )} matched · ${formatNumber(scan.iterations)} SCAN calls`
+              : `${formatNumber(scan.matched)} matched · ${formatNumber(
+                    scan.iterations
+                )} SCAN calls · ${formatNumber(scan.ms)} ms${
+                    data.hasMore ? ' · more to scan' : ''
+                }`;
 
     return (
         <div className="keys-page">
@@ -155,6 +166,15 @@ export function KeysPage() {
                             </button>
                         </div>
                     )}
+                    {data.failedNodes.length > 0 && (
+                        <div className="banner" role="alert">
+                            {`Could not scan ${data.failedNodes
+                                .map((n) => `${n.address} (${n.error})`)
+                                .join(
+                                    ', '
+                                )}. Keys on these Nodes may be missing; Load more retries them.`}
+                        </div>
+                    )}
                     {!data.error && !data.loading && data.keys.length === 0 ? (
                         <EmptyState title="No keys match">
                             Patterns use Redis glob syntax: *, ?, [abc]. Type
@@ -163,7 +183,8 @@ export function KeysPage() {
                     ) : (
                         <KeyList
                             rows={rows}
-                            meta={data.meta}
+                            meta={sized.meta}
+                            onVisibleKeys={sized.onVisibleKeys}
                             pattern={pattern}
                             activeKey={selectedKey}
                             isSelected={selection.has}
@@ -173,26 +194,52 @@ export function KeysPage() {
                         />
                     )}
                     <BulkActions
+                        key={env}
                         env={env ?? ''}
                         readOnly={readOnly}
                         keys={selection.keys}
                         matched={data.keys.length}
                         onClear={selection.clear}
                         onChanged={data.reload}
+                        deleteJob={deleteJob}
+                        exportJob={exportJob}
                     />
+                    <JobBanners deleteJob={deleteJob} exportJob={exportJob} />
                     <div className="kfoot">
                         <span className="mono xs mu">
                             {formatNumber(data.keys.length)} loaded
                         </span>
-                        {data.hasMore && (
+                        {env && (
+                            <MatchingActions
+                                key={env}
+                                env={env}
+                                pattern={pattern || '*'}
+                                type={type}
+                                readOnly={readOnly}
+                                unsupportedFilter={ttl !== 'any'}
+                                deleteJob={deleteJob}
+                                exportJob={exportJob}
+                            />
+                        )}
+                        {data.loading && scan.iterations > 0 ? (
                             <button
                                 type="button"
                                 className="btn sm"
-                                disabled={data.loading}
-                                onClick={data.loadMore}
+                                onClick={data.stop}
                             >
-                                {data.loading ? 'Loading…' : 'Load more'}
+                                Stop
                             </button>
+                        ) : (
+                            data.hasMore && (
+                                <button
+                                    type="button"
+                                    className="btn sm"
+                                    disabled={data.loading}
+                                    onClick={data.loadMore}
+                                >
+                                    {data.loading ? 'Loading…' : 'Load more'}
+                                </button>
+                            )
                         )}
                     </div>
                 </section>

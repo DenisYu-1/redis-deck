@@ -1,6 +1,15 @@
-const { execFile } = require('child_process');
+// Called as childProcess.execFile (not destructured) so tests can count spawns.
+const childProcess = require('child_process');
 const { getConnectionConfig } = require('./database');
 const { getClient } = require('./redisClient');
+const { scanBudget } = require('./scanBudget');
+const {
+    limitCli,
+    cachedTopology,
+    cacheTopology,
+    dropTopology,
+    dropTopologyOnError
+} = require('./connectionState');
 
 // Split a redis command string into an argv array, honouring '...' / "..."
 // quoting and backslash escapes inside double quotes.
@@ -69,9 +78,19 @@ function connArgs(config, nodeOverride = null) {
 }
 
 // Async, non-blocking spawn of redis-cli. No shell => no command injection.
-function runRedisCli(args, { input = null, timeout = 10000 } = {}) {
+// With a connectionId the spawn counts against that Connection's process cap;
+// this is the only spawn point, so the cap covers every caller.
+function runRedisCli(
+    args,
+    { input = null, timeout = 10000, connectionId = null } = {}
+) {
+    const spawn = () => spawnRedisCli(args, input, timeout);
+    return connectionId == null ? spawn() : limitCli(connectionId, spawn);
+}
+
+function spawnRedisCli(args, input, timeout) {
     return new Promise((resolve, reject) => {
-        const child = execFile(
+        const child = childProcess.execFile(
             process.env.REDIS_CLI_PATH || 'redis-cli',
             args,
             { encoding: 'utf8', timeout, maxBuffer: 64 * 1024 * 1024 },
@@ -137,7 +156,7 @@ function cliError(error, command) {
     };
 }
 
-async function runCommand(command, config, nodeOverride, label) {
+async function runCommand(command, config, nodeOverride, label, connectionId) {
     let raw = false;
     if (command.startsWith('--raw ')) {
         raw = true;
@@ -166,7 +185,7 @@ async function runCommand(command, config, nodeOverride, label) {
 
     let out;
     try {
-        out = await runRedisCli(args, { timeout: 10000 });
+        out = await runRedisCli(args, { timeout: 10000, connectionId });
     } catch (error) {
         throw cliError(error, command);
     }
@@ -214,7 +233,18 @@ async function runCommand(command, config, nodeOverride, label) {
 // Execute a Redis command against a saved connection.
 async function execRedisCommand(command, connectionId, nodeOverride = null) {
     const config = getConnectionConfig(connectionId);
-    return runCommand(command, config, nodeOverride, connectionId);
+    try {
+        return await runCommand(
+            command,
+            config,
+            nodeOverride,
+            connectionId,
+            connectionId
+        );
+    } catch (error) {
+        dropTopologyOnError(connectionId, error);
+        throw error;
+    }
 }
 
 // Run one command given as an argv array (no quoting/escaping to get wrong)
@@ -229,19 +259,81 @@ async function execArgv(argv, connectionId, nodeOverride = null) {
     console.log(`redis-cli [${connectionId}]: ${argv[0]} ${argv[1] ?? ''}`);
     let out;
     try {
-        out = (await runRedisCli(args)).trim();
+        out = (await runRedisCli(args, { connectionId })).trim();
     } catch (error) {
-        throw cliError(error, argv[0]);
+        const err = cliError(error, argv[0]);
+        dropTopologyOnError(connectionId, err);
+        throw err;
     }
     // redis-cli --json prints errors as: error:"ERR ..."
     if (out.startsWith('error:')) {
-        throw {
+        const err = {
             message: JSON.parse(out.slice(6)),
             command: argv[0],
             code: 'REDIS_ERROR'
         };
+        dropTopologyOnError(connectionId, err);
+        throw err;
     }
     return out ? JSON.parse(out) : null;
+}
+
+// One argument as a redis-cli stdin token: double-quoted, every byte outside
+// printable ASCII (and " / \\) as \\xHH. Exact for any valid UTF-8 string;
+// Keys reach us as JS strings (SCAN via --csv), so a Key holding invalid UTF-8
+// bytes has already been altered before it gets here.
+function quoteArg(arg) {
+    let out = '"';
+    for (const byte of Buffer.from(String(arg), 'utf8')) {
+        out +=
+            byte >= 0x20 && byte < 0x7f && byte !== 0x22 && byte !== 0x5c
+                ? String.fromCharCode(byte)
+                : `\\x${byte.toString(16).padStart(2, '0')}`;
+    }
+    return `${out}"`;
+}
+
+// Run many commands (argv arrays) on one Node in ONE redis-cli --json stdin
+// session. --json prints one line per reply (null for nil), so replies align
+// with commands. -> [{ value } | { error }]; a Redis error (incl. MOVED) is
+// per command, a failed spawn rejects the whole batch.
+async function execArgvBatch(commands, connectionId, nodeOverride = null) {
+    if (commands.length === 0) {
+        return [];
+    }
+    const config = getConnectionConfig(connectionId);
+    console.log(
+        `redis-cli [${connectionId}]: ${commands.length} batched commands`
+    );
+    let out;
+    try {
+        out = await runRedisCli([...connArgs(config, nodeOverride), '--json'], {
+            input: `${commands.map((argv) => argv.map(quoteArg).join(' ')).join('\n')}\n`,
+            timeout: 60000,
+            connectionId
+        });
+    } catch (error) {
+        const err = cliError(error, `${commands.length} batched commands`);
+        dropTopologyOnError(connectionId, err);
+        throw err;
+    }
+    const lines = out.split('\n').filter((line) => line !== '');
+    if (lines.length !== commands.length) {
+        // Replies cannot be matched to commands; the Node may be gone or moved.
+        dropTopology(connectionId);
+        throw {
+            message: `Expected ${commands.length} replies, got ${lines.length}`,
+            code: 'REDIS_ERROR'
+        };
+    }
+    return lines.map((line) => {
+        if (!line.startsWith('error:')) {
+            return { value: JSON.parse(line) };
+        }
+        const error = JSON.parse(line.slice(6));
+        dropTopologyOnError(connectionId, { message: error });
+        return { error };
+    });
 }
 
 // Execute a Redis command against an unsaved config (used by "test connection").
@@ -291,6 +383,10 @@ async function isClusterMode(connectionId) {
 
 // Get cluster nodes if in cluster mode
 async function getClusterNodes(connectionId) {
+    const cached = cachedTopology(connectionId);
+    if (cached) {
+        return cached;
+    }
     try {
         const config = getConnectionConfig(connectionId);
 
@@ -332,8 +428,15 @@ async function getClusterNodes(connectionId) {
             .filter((node) => node !== null);
 
         const masterNodes = nodes.filter((node) => node.isMaster);
-
-        return masterNodes.length > 0 ? masterNodes : nodes;
+        // Sorted by id: the Scan cursor set maps cursors to Nodes by position,
+        // so a refresh mid-search must keep the same order.
+        // ponytail: a Node added or removed mid-search still shifts positions
+        // (cursors land on the wrong Node). Rare; the user restarts the search.
+        const resolved = (masterNodes.length > 0 ? masterNodes : nodes).sort(
+            (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+        );
+        cacheTopology(connectionId, resolved);
+        return resolved;
     } catch (error) {
         console.error('Error getting cluster nodes:', error);
         return [
@@ -356,6 +459,11 @@ function parseScanCsv(result) {
     return { nextCursor, keys };
 }
 
+// Scan cursor set entry for a Node that has finished its SCAN.
+const DONE = 'done';
+
+// -> { keys, cursors, hasMore, failedNodes: [{ id, address, error }] }.
+// A failed Node keeps its cursor and counts as hasMore, so a continue retries it.
 // ponytail: no result cache here on purpose — SCAN feeds delete-then-rescan
 // loops and post-write searches, where a stale hit is a correctness bug.
 // Duplicate rapid fires are de-duped client-side (AbortController). The cheap
@@ -368,6 +476,16 @@ async function scanClusterNodes(
     type = null
 ) {
     const clusterMode = await isClusterMode(connectionId);
+    // Tier load budget (SPEC R8): cap COUNT, and pause before every hop that
+    // continues a scan (cursor '0' starts one, so a fresh search isn't delayed).
+    const { pauseMs, maxCount } = scanBudget(
+        getConnectionConfig(connectionId)?.tier
+    );
+    count = Math.min(count, maxCount);
+    const pause = (cursor) =>
+        pauseMs && cursor !== '0'
+            ? new Promise((r) => setTimeout(r, pauseMs))
+            : null;
 
     if (!clusterMode) {
         // Persistent socket — the route can loop SCAN hundreds of times to walk
@@ -375,6 +493,7 @@ async function scanClusterNodes(
         const cursor =
             Array.isArray(cursors) && cursors.length > 0 ? cursors[0] : '0';
         const client = await getClient(connectionId);
+        await pause(cursor);
         const reply = await client.scan(cursor, {
             MATCH: String(pattern),
             COUNT: count,
@@ -384,7 +503,8 @@ async function scanClusterNodes(
         return {
             keys: reply.keys,
             cursors: [nextCursor],
-            hasMore: nextCursor !== '0'
+            hasMore: nextCursor !== '0',
+            failedNodes: []
         };
     }
 
@@ -393,39 +513,75 @@ async function scanClusterNodes(
         .replace(/\\/g, '\\\\')
         .replace(/"/g, '\\"');
     const nodes = await getClusterNodes(connectionId);
-    let allKeys = [];
-    const nextCursors = [];
-    let hasMore = false;
 
-    for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i];
-        const cursor = Array.isArray(cursors) && cursors[i] ? cursors[i] : '0';
-        try {
-            const result = await execRedisCommand(
-                `SCAN ${cursor} MATCH "${safePattern}" COUNT ${count}${type ? ` TYPE ${type}` : ''}`,
-                connectionId,
-                node
-            );
-            const { nextCursor, keys } = parseScanCsv(result);
-            allKeys = allKeys.concat(keys);
-            nextCursors[i] = nextCursor;
-            if (nextCursor !== '0') {
-                hasMore = true;
+    // Nodes scan concurrently; results are assembled in Node order so the
+    // Scan cursor set and Key order match the sequential path.
+    const results = await Promise.all(
+        nodes.map(async (node, i) => {
+            const cursor =
+                Array.isArray(cursors) && cursors[i] ? cursors[i] : '0';
+            // SCAN's '0' means both "start" and "finished", so a finished Node
+            // is marked DONE instead; otherwise it would be rescanned.
+            if (cursor === DONE) {
+                return { cursor: DONE, keys: [], node };
             }
-            console.log(
-                `Node ${node.id}: found ${keys.length} keys, next cursor: ${nextCursor}`
-            );
-        } catch (error) {
-            console.error(`Error scanning node ${node.id}:`, error);
-            nextCursors[i] = '0';
+            try {
+                await pause(cursor);
+                const result = await execRedisCommand(
+                    `SCAN ${cursor} MATCH "${safePattern}" COUNT ${count}${type ? ` TYPE ${type}` : ''}`,
+                    connectionId,
+                    node
+                );
+                const { nextCursor, keys } = parseScanCsv(result);
+                console.log(
+                    `Node ${node.id}: found ${keys.length} keys, next cursor: ${nextCursor}`
+                );
+                return {
+                    cursor: nextCursor === '0' ? DONE : nextCursor,
+                    keys,
+                    node
+                };
+            } catch (error) {
+                // Keep the cursor so the next continue retries this Node from
+                // where it stopped; the caller shows it as failed.
+                console.error(`Error scanning node ${node.id}:`, error);
+                return {
+                    cursor,
+                    keys: [],
+                    failed: {
+                        id: node.id,
+                        address: `${node.host}:${node.port}`,
+                        error: error.message || String(error)
+                    }
+                };
+            }
+        })
+    );
+
+    const allKeys = results.flatMap((r) => r.keys);
+    // Which Node's SCAN returned each Key, so Page meta can batch per Node.
+    const keyNodes = {};
+    for (const r of results) {
+        for (const key of r.keys) {
+            keyNodes[key] = r.node;
         }
     }
+    const nextCursors = results.map((r) => r.cursor);
+    const failedNodes = results.filter((r) => r.failed).map((r) => r.failed);
+    // A failed Node keeps a non-DONE cursor, so it counts as more to scan.
+    const hasMore = nextCursors.some((c) => c !== DONE);
 
     console.log(
         `Cluster scan complete: ${allKeys.length} total keys across ${nodes.length} nodes`
     );
 
-    return { keys: allKeys, cursors: nextCursors, hasMore };
+    return {
+        keys: allKeys,
+        cursors: nextCursors,
+        hasMore,
+        failedNodes,
+        keyNodes
+    };
 }
 
 async function execRedisPipelinedCommands(
@@ -443,7 +599,8 @@ async function execRedisPipelinedCommands(
     try {
         const out = await runRedisCli(args, {
             input: `${commands.join('\n')}\n`,
-            timeout: 120000
+            timeout: 120000,
+            connectionId
         });
         const lines = out
             .trim()
@@ -474,6 +631,8 @@ module.exports = {
     parseRedisInfo,
     isClusterMode,
     getClusterNodes,
+    dropTopology,
     scanClusterNodes,
-    execArgv
+    execArgv,
+    execArgvBatch
 };

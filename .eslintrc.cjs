@@ -49,6 +49,12 @@ module.exports = {
             { allowNumber: true }
         ],
         '@typescript-eslint/strict-boolean-expressions': 'off',
-        '@typescript-eslint/no-confusing-void-expression': 'off'
+        '@typescript-eslint/no-confusing-void-expression': 'off',
+        // Allow plain `while (true)` loops that exit via return/break.
+        'no-constant-condition': ['error', { checkLoops: false }],
+        '@typescript-eslint/no-unnecessary-condition': [
+            'error',
+            { allowConstantLoopConditions: true }
+        ]
     }
 };

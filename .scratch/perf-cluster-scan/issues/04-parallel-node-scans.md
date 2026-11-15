@@ -4,11 +4,11 @@
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 Spec: `docs/perf-cluster-scan/SPEC.md`. Constraint: `redis-cli` is the only transport on clustered Connections (ADR 0002).
 
-- [ ] Nodes are scanned concurrently with a cap of 4 processes per Connection
-- [ ] Cursor set order and shape are unchanged; Load More resumes correctly
-- [ ] Cluster suite shows the same Keys as the sequential path on the same data
-- [ ] Failure handling from the failed-Node ticket still holds under concurrency
+- [x] Nodes are scanned concurrently with a cap of 4 processes per Connection
+- [x] Cursor set order and shape are unchanged; Load More resumes correctly
+- [x] Cluster suite shows the same Keys as the sequential path on the same data
+- [x] Failure handling from the failed-Node ticket still holds under concurrency

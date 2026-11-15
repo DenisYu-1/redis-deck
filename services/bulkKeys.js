@@ -2,10 +2,11 @@
 const { isClusterMode } = require('./redis');
 const { getClient } = require('./redisClient');
 const keyStore = require('./keyStore');
+const { runOnOwners } = require('./perNode');
 
 const MAX_EXPORT = 1000;
 
-const bad = (message) =>
+const badRequest = (message) =>
     Object.assign(new Error(message), { status: 400, code: 'BAD_REQUEST' });
 
 function checkKeys(keys) {
@@ -14,7 +15,7 @@ function checkKeys(keys) {
         keys.length === 0 ||
         keys.some((k) => typeof k !== 'string')
     ) {
-        throw bad('keys must be a non-empty array of strings');
+        throw badRequest('keys must be a non-empty array of strings');
     }
 }
 
@@ -39,7 +40,9 @@ const count = (replies) => replies.filter((r) => Number(r) > 0).length;
 async function setTtl(connectionId, keys, seconds) {
     checkKeys(keys);
     if (seconds !== null && !(Number.isInteger(seconds) && seconds > 0)) {
-        throw bad('seconds must be a positive integer, or null to persist');
+        throw badRequest(
+            'seconds must be a positive integer, or null to persist'
+        );
     }
     const replies = await pipelined(
         connectionId,
@@ -117,38 +120,60 @@ async function exportPipelined(connectionId, keys) {
     }));
 }
 
-async function exportClustered(connectionId, keys) {
-    const out = [];
-    for (const key of keys) {
-        try {
-            const { type, ttl, value } = await keyStore.readKey(
-                connectionId,
-                key,
-                { full: true }
-            );
-            out.push({ key, type, ttl, value });
-        } catch (error) {
-            if (error.code !== 'KEY_NOT_FOUND') {
-                throw error;
-            }
-        }
+const valueOrThrow = (result) => {
+    if (result.error) {
+        throw { message: result.error, code: 'REDIS_ERROR' };
     }
-    return out;
+    return result;
+};
+
+// Same entries as keyStore.readKey(..., { full: true }) per Key, read in two
+// batches per Node (TYPE + TTL, then values). keyNodes: { [key]: Node } when
+// the scan knows them; other Keys are routed by MOVED.
+async function exportClustered(connectionId, keys, keyNodes = {}) {
+    const head = await runOnOwners(connectionId, keys, keyNodes, (k) => [
+        ['TYPE', k],
+        ['TTL', k]
+    ]);
+    const present = keys
+        .map((key) => {
+            const { replies, node } = valueOrThrow(head[key]);
+            return { key, type: String(replies[0]), ttl: replies[1], node };
+        })
+        .filter((e) => e.type !== 'none');
+    const readable = present.filter((e) => keyStore.valueCommand(e.type));
+    const entry = new Map(readable.map((e) => [e.key, e]));
+    const owners = Object.fromEntries(readable.map((e) => [e.key, e.node]));
+    const body = await runOnOwners(
+        connectionId,
+        readable.map((e) => e.key),
+        owners,
+        (k) => [keyStore.valueCommand(entry.get(k).type, k, true)]
+    );
+    return present.map(({ key, type, ttl }) => ({
+        key,
+        type,
+        ttl,
+        value: body[key]
+            ? keyStore.shapeValue(type, valueOrThrow(body[key]).replies[0])
+            : null
+    }));
 }
 
 // -> [{ key, type, ttl, value }]; keys that vanished are skipped.
-async function exportKeys(connectionId, keys) {
+// keyNodes (clusters, optional): { [key]: Node } from the scan.
+async function exportKeys(connectionId, keys, keyNodes) {
     if (!Array.isArray(keys) || keys.some((k) => typeof k !== 'string')) {
-        throw bad('keys must be an array of strings');
+        throw badRequest('keys must be an array of strings');
     }
     if (keys.length > MAX_EXPORT) {
-        throw bad(`Cannot export more than ${MAX_EXPORT} keys at once`);
+        throw badRequest(`Cannot export more than ${MAX_EXPORT} keys at once`);
     }
     if (keys.length === 0) {
         return [];
     }
     return (await isClusterMode(connectionId))
-        ? exportClustered(connectionId, keys)
+        ? exportClustered(connectionId, keys, keyNodes)
         : exportPipelined(connectionId, keys);
 }
 

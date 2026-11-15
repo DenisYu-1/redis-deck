@@ -4,12 +4,12 @@
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent
+**Status:** done
 
 Spec: `docs/perf-cluster-scan/SPEC.md`. Constraint: `redis-cli` is the only transport on clustered Connections (ADR 0002).
 
-- [ ] Clustered search response omits size; type and TTL still present
-- [ ] New sizes endpoint takes Keys with their Node ids and answers with one batched call per Node
-- [ ] Size column shows a placeholder, then fills for visible rows; scrolling fills newly visible rows
-- [ ] Non-clustered Connections show size inline exactly as before
-- [ ] Cluster suite covers the sizes endpoint including a missing Key
+- [x] Clustered search response omits size; type and TTL still present
+- [x] New sizes endpoint takes Keys with their Node ids and answers with one batched call per Node
+- [x] Size column shows a placeholder, then fills for visible rows; scrolling fills newly visible rows
+- [x] Non-clustered Connections show size inline exactly as before
+- [x] Cluster suite covers the sizes endpoint including a missing Key

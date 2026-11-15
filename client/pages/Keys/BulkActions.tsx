@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { deleteKeys, exportKeys, setKeysTtl } from '@/services/apiService';
+import { setKeysTtl } from '@/services/apiService';
 import { showToast } from '@/utils/toast';
+import { EXPORT_CAP } from './JobBanners';
+import type { DeleteJob, ExportJob } from './hooks/useKeysJobs';
 import { BulkTtlDialog } from './BulkTtlDialog';
 import { SelectionBar } from './SelectionBar';
-
-export const EXPORT_CAP = 1000;
 
 type Dialog = 'ttl' | 'delete' | null;
 
@@ -18,61 +18,47 @@ interface BulkActionsProps {
     onClear: () => void;
     /** Called after a write so the list can refresh. */
     onChanged: () => void;
+    deleteJob: DeleteJob;
+    exportJob: ExportJob;
 }
 
-function download(name: string, data: unknown) {
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: 'application/json'
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-}
+const report = (e: unknown) =>
+    showToast(e instanceof Error ? e.message : String(e), 'error');
 
+/** Actions on the selected Keys; delete and export run as server jobs. */
 export function BulkActions({
     env,
     readOnly,
     keys,
     matched,
     onClear,
-    onChanged
+    onChanged,
+    deleteJob,
+    exportJob
 }: BulkActionsProps) {
     const [dialog, setDialog] = useState<Dialog>(null);
     const [busy, setBusy] = useState(false);
 
-    const run = async (task: () => Promise<void>) => {
+    const applyTtl = async (seconds: number | null) => {
         setBusy(true);
         try {
-            await task();
+            const { updated } = await setKeysTtl(keys, seconds, env);
+            showToast(
+                `${seconds === null ? 'Removed expiry on' : 'Set TTL on'} ${String(updated)} keys`
+            );
+            onChanged();
         } catch (e) {
-            showToast(e instanceof Error ? e.message : String(e), 'error');
+            report(e);
         } finally {
             setBusy(false);
             setDialog(null);
         }
     };
 
-    const applyTtl = (seconds: number | null) =>
-        run(async () => {
-            const { updated } = await setKeysTtl(keys, seconds, env);
-            showToast(
-                `${seconds === null ? 'Removed expiry on' : 'Set TTL on'} ${String(updated)} keys`
-            );
-            onChanged();
-        });
-
-    const confirmDelete = () =>
-        run(async () => {
-            const { deleted } = await deleteKeys(keys, env);
-            showToast(`Deleted ${String(deleted)} keys`);
-            onClear();
-            onChanged();
-        });
+    const confirmDelete = () => {
+        setDialog(null);
+        deleteJob.start({ keys }).then(onClear).catch(report);
+    };
 
     const doExport = () => {
         if (keys.length > EXPORT_CAP) {
@@ -82,11 +68,7 @@ export function BulkActions({
             );
             return;
         }
-        void run(async () => {
-            const entries = await exportKeys(keys, env);
-            download(`redis-keys-${env}.json`, entries);
-            showToast(`Exported ${String(entries.length)} keys`);
-        });
+        exportJob.start({ keys }).catch(report);
     };
 
     return (
@@ -119,14 +101,15 @@ export function BulkActions({
                             <Button
                                 variant="danger"
                                 disabled={busy}
-                                onClick={() => void confirmDelete()}
+                                onClick={confirmDelete}
                             >
                                 Delete
                             </Button>
                         </>
                     }
                 >
-                    This permanently removes the selected keys from {env}.
+                    This permanently removes the selected keys from {env}. It
+                    runs on the server; you can cancel it.
                 </Modal>
             )}
         </>

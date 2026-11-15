@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { ConfirmWriteHost } from '@/components/ui/ConfirmWriteHost';
 import { SelectionBar } from '@/pages/Keys/SelectionBar';
 import { BulkTtlDialog } from '@/pages/Keys/BulkTtlDialog';
-import { setKeysTtl, exportKeys, deleteKeys } from '@/services/apiService';
+import { setKeysTtl, startDeleteJob } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 
 describe('SelectionBar', () => {
@@ -123,10 +123,10 @@ describe('bulk api calls', () => {
         });
     });
 
-    it('deleteKeys is confirm-aware: sends the header after the typed name matches', async () => {
-        ok({ deleted: 1 });
+    it('the delete job is confirm-aware: sends the header after the typed name matches', async () => {
+        ok({ id: 'j1' });
         render(<ConfirmWriteHost />);
-        const done = deleteKeys(['a'], 'prod');
+        const done = startDeleteJob({ keys: ['a'] }, 'prod');
         await userEvent.type(
             await screen.findByLabelText(/connection name/i),
             'prod'
@@ -141,23 +141,15 @@ describe('bulk api calls', () => {
         ).toBe('prod');
     });
 
-    it('deleteKeys is cancelled when the typed name is wrong', async () => {
+    it('the delete job is cancelled when the typed name is wrong', async () => {
         render(<ConfirmWriteHost />);
-        const rejected = expect(deleteKeys(['a'], 'prod')).rejects.toThrow(
-            /cancelled/
-        );
+        const rejected = expect(
+            startDeleteJob({ keys: ['a'] }, 'prod')
+        ).rejects.toThrow(/cancelled/);
         await userEvent.click(
             await screen.findByRole('button', { name: 'Cancel' })
         );
         await rejected;
         expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('exportKeys returns the entries', async () => {
-        const entries = [{ key: 'a', type: 'string', ttl: -1, value: 'x' }];
-        ok(entries);
-        await expect(exportKeys(['a'], 'safe')).resolves.toEqual(entries);
-        const [url] = fetchMock.mock.calls[0] as [string];
-        expect(url).toBe('/api/keys/export?env=safe');
     });
 });

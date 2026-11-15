@@ -8,7 +8,10 @@ import type {
     CommandStatsResponse,
     MemoryByPatternResponse,
     SlowLogResponse,
-    HistoryResponse
+    HistoryResponse,
+    DeleteProgress,
+    ExportProgress,
+    Job
 } from '@/types';
 import type { WorkflowPlugin, WorkflowRun } from '@/types/workflows';
 import { useAppStore } from '@/store/useAppStore';
@@ -385,29 +388,25 @@ export async function updateConnection(
     await handleResponse<undefined>(response);
 }
 
-export async function deleteKeysByPattern(
-    pattern: string,
-    environment: string
-): Promise<{ count: number; message: string }> {
-    const params = new URLSearchParams({
-        env: environment,
-        pattern
-    });
-    const response = await writeFetch(
-        `${API_BASE}/allkeys?${params.toString()}`,
-        {
-            method: 'DELETE'
-        },
-        environment
-    );
-    return handleResponse<{ count: number; message: string }>(response);
-}
-
 const jsonPost = (body: unknown): RequestInit => ({
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
 });
+
+/** Sizes for visible rows on clustered Connections; null = Key gone. */
+export async function getKeySizes(
+    keys: { key: string; node?: string | undefined }[],
+    environment: string
+): Promise<Record<string, number | null>> {
+    const response = await fetch(
+        `${API_BASE}/keys/sizes?env=${encodeURIComponent(environment)}`,
+        jsonPost({ keys })
+    );
+    return (
+        await handleResponse<{ sizes: Record<string, number | null> }>(response)
+    ).sizes;
+}
 
 /** seconds > 0 sets an expiry; null removes it (PERSIST). */
 export async function setKeysTtl(
@@ -423,35 +422,61 @@ export async function setKeysTtl(
     return handleResponse<{ updated: number }>(response);
 }
 
-export async function deleteKeys(
-    keys: string[],
+/** Bulk delete as a server job: a pattern (optionally a SCAN type) or Keys. */
+export async function startDeleteJob(
+    target: { pattern: string; type?: string } | { keys: string[] },
     environment: string
-): Promise<{ deleted: number }> {
+): Promise<Job> {
     const response = await writeFetch(
-        `${API_BASE}/keys/delete?env=${environment}`,
-        jsonPost({ keys }),
+        `${API_BASE}/jobs/delete?env=${encodeURIComponent(environment)}`,
+        jsonPost(target),
         environment
     );
-    return handleResponse<{ deleted: number }>(response);
+    return handleResponse<Job>(response);
 }
 
-export interface ExportedKey {
-    key: string;
-    type: string;
-    ttl: number;
-    value: unknown;
-}
-
-/** A read: no write guard, no confirmation. Server caps at 1000 keys. */
-export async function exportKeys(
-    keys: string[],
+/**
+ * Export as a server job: a pattern (optionally a SCAN type) or Keys. A read:
+ * no write guard. The server stops at 1000 Keys.
+ */
+export async function startExportJob(
+    target: { pattern: string; type?: string } | { keys: string[] },
     environment: string
-): Promise<ExportedKey[]> {
+): Promise<Job<ExportProgress>> {
     const response = await fetch(
-        `${API_BASE}/keys/export?env=${environment}`,
-        jsonPost({ keys })
+        `${API_BASE}/jobs/export?env=${encodeURIComponent(environment)}`,
+        jsonPost(target)
     );
-    return handleResponse<ExportedKey[]>(response);
+    return handleResponse<Job<ExportProgress>>(response);
+}
+
+/** The finished job's result, served as a JSON download. */
+export function jobResultUrl(id: string): string {
+    return `${API_BASE}/jobs/${id}/result`;
+}
+
+export async function getJob<P = DeleteProgress>(id: string): Promise<Job<P>> {
+    return handleResponse<Job<P>>(await fetch(`${API_BASE}/jobs/${id}`));
+}
+
+/** Newest first. */
+export async function listJobs<P = DeleteProgress>(
+    environment: string,
+    kind: string
+): Promise<Job<P>[]> {
+    const params = new URLSearchParams({ env: environment, kind });
+    const { jobs } = await handleResponse<{ jobs: Job<P>[] }>(
+        await fetch(`${API_BASE}/jobs?${params.toString()}`)
+    );
+    return jobs;
+}
+
+export async function cancelJob<P = DeleteProgress>(
+    id: string
+): Promise<Job<P>> {
+    return handleResponse<Job<P>>(
+        await fetch(`${API_BASE}/jobs/${id}/cancel`, { method: 'POST' })
+    );
 }
 
 export async function deleteConnection(id: string): Promise<void> {

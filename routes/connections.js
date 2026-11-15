@@ -11,7 +11,8 @@ const {
 } = require('../services/database');
 const {
     execRedisCommand,
-    execRedisCommandWithConfig
+    execRedisCommandWithConfig,
+    dropTopology
 } = require('../services/redis');
 const { resolveTestPassword } = require('../services/connectionTest');
 const { dropClient } = require('../services/redisClient');
@@ -199,6 +200,7 @@ router.put('/connections/:id', async (req, res) => {
 
         const success = updateConnection(id, connection);
         await dropClient(id);
+        dropTopology(id);
 
         if (success) {
             // Don't send the password back to the client
@@ -231,6 +233,7 @@ router.delete('/connections/:id', async (req, res) => {
 
         const success = deleteConnection(id);
         await dropClient(id);
+        dropTopology(id);
 
         if (success) {
             res.json({ message: `Connection '${id}' deleted successfully` });

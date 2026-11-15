@@ -46,13 +46,6 @@ const writes = [
         (env) => request(app).delete('/api/keys/test:guard:k').query({ env })
     ],
     [
-        'DELETE /allkeys',
-        (env) =>
-            request(app)
-                .delete('/api/allkeys')
-                .query({ env, pattern: 'test:guard:*' })
-    ],
-    [
         'POST /keys/:key/rename',
         (env) =>
             request(app)

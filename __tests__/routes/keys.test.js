@@ -77,22 +77,6 @@ describe('Keys Routes', () => {
         });
     });
 
-    describe('GET /api/allkeys', () => {
-        test('should return all keys matching pattern', async () => {
-            await createTestKey('test:keys:all:1', 'value', testConnectionId);
-            await createTestKey('test:keys:all:2', 'value', testConnectionId);
-            await createTestKey('test:keys:all:3', 'value', testConnectionId);
-
-            const response = await request(app)
-                .get('/api/allkeys')
-                .query({ env: testConnectionId, pattern: 'test:keys:all:*' })
-                .expect(200);
-
-            expect(response.body).toHaveProperty('keys');
-            expect(response.body.keys.length).toBe(3);
-        });
-    });
-
     describe('GET /api/keys/:key', () => {
         test('should get string key value', async () => {
             await createTestKey(
@@ -283,60 +267,6 @@ describe('Keys Routes', () => {
                 .expect(200);
 
             expect(response.body.deleted).toBe(false);
-            expect(response.body.count).toBe(0);
-        });
-    });
-
-    describe('DELETE /api/allkeys', () => {
-        test('should delete keys by pattern', async () => {
-            await createTestKey('test:keys:batch:1', 'value', testConnectionId);
-            await createTestKey('test:keys:batch:2', 'value', testConnectionId);
-            await createTestKey('test:keys:batch:3', 'value', testConnectionId);
-
-            const response = await request(app)
-                .delete('/api/allkeys')
-                .query({ env: testConnectionId, pattern: 'test:keys:batch:*' })
-                .expect(200);
-
-            expect(response.body).toHaveProperty('count');
-            expect(response.body.count).toBeGreaterThanOrEqual(3);
-
-            const exists1 = await keyExists(
-                'test:keys:batch:1',
-                testConnectionId
-            );
-            const exists2 = await keyExists(
-                'test:keys:batch:2',
-                testConnectionId
-            );
-            const exists3 = await keyExists(
-                'test:keys:batch:3',
-                testConnectionId
-            );
-
-            expect(exists1).toBe(false);
-            expect(exists2).toBe(false);
-            expect(exists3).toBe(false);
-        });
-
-        test('should return 400 when pattern is missing', async () => {
-            const response = await request(app)
-                .delete('/api/allkeys')
-                .query({ env: testConnectionId })
-                .expect(400);
-
-            expect(response.body).toHaveProperty('error');
-        });
-
-        test('should handle pattern with no matches', async () => {
-            const response = await request(app)
-                .delete('/api/allkeys')
-                .query({
-                    env: testConnectionId,
-                    pattern: 'test:keys:nomatch:*'
-                })
-                .expect(200);
-
             expect(response.body.count).toBe(0);
         });
     });

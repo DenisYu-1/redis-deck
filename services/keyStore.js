@@ -27,31 +27,49 @@ async function run(connectionId, argv, node = null) {
     }
 }
 
-async function readValue(type, key, connectionId, node, full) {
-    const exec = (...argv) => execArgv(argv, connectionId, node);
+// The command that reads a whole value of `type`; null for types the editor
+// does not read (e.g. JSON).
+function valueCommand(type, key, full = false) {
     switch (type) {
         case 'string':
-            return exec('GET', key);
+            return ['GET', key];
         case 'hash':
-            return (await exec('HGETALL', key)) || {};
+            return ['HGETALL', key];
         case 'list':
-            return exec('LRANGE', key, 0, full ? -1 : LIST_PREVIEW - 1);
+            return ['LRANGE', key, 0, full ? -1 : LIST_PREVIEW - 1];
         case 'set':
-            return exec('SMEMBERS', key);
+            return ['SMEMBERS', key];
         case 'zset':
-            return (await exec('ZRANGE', key, 0, -1, 'WITHSCORES')).map(
-                ([member, score]) => ({ member, score })
-            );
+            return ['ZRANGE', key, 0, -1, 'WITHSCORES'];
         case 'stream':
-            return (
-                await exec('XRANGE', key, '-', '+', 'COUNT', LIST_PREVIEW)
-            ).map(([id, flat]) => ({
+            return ['XRANGE', key, '-', '+', 'COUNT', LIST_PREVIEW];
+        default:
+            return null;
+    }
+}
+
+// valueCommand's --json reply -> the value shape GET /keys/:key returns.
+function shapeValue(type, reply) {
+    switch (type) {
+        case 'hash':
+            return reply || {};
+        case 'zset':
+            return reply.map(([member, score]) => ({ member, score }));
+        case 'stream':
+            return reply.map(([id, flat]) => ({
                 id,
                 fields: Object.fromEntries(pairs2(flat))
             }));
         default:
-            return null;
+            return reply;
     }
+}
+
+async function readValue(type, key, connectionId, node, full) {
+    const argv = valueCommand(type, key, full);
+    return argv
+        ? shapeValue(type, await execArgv(argv, connectionId, node))
+        : null;
 }
 
 function pairs2(flat) {
@@ -233,5 +251,7 @@ module.exports = {
     deleteKey,
     renameKey,
     expireKey,
-    copyKey
+    copyKey,
+    valueCommand,
+    shapeValue
 };
