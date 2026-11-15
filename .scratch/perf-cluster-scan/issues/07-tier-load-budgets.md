@@ -4,11 +4,11 @@
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
 Spec: `docs/perf-cluster-scan/SPEC.md`. Constraint: `redis-cli` is the only transport on clustered Connections (ADR 0002).
 
-- [ ] Every scan loop (search and later jobs) applies the pause and COUNT cap for the Connection's Tier
-- [ ] Unit test with the Tier as input verifies pause and COUNT per Tier
-- [ ] Local Tier behaviour is unchanged
-- [ ] Non-clustered and clustered Connections both apply the budget
+- [x] Every scan loop (search and later jobs) applies the pause and COUNT cap for the Connection's Tier
+- [x] Unit test with the Tier as input verifies pause and COUNT per Tier
+- [x] Local Tier behaviour is unchanged
+- [x] Non-clustered and clustered Connections both apply the budget
