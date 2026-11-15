@@ -1,3 +1,6 @@
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const request = require('supertest');
 const { createApp } = require('../../config/app');
 const { db } = require('../../services/database');
@@ -153,5 +156,127 @@ describe('run', () => {
             inputs: { id: '7' }
         });
         expect(res.status).toBe(404);
+    });
+});
+
+describe('External Plugins in DATA_DIR/plugins', () => {
+    let dataDir;
+    let prevDataDir;
+    const pluginsDir = () => path.join(dataDir, 'plugins');
+
+    function writeExternal(manifest, handlers = {}) {
+        fs.mkdirSync(pluginsDir(), { recursive: true });
+        fs.writeFileSync(
+            path.join(pluginsDir(), 'config.json'),
+            typeof manifest === 'string' ? manifest : JSON.stringify(manifest)
+        );
+        for (const [rel, source] of Object.entries(handlers)) {
+            const file = path.join(pluginsDir(), `${rel}.js`);
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, source);
+        }
+    }
+    const handler = (planText, runText) =>
+        `module.exports = {
+            async plan() { return { text: ${JSON.stringify(planText)} }; },
+            async run() { return { text: ${JSON.stringify(runText)} }; }
+        };`;
+    const listed = async () =>
+        (await request(app).get('/api/workflows')).body.plugins;
+
+    beforeAll(() => {
+        prevDataDir = process.env.DATA_DIR;
+        dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'redis-deck-ext-'));
+        process.env.DATA_DIR = dataDir;
+    });
+    afterAll(() => {
+        if (prevDataDir === undefined) delete process.env.DATA_DIR;
+        else process.env.DATA_DIR = prevDataDir;
+        fs.rmSync(dataDir, { recursive: true, force: true });
+    });
+    afterEach(() => {
+        fs.rmSync(pluginsDir(), { recursive: true, force: true });
+    });
+
+    it('lists an External Plugin and plans and runs its handler', async () => {
+        writeExternal(
+            {
+                plugins: [
+                    {
+                        id: 'ext-demo',
+                        name: 'External demo',
+                        actions: [{ id: 'hello', title: 'Hello' }]
+                    }
+                ]
+            },
+            { 'ext-demo/hello': handler('ext plan', 'ext run') }
+        );
+        const plugin = (await listed()).find((p) => p.id === 'ext-demo');
+        expect(plugin.name).toBe('External demo');
+        expect(plugin.actions.map((a) => a.fullId)).toEqual(['ext-demo.hello']);
+
+        const p = await plan('ext-demo.hello', { env: local(), inputs: {} });
+        expect(p.status).toBe(200);
+        expect(p.body.plan.text).toBe('ext plan');
+        const r = await run('ext-demo.hello', { env: local(), inputs: {} });
+        expect(r.status).toBe(200);
+        expect(r.body.result).toMatchObject({ ok: true, text: 'ext run' });
+    });
+
+    it('replaces a built-in Plugin with the same id', async () => {
+        writeExternal(
+            {
+                plugins: [
+                    {
+                        id: 'examples',
+                        name: 'My examples',
+                        actions: [{ id: 'count-keys', title: 'Count' }]
+                    }
+                ]
+            },
+            { 'examples/count-keys': handler('mine', 'my count') }
+        );
+        const plugin = (await listed()).find((p) => p.id === 'examples');
+        expect(plugin.name).toBe('My examples');
+        expect(plugin.actions.map((a) => a.id)).toEqual(['count-keys']);
+        const r = await run(COUNT, { env: local(), inputs: {} });
+        expect(r.body.result.text).toBe('my count');
+    });
+
+    it('hides a built-in Plugin declared with enabled: false', async () => {
+        writeExternal({ plugins: [{ id: 'examples', enabled: false }] });
+        expect((await listed()).map((p) => p.id)).not.toContain('examples');
+        const r = await run(COUNT, { env: local(), inputs: {} });
+        expect(r.status).toBe(404);
+    });
+
+    it('ignores a malformed manifest', async () => {
+        writeExternal('{ "plugins": [ oops');
+        const res = await request(app).get('/api/workflows');
+        expect(res.status).toBe(200);
+        expect(res.body.plugins.map((p) => p.id)).toContain('examples');
+    });
+
+    it('leaves a Plugin with no handler on disk unlisted', async () => {
+        writeExternal({
+            plugins: [{ id: 'ext-ghost', actions: [{ id: 'boo' }] }]
+        });
+        expect((await listed()).map((p) => p.id)).not.toContain('ext-ghost');
+    });
+
+    it('sends External write Workflows through the write guard', async () => {
+        writeExternal(
+            {
+                plugins: [
+                    {
+                        id: 'ext-demo',
+                        actions: [{ id: 'write', writes: true }]
+                    }
+                ]
+            },
+            { 'ext-demo/write': handler('would write', 'wrote') }
+        );
+        const res = await run('ext-demo.write', { env: RO, inputs: {} });
+        expect(res.status).toBe(403);
     });
 });

@@ -4,8 +4,13 @@ const fs = require('fs');
 const { migrate } = require('./migrate');
 const migrations = require('./migrations');
 
+// The app's data folder (SQLite file, External Plugins); DATA_DIR overrides.
+function getDataDir() {
+    return process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+}
+
 // Ensure the data directory exists
-const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const dataDir = getDataDir();
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -186,5 +191,6 @@ module.exports = {
     getConnectionConfig,
     safetyFields,
     getDatabase,
+    getDataDir,
     db
 };
