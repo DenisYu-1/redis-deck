@@ -157,46 +157,6 @@ router.post('/keys/delete', writeGuard(), async (req, res) => {
     }
 });
 
-// A read, so no guard.
-router.post('/keys/export', async (req, res) => {
-    try {
-        res.json(await bulkKeys.exportKeys(req.query.env, req.body.keys));
-    } catch (error) {
-        fail(res, error);
-    }
-});
-
-// Get all keys without pagination (for operations that need all keys)
-router.get('/allkeys', async (req, res) => {
-    try {
-        const env = req.query.env;
-        const pattern = req.query.pattern || '*';
-
-        const keys = [];
-        let cursors = ['0'];
-        let hasMore = true;
-
-        // Keep scanning until we get all keys
-        while (hasMore) {
-            const result = await scanClusterNodes(pattern, cursors, 10000, env);
-            // A failed Node never finishes; stop rather than act on part of it.
-            if (result.failedNodes.length > 0) {
-                return res.status(502).json({
-                    error: 'Some cluster Nodes could not be scanned',
-                    failedNodes: result.failedNodes
-                });
-            }
-            keys.push(...result.keys);
-            cursors = result.cursors;
-            hasMore = result.hasMore;
-        }
-
-        res.json({ keys });
-    } catch (error) {
-        res.status(500).json(error);
-    }
-});
-
 // Get value for a key. value shape depends on type: string -> string,
 // hash -> {field: value}, list/set -> string[], zset -> [{member, score}],
 // stream -> [{id, fields}].
@@ -275,65 +235,6 @@ router.delete('/keys/:key', writeGuard(), async (req, res) => {
     } catch (error) {
         console.error(`Error deleting key ${req.params.key}:`, error);
         fail(res, error);
-    }
-});
-
-// Delete keys by pattern
-router.delete('/allkeys', writeGuard(), async (req, res) => {
-    try {
-        const env = req.query.env;
-        const pattern = req.query.pattern;
-
-        if (!pattern) {
-            return res
-                .status(400)
-                .json({ error: 'Pattern parameter is required' });
-        }
-
-        // First get all keys matching the pattern using cluster-aware scanning
-        const keys = [];
-        let cursors = ['0'];
-        let hasMore = true;
-
-        // Keep scanning until we get all keys
-        while (hasMore) {
-            const result = await scanClusterNodes(pattern, cursors, 10000, env);
-            // A failed Node never finishes; stop rather than act on part of it.
-            if (result.failedNodes.length > 0) {
-                return res.status(502).json({
-                    error: 'Some cluster Nodes could not be scanned',
-                    failedNodes: result.failedNodes
-                });
-            }
-            keys.push(...result.keys);
-            cursors = result.cursors;
-            hasMore = result.hasMore;
-        }
-
-        if (keys.length === 0) {
-            return res.json({
-                count: 0,
-                message: 'No keys found matching the pattern'
-            });
-        }
-
-        let deletedCount = 0;
-        for (const key of keys) {
-            try {
-                deletedCount += (await keyStore.deleteKey(env, key)) || 0;
-            } catch (e) {
-                console.error(`Error deleting key "${key}":`, e);
-            }
-        }
-
-        res.json({
-            count: deletedCount,
-            totalFound: keys.length,
-            message: `Deleted ${deletedCount} of ${keys.length} keys`
-        });
-    } catch (error) {
-        console.error('Error deleting keys by pattern:', error);
-        res.status(500).json(error);
     }
 });
 

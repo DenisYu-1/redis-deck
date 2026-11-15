@@ -1,36 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-    cancelJob,
-    getJob,
-    listJobs,
-    startDeleteJob
-} from '@/services/apiService';
+import { cancelJob, getJob, listJobs } from '@/services/apiService';
 import type { Job } from '@/types';
 
 const POLL_MS = 500;
 
 /**
- * The Connection's bulk delete job (mount with key={env}): picks up a running one on mount (the job
- * lives on the server), polls while it runs, and calls onFinished once.
+ * The Connection's server job of one kind (mount with key={env}): picks up a running one on mount
+ * (the job lives on the server), polls while it runs, and calls onFinished once it stops.
+ * start(target) creates the job through `create`.
  */
-export function useDeleteJob(env: string, onFinished: () => void) {
-    const [job, setJob] = useState<Job | null>(null);
+export function useJob<P, T>(
+    env: string,
+    kind: string,
+    create: (target: T, env: string) => Promise<Job<P>>,
+    onFinished: (job: Job<P>) => void = () => undefined
+) {
+    const [job, setJob] = useState<Job<P> | null>(null);
     const finished = useRef(onFinished);
+    const creator = useRef(create);
     useEffect(() => {
         finished.current = onFinished;
+        creator.current = create;
     });
 
-    // A job that stops changes the Keys, so the list refreshes.
-    const update = useCallback((next: Job) => {
+    const update = useCallback((next: Job<P>) => {
         setJob(next);
-        if (next.state !== 'running') finished.current();
+        if (next.state !== 'running') finished.current(next);
     }, []);
 
     useEffect(() => {
         const ac = new AbortController();
         void (async () => {
             try {
-                const running = (await listJobs(env, 'delete')).find(
+                const running = (await listJobs<P>(env, kind)).find(
                     (j) => j.state === 'running'
                 );
                 if (!ac.signal.aborted && running) setJob(running);
@@ -39,7 +41,7 @@ export function useDeleteJob(env: string, onFinished: () => void) {
             }
         })();
         return () => ac.abort();
-    }, [env]);
+    }, [env, kind]);
 
     const id = job?.id;
     const running = job?.state === 'running';
@@ -47,7 +49,7 @@ export function useDeleteJob(env: string, onFinished: () => void) {
         if (!id || !running) return;
         const ac = new AbortController();
         const timer = setInterval(() => {
-            void getJob(id)
+            void getJob<P>(id)
                 .then((next) => {
                     if (!ac.signal.aborted) update(next);
                 })
@@ -60,19 +62,14 @@ export function useDeleteJob(env: string, onFinished: () => void) {
     }, [id, running, update]);
 
     const start = useCallback(
-        async (pattern: string, type: string) => {
-            setJob(
-                await startDeleteJob(
-                    type ? { pattern, type } : { pattern },
-                    env
-                )
-            );
+        async (target: T) => {
+            setJob(await creator.current(target, env));
         },
         [env]
     );
 
     const cancel = useCallback(async () => {
-        if (id) update(await cancelJob(id));
+        if (id) update(await cancelJob<P>(id));
     }, [id, update]);
 
     return { job, start, cancel, dismiss: () => setJob(null) };

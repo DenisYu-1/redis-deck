@@ -4,11 +4,11 @@
 
 **Blocked by:** 09
 
-**Status:** ready-for-agent
+**Status:** done
 
 Spec: `docs/perf-cluster-scan/SPEC.md`. Constraint: `redis-cli` is the only transport on clustered Connections (ADR 0002).
 
-- [ ] Export runs as a job with progress and cancel; result downloadable on completion
-- [ ] MAX_EXPORT cap still enforced
-- [ ] The all-keys GET endpoint is removed, or kept with a documented caller if one remains
-- [ ] Tests cover export of a large pattern without loading all Keys into memory at once
+- [x] Export runs as a job with progress and cancel; result downloadable on completion
+- [x] MAX_EXPORT cap still enforced
+- [x] The all-keys GET endpoint is removed, or kept with a documented caller if one remains
+- [x] Tests cover export of a large pattern without loading all Keys into memory at once

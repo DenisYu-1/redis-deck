@@ -69,14 +69,26 @@ export interface FailedNode {
     error: string;
 }
 
+export interface DeleteProgress {
+    scanned: number;
+    deleted: number;
+}
+
+export interface ExportProgress {
+    scanned: number;
+    exported: number;
+    /** Stopped at the export cap; more Keys matched. */
+    truncated: boolean;
+}
+
 /** A server job (bulk delete, export). In memory; lost on server restart. */
-export interface Job {
+export interface Job<P = DeleteProgress> {
     id: string;
     kind: string;
     /** Connection id. */
     env: string;
     state: 'running' | 'done' | 'cancelled' | 'failed';
-    progress: { scanned: number; deleted: number };
+    progress: P;
     error?: string;
     failedNodes?: FailedNode[];
     startedAt: number;

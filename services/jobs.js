@@ -7,7 +7,7 @@ const { randomUUID } = require('crypto');
 const KEEP_FINISHED_MS = 60 * 60 * 1000;
 const MAX_FINISHED = 50;
 
-const jobs = new Map(); // id -> { job, cancelRequested }
+const jobs = new Map(); // id -> { job, cancelRequested, result? }
 
 function view({ job }) {
     return { ...job, progress: { ...job.progress } };
@@ -31,7 +31,8 @@ function prune() {
 
 // work({ progress, cancelled }) runs in the background. It stops early when
 // cancelled() turns true; a thrown error fails the job, and its `details`
-// (if any) are kept on the job, e.g. failedNodes.
+// (if any) are kept on the job, e.g. failedNodes. What work resolves to is
+// kept as the job's result (served by getJobResult) only if it finishes done.
 function startJob(kind, env, progress, work) {
     prune();
     const entry = {
@@ -53,7 +54,11 @@ function startJob(kind, env, progress, work) {
             work({ progress, cancelled: () => entry.cancelRequested })
         )
         .then(
-            () => finish(entry.cancelRequested ? 'cancelled' : 'done'),
+            (result) => {
+                if (entry.cancelRequested) return finish('cancelled');
+                entry.result = result;
+                finish('done');
+            },
             (error) =>
                 finish('failed', {
                     error: error?.message || String(error),
@@ -87,4 +92,13 @@ function cancelJob(id) {
     return view(entry);
 }
 
-module.exports = { startJob, getJob, listJobs, cancelJob };
+// -> null (unknown), { job } (not done) or { job, result }.
+function getJobResult(id) {
+    const entry = jobs.get(id);
+    if (!entry) return null;
+    return entry.job.state === 'done'
+        ? { job: view(entry), result: entry.result }
+        : { job: view(entry) };
+}
+
+module.exports = { startJob, getJob, listJobs, cancelJob, getJobResult };

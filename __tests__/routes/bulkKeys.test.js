@@ -77,58 +77,6 @@ describe('POST /keys/ttl', () => {
     });
 });
 
-describe('POST /keys/export', () => {
-    test('returns key, type, ttl and value', async () => {
-        const { body } = await post('export', { keys: KEYS }).expect(200);
-        const by = Object.fromEntries(body.map((e) => [e.key, e]));
-        expect(by['test:bulk:a']).toEqual({
-            key: 'test:bulk:a',
-            type: 'string',
-            ttl: -1,
-            value: 'va'
-        });
-        expect(by['test:bulk:b'].ttl).toBeGreaterThan(0);
-        expect(by['test:bulk:h']).toMatchObject({
-            type: 'hash',
-            value: { f: 'v' }
-        });
-    });
-
-    test('shapes list, set, zset and stream like GET /keys/:key', async () => {
-        await execRedisCommand('RPUSH "test:bulk:l" a b', env);
-        await execRedisCommand('SADD "test:bulk:s" m', env);
-        await execRedisCommand('ZADD "test:bulk:z" 1.5 m', env);
-        await execRedisCommand('XADD "test:bulk:x" 1-1 f v', env);
-        const keys = ['l', 's', 'z', 'x'].map((c) => `test:bulk:${c}`);
-        const { body } = await post('export', { keys }).expect(200);
-        const by = Object.fromEntries(body.map((e) => [e.key, e.value]));
-        expect(by['test:bulk:l']).toEqual(['a', 'b']);
-        expect(by['test:bulk:s']).toEqual(['m']);
-        expect(by['test:bulk:z']).toEqual([{ member: 'm', score: 1.5 }]);
-        expect(by['test:bulk:x']).toEqual([{ id: '1-1', fields: { f: 'v' } }]);
-    });
-
-    test('skips keys that no longer exist', async () => {
-        const { body } = await post('export', {
-            keys: ['test:bulk:a', 'test:bulk:nope']
-        }).expect(200);
-        expect(body.map((e) => e.key)).toEqual(['test:bulk:a']);
-    });
-
-    test('1000 keys ok, 1001 -> 400', async () => {
-        const mk = (n) =>
-            Array.from({ length: n }, (_, i) => `test:bulk:x${i}`);
-        await post('export', { keys: mk(1000) }).expect(200);
-        const res = await post('export', { keys: mk(1001) }).expect(400);
-        expect(res.body.error).toMatch(/1000/);
-    });
-
-    test('is a read: allowed on read-only and confirm connections', async () => {
-        await post('export', { keys: [] }, RO).expect(200);
-        await post('export', { keys: [] }, CW).expect(200);
-    });
-});
-
 describe('POST /keys/delete', () => {
     test('deletes exactly the selected keys', async () => {
         const res = await post('delete', {

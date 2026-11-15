@@ -4,7 +4,8 @@ import { Modal } from '@/components/ui/Modal';
 import type { Job } from '@/types';
 import { formatNumber } from '@/utils/formatter';
 import { showToast } from '@/utils/toast';
-import { useDeleteJob } from './hooks/useDeleteJob';
+import { startDeleteJob } from '@/services/apiService';
+import { useJob } from './hooks/useJob';
 
 interface DeleteMatchingProps {
     env: string;
@@ -41,7 +42,12 @@ export function DeleteMatching({
     disabled,
     onFinished
 }: DeleteMatchingProps) {
-    const { job, start, cancel, dismiss } = useDeleteJob(env, onFinished);
+    const { job, start, cancel, dismiss } = useJob(
+        env,
+        'delete',
+        startDeleteJob,
+        onFinished
+    );
     const [confirming, setConfirming] = useState(false);
     const running = job?.state === 'running';
 
@@ -50,7 +56,7 @@ export function DeleteMatching({
 
     const confirm = () => {
         setConfirming(false);
-        start(pattern, type).catch(report);
+        start(type ? { pattern, type } : { pattern }).catch(report);
     };
 
     return (

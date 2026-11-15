@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { ConfirmWriteHost } from '@/components/ui/ConfirmWriteHost';
 import { SelectionBar } from '@/pages/Keys/SelectionBar';
 import { BulkTtlDialog } from '@/pages/Keys/BulkTtlDialog';
-import { setKeysTtl, exportKeys, deleteKeys } from '@/services/apiService';
+import { setKeysTtl, deleteKeys } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 
 describe('SelectionBar', () => {
@@ -151,13 +151,5 @@ describe('bulk api calls', () => {
         );
         await rejected;
         expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('exportKeys returns the entries', async () => {
-        const entries = [{ key: 'a', type: 'string', ttl: -1, value: 'x' }];
-        ok(entries);
-        await expect(exportKeys(['a'], 'safe')).resolves.toEqual(entries);
-        const [url] = fetchMock.mock.calls[0] as [string];
-        expect(url).toBe('/api/keys/export?env=safe');
     });
 });

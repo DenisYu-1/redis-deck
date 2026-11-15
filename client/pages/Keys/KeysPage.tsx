@@ -188,6 +188,7 @@ export function KeysPage() {
                         />
                     )}
                     <BulkActions
+                        key={env}
                         env={env ?? ''}
                         readOnly={readOnly}
                         keys={selection.keys}

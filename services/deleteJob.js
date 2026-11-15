@@ -1,13 +1,8 @@
 // Bulk delete job (SPEC R7): one scan page at a time, so memory stays
 // constant. Clustered pages are deleted with one redis-cli stdin session per
 // primary Node that returned the Keys (ADR 0002).
-const {
-    scanClusterNodes,
-    isClusterMode,
-    execArgvBatch
-} = require('./redis');
-const { getConnectionConfig } = require('./database');
-const { scanBudget } = require('./scanBudget');
+const { isClusterMode, execArgvBatch } = require('./redis');
+const { scanPages } = require('./scanPages');
 const bulkKeys = require('./bulkKeys');
 const keyStore = require('./keyStore');
 const { startJob } = require('./jobs');
@@ -43,36 +38,12 @@ async function deletePage(env, page) {
     return deleted;
 }
 
-const nodeFailure = (failedNodes) =>
-    Object.assign(
-        new Error(
-            `Could not scan ${failedNodes.map((n) => n.address).join(', ')}; stopped`
-        ),
-        { details: { failedNodes } }
-    );
-
-async function byPattern(env, { pattern, type }, { progress, cancelled }) {
-    const { maxCount } = scanBudget(getConnectionConfig(env)?.tier);
-    let cursors = ['0'];
-    let hasMore = true;
-    while (hasMore && !cancelled()) {
-        const page = await scanClusterNodes(
-            pattern,
-            cursors,
-            maxCount,
-            env,
-            type || null
-        );
-        // A failed Node keeps its cursor forever; stop instead of looping.
-        if (page.failedNodes.length > 0) {
-            throw nodeFailure(page.failedNodes);
-        }
+async function byPattern(env, target, { progress, cancelled }) {
+    await scanPages(env, target, cancelled, async (page) => {
         progress.scanned += page.keys.length;
-        if (cancelled()) break;
+        if (cancelled()) return false;
         progress.deleted += await deletePage(env, page);
-        cursors = page.cursors;
-        hasMore = page.hasMore;
-    }
+    });
 }
 
 async function bySelection(env, keys, { progress, cancelled }) {
