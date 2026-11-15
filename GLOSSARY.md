@@ -57,5 +57,5 @@ A named, form-driven action (typed inputs, validation, dry-run, run, history) pr
 _Avoid_: Action, command, script
 
 **Board**:
-A page of Statistics widgets for the current Connection (Overview, Memory, Queues).
+A page of Statistics widgets for the current Connection (Overview, Memory deep-dive).
 _Avoid_: Dashboard
