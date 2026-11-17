@@ -11,6 +11,8 @@
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { version } = require('../../package.json');
 const readTools = require('./tools/read');
+const writeTools = require('./tools/write');
+const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
 
 const denyAll = async () => 'deny';
@@ -18,7 +20,7 @@ const denyAll = async () => 'deny';
 function createMcpServer({
     approver = denyAll,
     clock = Date.now,
-    tools = readTools
+    tools = [...readTools, ...writeTools]
 } = {}) {
     const server = new McpServer({ name: 'redis-deck', version });
     const ctx = {
@@ -41,17 +43,42 @@ function createMcpServer({
     return server;
 }
 
+// MCP write guard. Uses the same Connection row as guards/writeGuard.js, but
+// decides here: the AI client can never send a confirmation itself (tool
+// schemas have no such field and unknown arguments are dropped).
+// Returns null when the write may run, else the error text.
+function refuseWrite(connectionId) {
+    const conn = getConnection(connectionId);
+    if (!conn) {
+        return `Connection '${connectionId}' not found`;
+    }
+    if (conn.read_only === 1) {
+        return `Connection '${connectionId}' is read-only`;
+    }
+    if (conn.confirm_writes === 1) {
+        // Ticket 05 replaces this with ctx.approver + session grants.
+        return `Connection '${connectionId}' needs user approval for writes (Confirm writes); approval from AI clients is not available yet`;
+    }
+    return null;
+}
+
+const errorResult = (text) => ({
+    isError: true,
+    content: [{ type: 'text', text }]
+});
+
 async function invoke(tool, args, ctx) {
+    if (tool.access !== 'read') {
+        const refusal = refuseWrite(args.connectionId);
+        if (refusal) {
+            return errorResult(refusal);
+        }
+    }
     try {
         const data = await tool.run(args, ctx);
         return { content: [{ type: 'text', text: JSON.stringify(data) }] };
     } catch (error) {
-        return {
-            isError: true,
-            content: [
-                { type: 'text', text: safeMessage(error, args.connectionId) }
-            ]
-        };
+        return errorResult(safeMessage(error, args.connectionId));
     }
 }
 
