@@ -1,6 +1,7 @@
 const { createApp } = require('./config/app');
 const { hostGuard } = require('./guards/hostGuard');
 const { getAllConnections } = require('./services/database');
+const { createInstaller } = require('./services/aiClients/installer');
 const statsCollector = require('./services/statsCollector');
 
 const COLLECTION_INTERVAL = 5 * 60 * 1000;
@@ -43,15 +44,20 @@ function startTimers() {
 
 // Starts the app + background loops. Resolves with the listening http.Server;
 // closing it also stops the loops. Electron main calls this with port 0 and
-// embedded: true, which rejects requests with a foreign Host header (DNS rebinding).
+// embedded: true, which rejects requests with a foreign Host header (DNS rebinding),
+// and mcpBinary ({ command, args } that start the app in --mcp mode), which
+// enables the AI client installer routes.
 function startServer({
     port = process.env.PORT || 3000,
     host,
-    embedded = false
+    embedded = false,
+    mcpBinary
 } = {}) {
     let server;
     const app = createApp({
-        middleware: embedded ? [hostGuard(() => server.address().port)] : []
+        middleware: embedded ? [hostGuard(() => server.address().port)] : [],
+        aiClients:
+            embedded && mcpBinary ? createInstaller(mcpBinary) : undefined
     });
 
     return new Promise((resolve, reject) => {

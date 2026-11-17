@@ -6,6 +6,7 @@ const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { execFile } = require('child_process');
 const path = require('path');
 const { applyBundledRedisCli } = require('./redisCli');
+const { mcpBinary } = require('./mcpBinary');
 const { isSafeExternalUrl, isSameOrigin } = require('./navGuard');
 
 const ROOT = path.join(__dirname, '..');
@@ -94,7 +95,12 @@ async function boot() {
     server = await startServer({
         port: 0,
         host: '127.0.0.1',
-        embedded: true
+        embedded: true,
+        mcpBinary: mcpBinary({
+            packaged: app.isPackaged,
+            execPath: process.execPath,
+            appPath: app.getAppPath()
+        })
     });
     const apiPort = server.address().port;
 
