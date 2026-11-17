@@ -130,7 +130,69 @@ async function main() {
         if (!/^redis-cli \d/.test(version))
             throw new Error(`unexpected redis-cli --version: ${version}`);
         console.log(`ok  bundled ${redisCli} -> ${version}`);
+        await mcpCheck(exe, env, userData);
         console.log('SMOKE PASS');
+    }
+}
+
+// Starts the binary with --mcp, sends initialize over stdin and asserts a
+// valid reply. Every stdout line must be a protocol message.
+async function mcpCheck(exe, env, userData) {
+    const args = ['--mcp', `--user-data-dir=${userData}`];
+    if (process.env.SMOKE_NO_SANDBOX === '1') args.push('--no-sandbox');
+    const child = spawn(exe, args, { env, stdio: ['pipe', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stderr.on('data', (d) => (stderr += d));
+    const exit = new Promise((resolve) => child.on('exit', resolve));
+    let timer;
+    try {
+        const reply = await new Promise((resolve, reject) => {
+            timer = setTimeout(
+                () => reject(new Error(`timeout waiting for --mcp\n${stderr}`)),
+                TIMEOUT_MS
+            );
+            child.on('exit', (code) =>
+                reject(new Error(`--mcp exited (${code})\n${stderr}`))
+            );
+            child.stdout.on('data', (d) => {
+                stdout += d;
+                const line = stdout.split('\n')[0];
+                if (stdout.includes('\n')) resolve(line);
+            });
+            child.stdin.write(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'initialize',
+                    params: {
+                        protocolVersion: '2025-06-18',
+                        capabilities: {},
+                        clientInfo: { name: 'smoke', version: '0' }
+                    }
+                }) + '\n'
+            );
+        });
+        let msg;
+        try {
+            msg = JSON.parse(reply);
+        } catch {
+            throw new Error(`--mcp stdout is not JSON-RPC: ${reply}`);
+        }
+        if (msg.id !== 1 || msg.result?.serverInfo?.name !== 'redis-deck')
+            throw new Error(`unexpected initialize reply: ${reply}`);
+        console.log(
+            `ok  --mcp initialize -> ${msg.result.serverInfo.name} ${msg.result.serverInfo.version}`
+        );
+    } finally {
+        clearTimeout(timer);
+        child.stdin.end();
+        const closed = await Promise.race([
+            exit.then(() => true),
+            new Promise((r) => setTimeout(() => r(false), 5000))
+        ]);
+        if (!closed) child.kill();
+        await exit;
     }
 }
 

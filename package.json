@@ -23,6 +23,7 @@
     },
     "dependencies": {
         "@alenaksu/json-viewer": "^2.1.2",
+        "@modelcontextprotocol/sdk": "^1.32.2",
         "better-sqlite3": "^13.0.3",
         "chart.js": "^4.6.1",
         "dotenv": "^18.0.10",
@@ -32,6 +33,7 @@
         "react-router-dom": "^7.18.5",
         "react-window": "^2.5.3",
         "redis": "^6.3.1",
+        "zod": "^4.6.7",
         "zustand": "^5.1.0"
     },
     "devDependencies": {
