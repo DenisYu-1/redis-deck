@@ -64,7 +64,11 @@ function startMcp() {
         .then(() => {
             applyAppEnv();
             const { startStdio } = require('../services/mcp/stdio');
-            return startStdio({}, { onClose: () => app.quit() });
+            const { approvalDialog } = require('./approvalDialog');
+            return startStdio(
+                { approver: approvalDialog },
+                { onClose: () => app.quit() }
+            );
         })
         .catch((err) => {
             console.error('Redis Deck MCP failed to start:', err);

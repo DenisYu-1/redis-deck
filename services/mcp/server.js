@@ -4,6 +4,7 @@
 // deps:
 //   approver(request) -> 'deny' | 'once' | 'session'  (asked for guarded writes)
 //   clock() -> ms since epoch                          (budgets, session grants)
+//   approvalTimeoutMs                                  (no answer = deny; 60 s)
 //   tools                                              (defaults to every tool)
 // Each tool: { name, description, access: 'read' | 'write', inputSchema
 // (zod raw shape), run(args, ctx) -> JSON-able result }. Throwing fails the
@@ -14,17 +15,23 @@ const readTools = require('./tools/read');
 const writeTools = require('./tools/write');
 const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
+const { createApprovals } = require('./approvals');
 
 const denyAll = async () => 'deny';
 
 function createMcpServer({
     approver = denyAll,
     clock = Date.now,
+    approvalTimeoutMs,
     tools = [...readTools, ...writeTools]
 } = {}) {
     const server = new McpServer({ name: 'redis-deck', version });
     const ctx = {
-        approver,
+        approvals: createApprovals({
+            approver,
+            clock,
+            timeoutMs: approvalTimeoutMs
+        }),
         clock,
         // AI client name from the initialize handshake (for dialogs and logs).
         clientName: () => server.server.getClientVersion()?.name ?? 'unknown'
@@ -45,19 +52,39 @@ function createMcpServer({
 
 // MCP write guard. Uses the same Connection row as guards/writeGuard.js, but
 // decides here: the AI client can never send a confirmation itself (tool
-// schemas have no such field and unknown arguments are dropped).
-// Returns null when the write may run, else the error text.
-function refuseWrite(connectionId) {
+// schemas have no such field and unknown arguments are dropped); Confirm
+// writes asks the user through ctx.approvals.
+// Returns null when the write may run, else { outcome, text } with outcome
+// 'blocked' (not allowed at all) or 'denied' (the user said no).
+async function refuseWrite(tool, args, ctx) {
+    const { connectionId } = args;
     const conn = getConnection(connectionId);
     if (!conn) {
-        return `Connection '${connectionId}' not found`;
+        return {
+            outcome: 'blocked',
+            text: `Connection '${connectionId}' not found`
+        };
     }
     if (conn.read_only === 1) {
-        return `Connection '${connectionId}' is read-only`;
+        return {
+            outcome: 'blocked',
+            text: `Connection '${connectionId}' is read-only`
+        };
     }
     if (conn.confirm_writes === 1) {
-        // Ticket 05 replaces this with ctx.approver + session grants.
-        return `Connection '${connectionId}' needs user approval for writes (Confirm writes); approval from AI clients is not available yet`;
+        const approved = await ctx.approvals.approve({
+            clientName: ctx.clientName(),
+            connectionId,
+            tier: conn.tier,
+            operation: tool.name,
+            key: args.key
+        });
+        if (!approved) {
+            return {
+                outcome: 'denied',
+                text: `The user denied ${tool.name} on Connection '${connectionId}'`
+            };
+        }
     }
     return null;
 }
@@ -69,9 +96,9 @@ const errorResult = (text) => ({
 
 async function invoke(tool, args, ctx) {
     if (tool.access !== 'read') {
-        const refusal = refuseWrite(args.connectionId);
+        const refusal = await refuseWrite(tool, args, ctx);
         if (refusal) {
-            return errorResult(refusal);
+            return errorResult(refusal.text);
         }
     }
     try {

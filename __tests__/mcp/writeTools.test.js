@@ -2,7 +2,10 @@
  * @jest-environment node
  */
 const { connectMcp } = require('../helpers/mcpClient');
-const { db } = require('../../services/database');
+const {
+    addGuardedConnection,
+    removeConnections
+} = require('../helpers/guardedConnections');
 const {
     createTestKey,
     createTestHash,
@@ -17,26 +20,6 @@ const CONN = global.TEST_CONNECTION_ID;
 const READ_ONLY = 'test-mcp-read-only';
 const CONFIRM = 'test-mcp-confirm';
 
-// A guarded Connection pointing at the same test Redis as CONN.
-function addGuardedConnection(id, flags) {
-    const base = db.prepare('SELECT * FROM connections WHERE id = ?').get(CONN);
-    db.prepare(
-        `INSERT OR REPLACE INTO connections (id, host, port, username, password, tls, cluster, \`order\`, db, tier, read_only, confirm_writes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1000, ?, 'production', ?, ?)`
-    ).run(
-        id,
-        base.host,
-        base.port,
-        base.username,
-        base.password,
-        base.tls,
-        base.cluster,
-        base.db,
-        flags.readOnly ? 1 : 0,
-        flags.confirmWrites ? 1 : 0
-    );
-}
-
 describe('MCP write tools', () => {
     let mcp;
 
@@ -46,10 +29,7 @@ describe('MCP write tools', () => {
     });
 
     afterAll(() => {
-        db.prepare('DELETE FROM connections WHERE id IN (?, ?)').run(
-            READ_ONLY,
-            CONFIRM
-        );
+        removeConnections(READ_ONLY, CONFIRM);
     });
 
     beforeEach(async () => {
@@ -253,7 +233,7 @@ describe('MCP write tools', () => {
             }
         );
 
-        test('a Confirm writes Connection is blocked (no approval yet)', async () => {
+        test('a Confirm writes Connection is denied when no approver is given', async () => {
             const res = await mcp.call('set_key', {
                 connectionId: CONFIRM,
                 key: 'test:mcpw:g',
@@ -261,7 +241,7 @@ describe('MCP write tools', () => {
             });
 
             expect(res.ok).toBe(false);
-            expect(res.error).toMatch(/needs user approval/);
+            expect(res.error).toMatch(/user denied/i);
             expect(await keyExists(CONN, 'test:mcpw:g')).toBe(false);
         });
 
