@@ -5,6 +5,7 @@ const { connectMcp } = require('../helpers/mcpClient');
 const { keyExists, deleteKey } = require('../../services/keyStore');
 const { getHistory } = require('../../services/workflows');
 const { db } = require('../../services/database');
+const { listActivity } = require('../../services/aiActivity');
 const {
     addGuardedConnection,
     removeConnections
@@ -103,6 +104,24 @@ describe('MCP Workflow tools', () => {
                 connection: CONN,
                 inputs: { id: ID, ttl: '300' },
                 ok: true
+            })
+        );
+    });
+
+    test('a run on a plain Connection is logged as done AI activity, naming the Workflow', async () => {
+        const NOW = 1_700_000_000_000;
+        mcp = await connectMcp({ clock: () => NOW });
+
+        await runMarker(mcp, CONN);
+
+        expect(listActivity({ connectionId: CONN }).entries).toContainEqual(
+            expect.objectContaining({
+                time: NOW,
+                client: 'test-client',
+                operation: 'run_workflow',
+                target: SET,
+                result: 'done',
+                error: null
             })
         );
     });
