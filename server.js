@@ -7,6 +7,8 @@ const { cleanupOldActivity } = require('./services/aiActivity');
 
 const COLLECTION_INTERVAL = 5 * 60 * 1000;
 const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000;
+const SNAPSHOT_RETENTION_DAYS = 30;
+const AI_ACTIVITY_RETENTION_DAYS = 30;
 
 // Background loops; started once the server is listening. Timers are unref'd so
 // they never keep the process alive on their own.
@@ -33,12 +35,12 @@ function startTimers() {
         }, COLLECTION_INTERVAL),
         setInterval(() => {
             try {
-                statsCollector.cleanupOldSnapshots(30);
+                statsCollector.cleanupOldSnapshots(SNAPSHOT_RETENTION_DAYS);
             } catch (error) {
                 console.error('Error cleaning up old snapshots:', error);
             }
             try {
-                cleanupOldActivity(30);
+                cleanupOldActivity(AI_ACTIVITY_RETENTION_DAYS);
             } catch (error) {
                 console.error('Error cleaning up old AI activity:', error);
             }

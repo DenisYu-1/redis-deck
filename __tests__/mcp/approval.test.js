@@ -69,13 +69,17 @@ describe('MCP approval for Confirm writes', () => {
 
         await setKey(mcp, 'v');
 
-        expect(approver).toHaveBeenCalledWith({
-            clientName: 'test-client',
-            connectionId: CONFIRM,
-            tier: 'production',
-            operation: 'set_key',
-            key: 'test:mcpa:k'
-        });
+        expect(approver).toHaveBeenCalledWith(
+            {
+                clientName: 'test-client',
+                connectionId: CONFIRM,
+                tier: 'production',
+                operation: 'set_key',
+                target: 'test:mcpa:k',
+                targetLabel: 'Key'
+            },
+            { signal: expect.any(AbortSignal) }
+        );
     });
 
     test('Allow once runs the write and the next write asks again', async () => {
@@ -120,7 +124,8 @@ describe('MCP approval for Confirm writes', () => {
         expect(other.ok).toBe(false);
         expect(approver).toHaveBeenCalledTimes(2);
         expect(approver).toHaveBeenLastCalledWith(
-            expect.objectContaining({ connectionId: CONFIRM_OTHER })
+            expect.objectContaining({ connectionId: CONFIRM_OTHER }),
+            expect.anything()
         );
     });
 
@@ -161,6 +166,37 @@ describe('MCP approval for Confirm writes', () => {
 
         expect(res.error).toMatch(/user denied/i);
         expect(await keyExists(CONN, 'test:mcpa:k')).toBe(false);
+    });
+
+    test('the approval timeout aborts the signal given to the approver', async () => {
+        let signal;
+        const never = jest.fn((_request, opts) => {
+            signal = opts.signal;
+            return new Promise(() => {});
+        });
+        mcp = await connectMcp({
+            approver: never,
+            clock,
+            approvalTimeoutMs: 20
+        });
+
+        await setKey(mcp, 'v');
+
+        expect(signal.aborted).toBe(true);
+    });
+
+    test('an answer in time leaves the signal un-aborted', async () => {
+        let signal;
+        const approver = jest.fn(async (_request, opts) => {
+            signal = opts.signal;
+            return 'once';
+        });
+        mcp = await connectMcp({ approver, clock, approvalTimeoutMs: 20 });
+
+        await setKey(mcp, 'v');
+        await new Promise((r) => setTimeout(r, 40));
+
+        expect(signal.aborted).toBe(false);
     });
 
     test('plain Connections write without asking', async () => {

@@ -6,6 +6,14 @@ const { getDatabase } = require('./database');
 const LOG_SETTING = 'log_ai_operations';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// What happened to a logged write. Mirrored by AiActivityResult in the client.
+const RESULTS = Object.freeze({
+    done: 'done', // ran
+    denied: 'denied', // the user said no (or did not answer)
+    blocked: 'blocked', // not allowed at all (Read-only, unknown Connection)
+    failed: 'failed' // ran and threw
+});
+
 function isLoggingEnabled() {
     const row = getDatabase()
         .prepare('SELECT value FROM settings WHERE key = ?')
@@ -21,7 +29,7 @@ function setLoggingEnabled(enabled) {
         .run(LOG_SETTING, enabled ? '1' : '0');
 }
 
-// result: 'done' | 'denied' | 'blocked' | 'failed'. No-op when logging is off.
+// result: one of RESULTS. No-op when logging is off.
 function recordActivity({
     time,
     client,
@@ -75,6 +83,7 @@ function cleanupOldActivity(daysToKeep = 30, now = Date.now()) {
 }
 
 module.exports = {
+    RESULTS,
     isLoggingEnabled,
     setLoggingEnabled,
     recordActivity,

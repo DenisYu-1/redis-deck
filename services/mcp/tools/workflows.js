@@ -5,7 +5,7 @@ const { z } = require('zod');
 const workflows = require('../../workflows');
 const { getConnection } = require('../../database');
 
-const connectionId = z.string().describe('Connection id from list_connections');
+const { connectionId, workflowTarget } = require('./shared');
 const fullId = z.string().describe('Workflow fullId from list_workflows');
 const inputs = z
     .record(z.string(), z.union([z.string(), z.number()]))
@@ -78,6 +78,7 @@ const planWorkflow = {
 const runWorkflow = {
     name: 'run_workflow',
     access: 'write',
+    target: workflowTarget,
     description:
         'Run a Workflow on a Connection. It may change Redis; use plan_workflow first to preview.',
     inputSchema: { connectionId, fullId, inputs },

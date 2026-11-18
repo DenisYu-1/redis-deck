@@ -2,12 +2,12 @@
 // free, so the --mcp entry wires stdio and tests wire the in-memory pair.
 //
 // deps:
-//   approver(request) -> 'deny' | 'once' | 'session'  (asked for guarded writes)
-//   clock() -> ms since epoch                          (budgets, session grants)
-//   approvalTimeoutMs                                  (no answer = deny; 60 s)
-//   tools                                              (defaults to every tool)
+//   approver, approvalTimeoutMs   see approvals.js (asked for guarded writes)
+//   clock() -> ms since epoch     (budgets, session grants)
+//   tools                         (defaults to every tool)
 // Each tool: { name, description, access: 'read' | 'write', inputSchema
-// (zod raw shape), run(args, ctx) -> JSON-able result }. Throwing fails the
+// (zod raw shape), run(args, ctx) -> JSON-able result }; a write also has
+// target (tools/shared.js), the Key or Workflow it names. Throwing fails the
 // call with a message scrubbed of Connection config.
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { version } = require('../../package.json');
@@ -17,7 +17,11 @@ const workflowTools = require('./tools/workflows');
 const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
 const { createApprovals } = require('./approvals');
-const { recordActivity } = require('../aiActivity');
+const { recordActivity, RESULTS } = require('../aiActivity');
+const { checkWrite } = require('../../guards/writeGuard');
+
+// checkWrite's status when the write needs the user's confirmation.
+const CONFIRM_REQUIRED = 428;
 
 const denyAll = async () => 'deny';
 
@@ -52,43 +56,43 @@ function createMcpServer({
     return server;
 }
 
-// MCP write guard. Uses the same Connection row as guards/writeGuard.js, but
-// decides here: the AI client can never send a confirmation itself (tool
-// schemas have no such field and unknown arguments are dropped); Confirm
-// writes asks the user through ctx.approvals.
+// MCP write guard: guards/writeGuard.js decides, called without a confirm
+// header because the AI client can never confirm a write itself (tool schemas
+// have no such field and unknown arguments are dropped). Where the HTTP API
+// would answer 428, the user is asked through ctx.approvals instead.
 // Returns null when the write may run, else { outcome, text } with outcome
-// 'blocked' (not allowed at all) or 'denied' (the user said no).
+// RESULTS.blocked (not allowed at all) or RESULTS.denied (the user said no).
 async function refuseWrite(tool, args, ctx) {
     const { connectionId } = args;
     const conn = getConnection(connectionId);
     if (!conn) {
         return {
-            outcome: 'blocked',
+            outcome: RESULTS.blocked,
             text: `Connection '${connectionId}' not found`
         };
     }
-    if (conn.read_only === 1) {
-        return {
-            outcome: 'blocked',
-            text: `Connection '${connectionId}' is read-only`
-        };
+    const refusal = checkWrite(connectionId);
+    if (!refusal) {
+        return null;
     }
-    if (conn.confirm_writes === 1) {
-        const approved = await ctx.approvals.approve({
-            clientName: ctx.clientName(),
-            connectionId,
-            tier: conn.tier,
-            operation: tool.name,
-            key: args.key ?? args.fullId // Workflow tools name the Workflow
-        });
-        if (!approved) {
-            return {
-                outcome: 'denied',
-                text: `The user denied ${tool.name} on Connection '${connectionId}'`
-            };
-        }
+    if (refusal.status !== CONFIRM_REQUIRED) {
+        return { outcome: RESULTS.blocked, text: refusal.error };
     }
-    return null;
+    const approved = await ctx.approvals.approve({
+        clientName: ctx.clientName(),
+        connectionId,
+        tier: conn.tier,
+        operation: tool.name,
+        target: tool.target?.of(args),
+        targetLabel: tool.target?.label
+    });
+    if (approved) {
+        return null;
+    }
+    return {
+        outcome: RESULTS.denied,
+        text: `The user denied ${tool.name} on Connection '${connectionId}'`
+    };
 }
 
 const errorResult = (text) => ({
@@ -106,7 +110,7 @@ function logActivity(tool, args, ctx, result, error) {
             client: ctx.clientName(),
             connectionId: args.connectionId,
             operation: tool.name,
-            target: args.key ?? args.fullId,
+            target: tool.target?.of(args),
             result,
             error
         });
@@ -125,11 +129,11 @@ async function invoke(tool, args, ctx) {
     }
     try {
         const data = await tool.run(args, ctx);
-        logActivity(tool, args, ctx, 'done');
+        logActivity(tool, args, ctx, RESULTS.done);
         return { content: [{ type: 'text', text: JSON.stringify(data) }] };
     } catch (error) {
         const message = safeMessage(error, args.connectionId);
-        logActivity(tool, args, ctx, 'failed', message);
+        logActivity(tool, args, ctx, RESULTS.failed, message);
         return errorResult(message);
     }
 }

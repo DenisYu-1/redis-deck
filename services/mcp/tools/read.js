@@ -15,7 +15,7 @@ const DEFAULT_SCAN_KEYS = 100;
 const SCAN_BUDGET_MS = 2000;
 const SCAN_HOP_COUNT = 1000;
 
-const connectionId = z.string().describe('Connection id from list_connections');
+const { connectionId } = require('./shared');
 
 const listConnections = {
     name: 'list_connections',

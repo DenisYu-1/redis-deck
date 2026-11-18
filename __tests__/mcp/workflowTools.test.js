@@ -159,13 +159,17 @@ describe('MCP Workflow tools', () => {
 
             expect(res.ok).toBe(false);
             expect(res.error).toMatch(/user denied/i);
-            expect(approver).toHaveBeenCalledWith({
-                clientName: 'test-client',
-                connectionId: CONFIRM,
-                tier: 'production',
-                operation: 'run_workflow',
-                key: SET
-            });
+            expect(approver).toHaveBeenCalledWith(
+                {
+                    clientName: 'test-client',
+                    connectionId: CONFIRM,
+                    tier: 'production',
+                    operation: 'run_workflow',
+                    target: SET,
+                    targetLabel: 'Workflow'
+                },
+                { signal: expect.any(AbortSignal) }
+            );
             expect(await keyExists(CONN, MARKER)).toBe(false);
             expect(getHistory(SET).some((r) => r.connection === CONFIRM)).toBe(
                 false

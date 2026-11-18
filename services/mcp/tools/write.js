@@ -11,12 +11,13 @@ const {
     expireKey
 } = require('../../keyStore');
 
-const connectionId = z.string().describe('Connection id from list_connections');
+const { connectionId, keyTarget } = require('./shared');
 const key = z.string().min(1).describe('Exact Key name');
 
 const setKey = {
     name: 'set_key',
     access: 'write',
+    target: keyTarget,
     description:
         'Create or replace a whole Key. type picks the value shape: string -> a string; hash -> { field: value }; list / set -> [string]; zset -> [{ member, score }]. ttl > 0 sets an expiry in seconds. To change one member, use zadd or set_hash_field instead.',
     inputSchema: {
@@ -42,6 +43,7 @@ const setKey = {
 const deleteKeyTool = {
     name: 'delete_key',
     access: 'write',
+    target: keyTarget,
     description: 'Delete one Key. deleted: false means it did not exist.',
     inputSchema: { connectionId, key },
     run: async ({ connectionId: id, key: k }) => ({
@@ -53,6 +55,7 @@ const deleteKeyTool = {
 const renameKeyTool = {
     name: 'rename_key',
     access: 'write',
+    target: keyTarget,
     description:
         'Rename a Key (RENAME): an existing Key named newKey is overwritten.',
     inputSchema: {
@@ -69,6 +72,7 @@ const renameKeyTool = {
 const setTtl = {
     name: 'set_ttl',
     access: 'write',
+    target: keyTarget,
     description: 'Set a Key to expire in seconds.',
     inputSchema: {
         connectionId,
@@ -85,6 +89,7 @@ const setTtl = {
 const removeTtl = {
     name: 'remove_ttl',
     access: 'write',
+    target: keyTarget,
     description: 'Remove the expiry of a Key so it never expires.',
     inputSchema: { connectionId, key },
     run: async ({ connectionId: id, key: k }) => ({
@@ -97,6 +102,7 @@ const removeTtl = {
 const zadd = {
     name: 'zadd',
     access: 'write',
+    target: keyTarget,
     description:
         'Add members to a sorted set in place (ZADD); an existing member gets the new score, other members and the TTL stay. Creates the Key if missing. added counts new members only.',
     inputSchema: {
@@ -116,6 +122,7 @@ const zadd = {
 const setHashField = {
     name: 'set_hash_field',
     access: 'write',
+    target: keyTarget,
     description:
         'Set one field of a hash Key in place (HSET); other fields and the TTL stay. Creates the hash if missing.',
     inputSchema: {
