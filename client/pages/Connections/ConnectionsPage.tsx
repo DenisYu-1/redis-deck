@@ -14,6 +14,8 @@ import {
     updateConnection
 } from '@/services/apiService';
 import type { RedisConnection } from '@/types';
+import { isDesktop } from '@/utils/desktopTitleBar';
+import { AiClientsPanel } from './AiClientsPanel';
 import { ConnectionForm, type TestResult } from './ConnectionForm';
 import {
     blankDraft,
@@ -308,6 +310,7 @@ export function ConnectionsPage() {
                             </tbody>
                         </table>
                     </div>
+                    {isDesktop() && <AiClientsPanel />}
                 </div>
             </section>
             {draft && (

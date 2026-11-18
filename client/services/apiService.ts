@@ -601,3 +601,45 @@ export async function getServerStatus(
         pingMs: Math.round(performance.now() - started)
     };
 }
+
+// AI clients (MCP) installer: Desktop app only (routes exist only there).
+export type AiClientStatus = 'not-installed' | 'installed' | 'stale' | 'error';
+
+export interface AiClient {
+    id: string;
+    name: string;
+    configPath: string;
+    status: AiClientStatus;
+    error?: string;
+}
+
+export interface AiClientSnippet {
+    path: string;
+    text: string;
+}
+
+const aiClientUrl = (id: string, action: string) =>
+    `${API_BASE}/ai-clients/${encodeURIComponent(id)}/${action}`;
+
+export async function listAiClients(): Promise<AiClient[]> {
+    const response = await fetch(`${API_BASE}/ai-clients`);
+    return (await handleResponse<{ clients: AiClient[] }>(response)).clients;
+}
+
+export async function installAiClient(id: string): Promise<void> {
+    await handleResponse(
+        await fetch(aiClientUrl(id, 'install'), { method: 'POST' })
+    );
+}
+
+export async function removeAiClient(id: string): Promise<void> {
+    await handleResponse(
+        await fetch(aiClientUrl(id, 'remove'), { method: 'POST' })
+    );
+}
+
+export async function getAiClientSnippet(id: string): Promise<AiClientSnippet> {
+    return handleResponse<AiClientSnippet>(
+        await fetch(aiClientUrl(id, 'snippet'))
+    );
+}
