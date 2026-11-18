@@ -55,11 +55,24 @@ function applyAppEnv() {
     });
 }
 
+// macOS: LaunchServices treats a running --mcp process as the app, so opening
+// Redis Deck (Finder, Dock, `open`) only re-activates it and no window comes.
+// Launch a new, normal instance instead; its single-instance lock hands off to
+// a window app that is already running.
+function openWindowApp() {
+    const bundle = path.resolve(process.execPath, '../../..');
+    const args = app.isPackaged ? [] : ['--args', app.getAppPath()];
+    execFile('open', ['-n', bundle, ...args], (err) => {
+        if (err) console.error('Failed to open Redis Deck:', err.message);
+    });
+}
+
 // --mcp: stdio MCP server for an AI client. No window, no HTTP listener, no
 // single-instance lock, so it runs beside the normal app. Errors go to
 // stderr only: stdout belongs to the protocol.
 function startMcp() {
     app.dock?.hide();
+    app.on('activate', openWindowApp);
     app.whenReady()
         .then(() => {
             applyAppEnv();
