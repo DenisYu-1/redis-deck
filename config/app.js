@@ -11,6 +11,7 @@ const statsRoutes = require('../routes/stats');
 const workflowRoutes = require('../routes/workflows');
 const jobRoutes = require('../routes/jobs');
 const { createAiClientsRouter } = require('../routes/aiClients');
+const aiActivityRoutes = require('../routes/aiActivity');
 
 // aiClients: client config installer; given only when embedded in the
 // Desktop app, which is the only place the installer routes exist.
@@ -41,6 +42,7 @@ function createApp({ middleware = [], searchBudgetMs, aiClients } = {}) {
     app.use('/api', searchRoutes);
     app.use('/api', workflowRoutes);
     app.use('/api', jobRoutes);
+    app.use('/api', aiActivityRoutes);
     app.use('/api/stats', statsRoutes);
     if (aiClients) app.use('/api', createAiClientsRouter(aiClients));
 

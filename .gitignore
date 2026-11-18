@@ -1,5 +1,6 @@
 node_modules/
 data/*.sqlite
+data/*.sqlite.bak-v*
 data/*.db
 data/plugins/
 !data/.gitkeep

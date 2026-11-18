@@ -16,6 +16,7 @@ const writeTools = require('./tools/write');
 const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
 const { createApprovals } = require('./approvals');
+const { recordActivity } = require('../aiActivity');
 
 const denyAll = async () => 'deny';
 
@@ -94,18 +95,41 @@ const errorResult = (text) => ({
     content: [{ type: 'text', text }]
 });
 
+// AI activity entry for a write or refused write; reads are never logged.
+// A failing log write never fails the tool call.
+function logActivity(tool, args, ctx, result, error) {
+    if (tool.access === 'read') return;
+    try {
+        recordActivity({
+            time: ctx.clock(),
+            client: ctx.clientName(),
+            connectionId: args.connectionId,
+            operation: tool.name,
+            target: args.key ?? args.fullId,
+            result,
+            error
+        });
+    } catch (logError) {
+        console.error('Failed to log AI activity:', logError.message);
+    }
+}
+
 async function invoke(tool, args, ctx) {
     if (tool.access !== 'read') {
         const refusal = await refuseWrite(tool, args, ctx);
         if (refusal) {
+            logActivity(tool, args, ctx, refusal.outcome, refusal.text);
             return errorResult(refusal.text);
         }
     }
     try {
         const data = await tool.run(args, ctx);
+        logActivity(tool, args, ctx, 'done');
         return { content: [{ type: 'text', text: JSON.stringify(data) }] };
     } catch (error) {
-        return errorResult(safeMessage(error, args.connectionId));
+        const message = safeMessage(error, args.connectionId);
+        logActivity(tool, args, ctx, 'failed', message);
+        return errorResult(message);
     }
 }
 

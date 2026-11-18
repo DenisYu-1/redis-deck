@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/hooks/useToast';
+import { AiActivityControls } from './AiActivityControls';
 import {
     getAiClientSnippet,
     installAiClient,
@@ -155,6 +156,7 @@ export function AiClientsPanel() {
                     </tbody>
                 </table>
             </div>
+            <AiActivityControls />
             {restartHint && (
                 <p className="sm tx2" role="status">
                     Restart {restartHint} to load Redis Deck.
