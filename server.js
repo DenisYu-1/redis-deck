@@ -3,6 +3,7 @@ const { hostGuard } = require('./guards/hostGuard');
 const { getAllConnections } = require('./services/database');
 const { createInstaller } = require('./services/aiClients/installer');
 const statsCollector = require('./services/statsCollector');
+const { cleanupOldActivity } = require('./services/aiActivity');
 
 const COLLECTION_INTERVAL = 5 * 60 * 1000;
 const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000;
@@ -35,6 +36,11 @@ function startTimers() {
                 statsCollector.cleanupOldSnapshots(30);
             } catch (error) {
                 console.error('Error cleaning up old snapshots:', error);
+            }
+            try {
+                cleanupOldActivity(30);
+            } catch (error) {
+                console.error('Error cleaning up old AI activity:', error);
             }
         }, CLEANUP_INTERVAL)
     ];

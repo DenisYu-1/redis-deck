@@ -1074,6 +1074,41 @@ kbd {
     max-height: 260px;
     overflow: auto;
 }
+.aic-log {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.aic-log-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+.aic-activity {
+    max-height: 50vh;
+    overflow: auto;
+}
+.aic-activity .ctable {
+    min-width: 0;
+}
+.aic-activity-target {
+    word-break: break-all;
+}
+.aic-activity-count {
+    margin-right: auto;
+}
+.aic-activity-error,
+.aic-result.failed,
+.aic-result.blocked {
+    color: var(--ac);
+}
+.aic-result.done {
+    color: var(--ok);
+}
+.aic-result.denied {
+    color: var(--warn);
+}
 .drawer {
     background: var(--sf);
     border-left: 1px solid var(--bd);

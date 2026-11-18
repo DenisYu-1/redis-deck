@@ -643,3 +643,53 @@ export async function getAiClientSnippet(id: string): Promise<AiClientSnippet> {
         await fetch(aiClientUrl(id, 'snippet'))
     );
 }
+
+// AI activity: MCP writes and refused write attempts, plus the "Log AI
+// operations" toggle. App settings, not Redis writes (no write guard).
+export type AiActivityResult = 'done' | 'denied' | 'blocked' | 'failed';
+
+export interface AiActivityEntry {
+    id: number;
+    /** ms since epoch */
+    time: number;
+    client: string;
+    connectionId: string;
+    operation: string;
+    /** The Key, or the Workflow id */
+    target: string | null;
+    result: AiActivityResult;
+    error: string | null;
+}
+
+export interface AiActivityPage {
+    entries: AiActivityEntry[];
+    total: number;
+}
+
+export async function listAiActivity(params: {
+    connectionId?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<AiActivityPage> {
+    const query = new URLSearchParams();
+    if (params.connectionId) query.set('connectionId', params.connectionId);
+    if (params.limit !== undefined) query.set('limit', String(params.limit));
+    if (params.offset !== undefined) query.set('offset', String(params.offset));
+    return handleResponse<AiActivityPage>(
+        await fetch(`${API_BASE}/ai-activity?${query.toString()}`)
+    );
+}
+
+const aiLogSettings = async (init?: RequestInit): Promise<boolean> => {
+    const response = await fetch(`${API_BASE}/ai-activity/settings`, init);
+    return (await handleResponse<{ logEnabled: boolean }>(response)).logEnabled;
+};
+
+export const getAiActivityLogging = (): Promise<boolean> => aiLogSettings();
+
+export const setAiActivityLogging = (logEnabled: boolean): Promise<boolean> =>
+    aiLogSettings({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logEnabled })
+    });
