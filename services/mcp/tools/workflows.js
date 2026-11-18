@@ -6,7 +6,7 @@ const workflows = require('../../workflows');
 const { getConnection } = require('../../database');
 
 const connectionId = z.string().describe('Connection id from list_connections');
-const workflowId = z.string().describe('Workflow id from list_workflows');
+const fullId = z.string().describe('Workflow fullId from list_workflows');
 const inputs = z
     .record(z.string(), z.union([z.string(), z.number()]))
     .default({})
@@ -14,9 +14,9 @@ const inputs = z
 
 // The Workflow and Connection a plan or run acts on; throws if either is unknown.
 function resolve(args) {
-    const workflow = workflows.findWorkflow(args.workflowId);
+    const workflow = workflows.findWorkflow(args.fullId);
     if (!workflow) {
-        throw new Error(`Unknown Workflow '${args.workflowId}'`);
+        throw new Error(`Unknown Workflow '${args.fullId}'`);
     }
     const connection = getConnection(args.connectionId);
     if (!connection) {
@@ -41,12 +41,12 @@ const listWorkflows = {
     name: 'list_workflows',
     access: 'read',
     description:
-        'List the Workflows (prepared plan/run actions) with their inputs. Use the id with plan_workflow and run_workflow.',
+        'List the Workflows (prepared plan/run actions) with their inputs. Use the fullId with plan_workflow and run_workflow.',
     inputSchema: {},
     run: async () => ({
         workflows: workflows.listWorkflows().flatMap((plugin) =>
             plugin.actions.map((action) => ({
-                id: action.fullId,
+                fullId: action.fullId,
                 plugin: plugin.name,
                 title: action.title,
                 description: action.desc,
@@ -62,7 +62,7 @@ const planWorkflow = {
     access: 'read',
     description:
         'Dry-run a Workflow: validates the inputs and says what run_workflow would do, without changing Redis.',
-    inputSchema: { connectionId, workflowId, inputs },
+    inputSchema: { connectionId, fullId, inputs },
     run: async (args) => {
         const { workflow, connection } = resolve(args);
         return workflows.plan(
@@ -80,7 +80,7 @@ const runWorkflow = {
     access: 'write',
     description:
         'Run a Workflow on a Connection. It may change Redis; use plan_workflow first to preview.',
-    inputSchema: { connectionId, workflowId, inputs },
+    inputSchema: { connectionId, fullId, inputs },
     run: async (args) => {
         const { workflow, connection } = resolve(args);
         const result = await workflows.run(

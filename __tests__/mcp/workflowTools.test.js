@@ -13,15 +13,17 @@ const {
 const CONN = global.TEST_CONNECTION_ID;
 const SET = 'examples.set-marker';
 const COUNT = 'examples.count-keys';
-const MARKER = 'workflow:example:7';
+// Own marker id: routes/workflows.test.js runs the same Workflow with id 7.
+const ID = 64;
+const MARKER = `workflow:example:${ID}`;
 const READ_ONLY = 'test-mcp-wf-read-only';
 const CONFIRM = 'test-mcp-wf-confirm';
 
 const runMarker = (mcp, connectionId) =>
     mcp.call('run_workflow', {
         connectionId,
-        workflowId: SET,
-        inputs: { id: 7 }
+        fullId: SET,
+        inputs: { id: ID }
     });
 
 describe('MCP Workflow tools', () => {
@@ -34,9 +36,10 @@ describe('MCP Workflow tools', () => {
 
     afterAll(() => {
         removeConnections(READ_ONLY, CONFIRM);
+        // Only this file's runs: other suites share these Connections.
         db.prepare(
-            'DELETE FROM workflow_runs WHERE connection_id IN (?, ?, ?)'
-        ).run(CONN, READ_ONLY, CONFIRM);
+            'DELETE FROM workflow_runs WHERE action_id = ? AND inputs LIKE ?'
+        ).run(SET, `%"id":${ID},%`);
     });
 
     afterEach(async () => {
@@ -51,7 +54,7 @@ describe('MCP Workflow tools', () => {
         const res = await mcp.call('list_workflows');
 
         expect(res.ok).toBe(true);
-        const setMarker = res.data.workflows.find((w) => w.id === SET);
+        const setMarker = res.data.workflows.find((w) => w.fullId === SET);
         expect(setMarker).toMatchObject({
             title: 'Set marker key',
             writes: true
@@ -69,15 +72,15 @@ describe('MCP Workflow tools', () => {
 
         const res = await mcp.call('plan_workflow', {
             connectionId: CONN,
-            workflowId: SET,
-            inputs: { id: 7 }
+            fullId: SET,
+            inputs: { id: ID }
         });
 
         expect(res.ok).toBe(true);
         expect(res.data.text).toBe(
-            'Would SET workflow:example:7 to marker with a 60s expiry'
+            'Would SET workflow:example:64 to marker with a 60s expiry'
         );
-        expect(res.data.inputs).toEqual({ id: 7, ttl: '60' });
+        expect(res.data.inputs).toEqual({ id: ID, ttl: '60' });
         expect(await keyExists(CONN, MARKER)).toBe(false);
     });
 
@@ -86,20 +89,22 @@ describe('MCP Workflow tools', () => {
 
         const res = await mcp.call('run_workflow', {
             connectionId: CONN,
-            workflowId: SET,
-            inputs: { id: '7', ttl: '300' }
+            fullId: SET,
+            inputs: { id: String(ID), ttl: '300' }
         });
 
         expect(res.ok).toBe(true);
         expect(res.data.text).toBe(
-            'Set workflow:example:7 to marker (expires in 300s)'
+            'Set workflow:example:64 to marker (expires in 300s)'
         );
         expect(await keyExists(CONN, MARKER)).toBe(true);
-        expect(getHistory(SET)[0]).toMatchObject({
-            connection: CONN,
-            inputs: { id: 7, ttl: '300' },
-            ok: true
-        });
+        expect(getHistory(SET)).toContainEqual(
+            expect.objectContaining({
+                connection: CONN,
+                inputs: { id: ID, ttl: '300' },
+                ok: true
+            })
+        );
     });
 
     describe('run guard', () => {
@@ -108,7 +113,7 @@ describe('MCP Workflow tools', () => {
 
             const res = await mcp.call('run_workflow', {
                 connectionId: READ_ONLY,
-                workflowId: COUNT
+                fullId: COUNT
             });
 
             expect(res.ok).toBe(false);
@@ -120,8 +125,8 @@ describe('MCP Workflow tools', () => {
 
             const res = await mcp.call('plan_workflow', {
                 connectionId: READ_ONLY,
-                workflowId: SET,
-                inputs: { id: 7 }
+                fullId: SET,
+                inputs: { id: ID }
             });
 
             expect(res.ok).toBe(true);

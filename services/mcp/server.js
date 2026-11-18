@@ -78,7 +78,7 @@ async function refuseWrite(tool, args, ctx) {
             connectionId,
             tier: conn.tier,
             operation: tool.name,
-            key: args.key ?? args.workflowId // Workflow tools name the Workflow
+            key: args.key ?? args.fullId // Workflow tools name the Workflow
         });
         if (!approved) {
             return {
