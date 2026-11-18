@@ -274,7 +274,7 @@ describe('MCP write tools', () => {
     });
 
     describe('tool list', () => {
-        test('exposes exactly the read and guarded write tools', async () => {
+        test('exposes exactly the read, guarded write and Workflow tools', async () => {
             const { tools } = await mcp.client.listTools();
 
             expect(tools.map((t) => t.name).sort()).toEqual(
@@ -289,7 +289,10 @@ describe('MCP write tools', () => {
                     'set_ttl',
                     'remove_ttl',
                     'zadd',
-                    'set_hash_field'
+                    'set_hash_field',
+                    'list_workflows',
+                    'plan_workflow',
+                    'run_workflow'
                 ].sort()
             );
         });

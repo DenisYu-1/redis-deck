@@ -13,6 +13,7 @@ const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { version } = require('../../package.json');
 const readTools = require('./tools/read');
 const writeTools = require('./tools/write');
+const workflowTools = require('./tools/workflows');
 const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
 const { createApprovals } = require('./approvals');
@@ -23,7 +24,7 @@ function createMcpServer({
     approver = denyAll,
     clock = Date.now,
     approvalTimeoutMs,
-    tools = [...readTools, ...writeTools]
+    tools = [...readTools, ...writeTools, ...workflowTools]
 } = {}) {
     const server = new McpServer({ name: 'redis-deck', version });
     const ctx = {
@@ -77,7 +78,7 @@ async function refuseWrite(tool, args, ctx) {
             connectionId,
             tier: conn.tier,
             operation: tool.name,
-            key: args.key
+            key: args.key ?? args.workflowId // Workflow tools name the Workflow
         });
         if (!approved) {
             return {

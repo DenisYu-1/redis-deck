@@ -25,7 +25,9 @@ async function approvalDialog({
             type: 'warning',
             title: 'Redis Deck: approve AI write',
             message: `${clientName} wants to run ${operation} on Connection "${connectionId}" (${tier}).`,
-            detail: key ? `Key: ${key}` : undefined,
+            detail: key
+                ? `${operation === 'run_workflow' ? 'Workflow' : 'Key'}: ${key}`
+                : undefined,
             buttons: ['Deny', 'Allow once', 'Allow for this session'],
             defaultId: 0,
             cancelId: 0,
