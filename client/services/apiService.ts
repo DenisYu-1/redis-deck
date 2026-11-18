@@ -601,3 +601,95 @@ export async function getServerStatus(
         pingMs: Math.round(performance.now() - started)
     };
 }
+
+// AI clients (MCP) installer: Desktop app only (routes exist only there).
+export type AiClientStatus = 'not-installed' | 'installed' | 'stale' | 'error';
+
+export interface AiClient {
+    id: string;
+    name: string;
+    configPath: string;
+    status: AiClientStatus;
+    error?: string;
+}
+
+export interface AiClientSnippet {
+    path: string;
+    text: string;
+}
+
+const aiClientUrl = (id: string, action: string) =>
+    `${API_BASE}/ai-clients/${encodeURIComponent(id)}/${action}`;
+
+export async function listAiClients(): Promise<AiClient[]> {
+    const response = await fetch(`${API_BASE}/ai-clients`);
+    return (await handleResponse<{ clients: AiClient[] }>(response)).clients;
+}
+
+export async function installAiClient(id: string): Promise<void> {
+    await handleResponse(
+        await fetch(aiClientUrl(id, 'install'), { method: 'POST' })
+    );
+}
+
+export async function removeAiClient(id: string): Promise<void> {
+    await handleResponse(
+        await fetch(aiClientUrl(id, 'remove'), { method: 'POST' })
+    );
+}
+
+export async function getAiClientSnippet(id: string): Promise<AiClientSnippet> {
+    return handleResponse<AiClientSnippet>(
+        await fetch(aiClientUrl(id, 'snippet'))
+    );
+}
+
+// AI activity: MCP writes and refused write attempts, plus the "Log AI
+// operations" toggle. App settings, not Redis writes (no write guard).
+export type AiActivityResult = 'done' | 'denied' | 'blocked' | 'failed';
+
+export interface AiActivityEntry {
+    id: number;
+    /** ms since epoch */
+    time: number;
+    client: string;
+    connectionId: string;
+    operation: string;
+    /** The Key, or the Workflow id */
+    target: string | null;
+    result: AiActivityResult;
+    error: string | null;
+}
+
+export interface AiActivityPage {
+    entries: AiActivityEntry[];
+    total: number;
+}
+
+export async function listAiActivity(params: {
+    connectionId?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<AiActivityPage> {
+    const query = new URLSearchParams();
+    if (params.connectionId) query.set('connectionId', params.connectionId);
+    if (params.limit !== undefined) query.set('limit', String(params.limit));
+    if (params.offset !== undefined) query.set('offset', String(params.offset));
+    return handleResponse<AiActivityPage>(
+        await fetch(`${API_BASE}/ai-activity?${query.toString()}`)
+    );
+}
+
+const aiLogSettings = async (init?: RequestInit): Promise<boolean> => {
+    const response = await fetch(`${API_BASE}/ai-activity/settings`, init);
+    return (await handleResponse<{ logEnabled: boolean }>(response)).logEnabled;
+};
+
+export const getAiActivityLogging = (): Promise<boolean> => aiLogSettings();
+
+export const setAiActivityLogging = (logEnabled: boolean): Promise<boolean> =>
+    aiLogSettings({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logEnabled })
+    });

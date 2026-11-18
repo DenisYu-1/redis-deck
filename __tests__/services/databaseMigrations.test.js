@@ -52,15 +52,19 @@ describe('database migrations', () => {
         fs.rmSync(dataDir, { recursive: true, force: true });
     });
 
-    test('a fresh data folder starts at data version 1 with today’s tables and no backup', () => {
+    test('a fresh data folder starts at data version 2 with today’s tables and no backup', () => {
         const state = startApp(dataDir);
 
-        expect(state.version).toBe(1);
+        expect(state.version).toBe(2);
         expect(state.tables).toEqual([
+            'ai_activity',
             'connections',
+            'idx_ai_activity_connection',
+            'idx_ai_activity_time',
             'idx_stats_connection_time',
             'idx_workflow_runs_action',
             'saved_searches',
+            'settings',
             'stats_snapshots',
             'workflow_runs'
         ]);
@@ -75,7 +79,7 @@ describe('database migrations', () => {
         const second = startApp(dataDir);
 
         expect(second).toEqual(first);
-        expect(second.version).toBe(1);
+        expect(second.version).toBe(2);
         expect(second.connections).toEqual(['test:kept']);
         expect(backups(dataDir)).toEqual([]);
     });
@@ -116,6 +120,8 @@ describe('database migrations', () => {
     describe('an older versioned database', () => {
         let file;
         // Previous-version fixture: the current list is the "earlier" release.
+        const V = migrations.length;
+        const BAK = `.bak-v${V}`;
         beforeEach(() => {
             file = path.join(dataDir, DB_FILE);
             const raw = new Database(file);
@@ -152,8 +158,8 @@ describe('database migrations', () => {
             return state;
         };
 
-        test('is backed up as .bak-v1, upgraded, and keeps its Connections', () => {
-            fs.writeFileSync(`${file}.bak-v1`, 'stale backup');
+        test('is backed up as .bak-v<current>, upgraded, and keeps its Connections', () => {
+            fs.writeFileSync(`${file}${BAK}`, 'stale backup');
 
             openAndMigrate([
                 ...migrations,
@@ -161,33 +167,33 @@ describe('database migrations', () => {
             ]);
 
             const after = read(file);
-            const backup = read(`${file}.bak-v1`);
-            expect(after.version).toBe(2);
+            const backup = read(`${file}${BAK}`);
+            expect(after.version).toBe(V + 1);
             expect(after.connections).toEqual([
                 { id: 'test:kept', password: 'secret' }
             ]);
             expect(after.tables).toContain('extra');
-            expect(backups(dataDir)).toEqual([`${DB_FILE}.bak-v1`]);
-            expect(backup.version).toBe(1);
+            expect(backups(dataDir)).toEqual([`${DB_FILE}${BAK}`]);
+            expect(backup.version).toBe(V);
             expect(backup.tables).not.toContain('extra');
         });
 
-        test('a failing migration rolls back, stays at version 1, and names the backup', () => {
+        test('a failing migration rolls back, stays at the current version, and names the backup', () => {
             const failing = (db) => {
                 db.exec('CREATE TABLE half_done (x)');
                 throw new Error('boom');
             };
 
             expect(() => openAndMigrate([...migrations, failing])).toThrow(
-                `${file}.bak-v1`
+                `${file}${BAK}`
             );
             const after = read(file);
-            expect(after.version).toBe(1);
+            expect(after.version).toBe(V);
             expect(after.tables).not.toContain('half_done');
             expect(after.connections).toEqual([
                 { id: 'test:kept', password: 'secret' }
             ]);
-            expect(backups(dataDir)).toEqual([`${DB_FILE}.bak-v1`]);
+            expect(backups(dataDir)).toEqual([`${DB_FILE}${BAK}`]);
         });
     });
 

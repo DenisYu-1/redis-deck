@@ -10,8 +10,12 @@ const searchRoutes = require('../routes/searches');
 const statsRoutes = require('../routes/stats');
 const workflowRoutes = require('../routes/workflows');
 const jobRoutes = require('../routes/jobs');
+const { createAiClientsRouter } = require('../routes/aiClients');
+const aiActivityRoutes = require('../routes/aiActivity');
 
-function createApp({ middleware = [], searchBudgetMs } = {}) {
+// aiClients: client config installer; given only when embedded in the
+// Desktop app, which is the only place the installer routes exist.
+function createApp({ middleware = [], searchBudgetMs, aiClients } = {}) {
     const app = express();
     // Tests shrink the GET /api/keys time budget instead of waiting 2 s.
     if (searchBudgetMs !== undefined)
@@ -38,7 +42,9 @@ function createApp({ middleware = [], searchBudgetMs } = {}) {
     app.use('/api', searchRoutes);
     app.use('/api', workflowRoutes);
     app.use('/api', jobRoutes);
+    app.use('/api', aiActivityRoutes);
     app.use('/api/stats', statsRoutes);
+    if (aiClients) app.use('/api', createAiClientsRouter(aiClients));
 
     // SPA fallback routes
     app.get('/', (req, res) => {
