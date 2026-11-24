@@ -3,6 +3,7 @@
  */
 const { connectMcp } = require('../helpers/mcpClient');
 const { setAiAccess } = require('../../services/aiAccess');
+const { setToolEnabled } = require('../../services/mcp/toolSwitches');
 const {
     addGuardedConnection,
     removeConnections
@@ -25,12 +26,14 @@ describe('MCP write tools', () => {
     let mcp;
 
     beforeAll(() => {
+        setToolEnabled('run_workflow', true); // off by default
         addGuardedConnection(READ_ONLY, { readOnly: true });
         addGuardedConnection(CONFIRM, {});
         setAiAccess(CONFIRM, { write: true, workflows: true });
     });
 
     afterAll(() => {
+        setToolEnabled('run_workflow', false);
         removeConnections(READ_ONLY, CONFIRM);
     });
 
