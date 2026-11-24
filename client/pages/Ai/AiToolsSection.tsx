@@ -51,10 +51,10 @@ export function AiToolsSection() {
                     <span className="track">
                         <i />
                     </span>
-                    <span className="sw-text ai-tool-main">
+                    <span className="ai-tool-main">
                         <code className="mono">{tool.name}</code>
                         {tool.write && (
-                            <span className="ai-tool-tag sm">write</span>
+                            <span className="badge auto ai-write">write</span>
                         )}
                         <span className="sm tx2 ai-tool-desc">
                             {tool.description}

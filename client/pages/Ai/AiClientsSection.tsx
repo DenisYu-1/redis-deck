@@ -161,7 +161,7 @@ export function AiClientsSection() {
             <section className="card sect" aria-label="Add to a client">
                 <h2>Add to a client</h2>
                 <div className="ctable-wrap">
-                    <table className="ctable">
+                    <table className="ctable aic-table">
                         <tbody>
                             {clients.map((c) => (
                                 <tr key={c.id} data-testid="ai-client-row">

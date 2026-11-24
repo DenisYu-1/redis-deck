@@ -1,4 +1,5 @@
 .keys-page {
+    padding-top: var(--tb, 0px);
     display: flex;
     flex-direction: column;
     height: 100%;

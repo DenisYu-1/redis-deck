@@ -101,7 +101,7 @@ test('outside Desktop: log and switch show, AI clients section does not', async 
     expect(mocked.setAiActivityLogging).toHaveBeenCalledWith(false);
 });
 
-test('log card: filters, Show more, Clear and Logging off marker', async () => {
+test('log card: filters, Show more, and Clear', async () => {
     const user = userEvent.setup();
     mocked.listAiActivityClients.mockResolvedValue([
         { client: 'Cursor', lastCallAt: Date.now() }
@@ -109,7 +109,6 @@ test('log card: filters, Show more, Clear and Logging off marker', async () => {
     mocked.clearAiActivity.mockResolvedValue(undefined);
     renderPage();
     await screen.findAllByTestId('ai-activity-row');
-    expect(screen.getByText('Live')).toBeInTheDocument();
     expect(screen.getByText('1 calls · 0 blocked · 0 errors')).toBeVisible();
 
     await user.type(screen.getByLabelText('Filter calls'), 'user');
@@ -136,7 +135,7 @@ test('log card: filters, Show more, Clear and Logging off marker', async () => {
     mocked.getAiActivityLogging.mockResolvedValue(false);
 });
 
-test('log card: Show 25 more raises the limit; off switch reads Logging off', async () => {
+test('log card: Show 25 more raises the limit; counts cover all entries', async () => {
     const user = userEvent.setup();
     mocked.getAiActivityLogging.mockResolvedValue(false);
     const base = (await mocked.listAiActivity()).entries[0];
@@ -147,7 +146,9 @@ test('log card: Show 25 more raises the limit; off switch reads Logging off', as
     });
     renderPage();
 
-    expect(await screen.findByText('Logging off')).toBeInTheDocument();
+    expect(
+        await screen.findByText('40 calls · 3 blocked · 1 errors')
+    ).toBeVisible();
     expect(screen.getByText('40 calls · 3 blocked · 1 errors')).toBeVisible();
     await user.click(
         await screen.findByRole('button', { name: 'Show 25 more' })

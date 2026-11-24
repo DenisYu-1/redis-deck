@@ -202,11 +202,6 @@ export function AiActivityLog() {
                         {`${total} calls · ${blocked} blocked · ${errors} errors`}
                     </span>
                 </div>
-                <span
-                    className={`aic-live${logEnabled === false ? ' off' : ''}`}
-                >
-                    {logEnabled === false ? 'Logging off' : 'Live'}
-                </span>
                 <label className="aic-log-toggle">
                     <input
                         type="checkbox"

@@ -686,7 +686,7 @@ kbd {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 16px;
+    padding: calc(8px + var(--tb, 0px)) 16px 8px;
     background: var(--acs);
     color: var(--ac);
     border-bottom: 1px solid var(--bd);
@@ -853,7 +853,7 @@ kbd {
     flex-direction: column;
     gap: 14px;
     max-width: 760px;
-    padding: 20px;
+    padding: calc(20px + var(--tb, 0px)) 20px 20px;
     overflow: auto;
 }
 .wf-page h1 {
@@ -944,6 +944,7 @@ kbd {
 
 /* ---------- connections page ---------- */
 .cwrap {
+    padding-top: var(--tb, 0px);
     flex: 1;
     min-height: 0;
     display: grid;
@@ -1041,7 +1042,23 @@ kbd {
 }
 .aic-name {
     font-weight: 500;
-    width: 40%;
+}
+/* Fits the card: no min-width, actions wrap instead of scrolling. */
+.aic-table {
+    min-width: 0;
+}
+.aic-table td {
+    white-space: normal;
+}
+.aic-table .aic-name,
+.aic-table .aic-status {
+    white-space: nowrap;
+}
+.aic-actions {
+    text-align: right;
+}
+.aic-actions .btn {
+    margin: 2px 0 2px 6px;
 }
 .aic-status {
     font-size: 12px;
@@ -1055,12 +1072,6 @@ kbd {
 }
 .aic-status.error {
     color: var(--ac);
-}
-.aic-actions {
-    text-align: right;
-}
-.aic-actions .btn + .btn {
-    margin-left: 6px;
 }
 .aic-snippet {
     margin: 0;
@@ -1080,6 +1091,8 @@ kbd {
     gap: 12px;
 }
 .aic-log-toggle {
+    flex: none;
+    white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1249,39 +1262,57 @@ kbd {
     }
 }
 
-/* Electron custom title bar: drag strip under the native window buttons. */
+/* Electron custom title bar: the app extends under the native window
+   buttons. The strip itself is invisible; the top 36px of the app is the
+   window drag area and interactive elements opt out of dragging. */
 .titlebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 36px;
-    z-index: 50;
-    background: var(--bg);
-    -webkit-app-region: drag;
+    display: none;
 }
 /* Desktop window is the frame: no outer margin, border, radius or shadow. */
 html body:has(.titlebar) {
-    padding: 36px 0 0;
+    padding: 0;
 }
 body:has(.titlebar) .app {
+    position: relative;
     border: 0;
     border-radius: 0;
     box-shadow: none;
 }
-/* Sidebar meets the title bar strip: soften its top-right corner. */
-body:has(.titlebar) .side {
-    border-top-right-radius: 12px;
-    border-top: 1px solid var(--bd);
+body:has(.titlebar) .app::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 36px;
+    z-index: 1;
+    pointer-events: none;
+    -webkit-app-region: drag;
 }
-/* The 36px title bar already gives the toolbar its top space. */
+body:has(.titlebar)
+    .app
+    :is(button, a, input, select, textarea, label, summary) {
+    -webkit-app-region: no-drag;
+}
+/* Keep the brand clear of the native window buttons. */
+body:has(.titlebar) .side {
+    padding-top: 50px;
+}
+/* Pages add --tb of top space themselves (0 on web), so scrolled content
+   can show in the strip. A banner takes that space for the page under it. */
+body:has(.titlebar) {
+    --tb: 36px;
+}
+.banner ~ * {
+    --tb: 0px;
+}
 body:has(.titlebar) .toolbar {
     padding-top: 2px;
 }
 
 /* AI page */
 .aiwrap {
-    padding: 18px 20px 28px;
+    padding: calc(18px + var(--tb, 0px)) 20px 28px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -1336,13 +1367,6 @@ body:has(.titlebar) .toolbar {
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-}
-.aic-live {
-    font-size: 12px;
-    color: var(--ok);
-}
-.aic-live.off {
-    color: var(--mu);
 }
 .aic-new {
     animation: aic-flash 2.5s ease-out;
@@ -1439,10 +1463,7 @@ body:has(.titlebar) .toolbar {
 .ai-tool-desc {
     display: block;
 }
-.ai-tool-tag {
+.ai-write {
+    --tc: var(--warn);
     margin-left: 6px;
-    padding: 0 6px;
-    border: 1px solid var(--bd);
-    border-radius: 4px;
-    font-size: 11px;
 }
