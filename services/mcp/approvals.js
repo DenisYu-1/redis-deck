@@ -1,4 +1,4 @@
-// User approval for MCP writes on Confirm writes Connections, plus the
+// User approval for MCP writes on Ask-before-writes Connections, plus the
 // "Allow for this session" grants. One instance per MCP server, so grants
 // live in memory for the --mcp process and die with it.
 //

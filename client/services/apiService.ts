@@ -11,7 +11,8 @@ import type {
     HistoryResponse,
     DeleteProgress,
     ExportProgress,
-    Job
+    Job,
+    ConnectionTier
 } from '@/types';
 import type { WorkflowPlugin, WorkflowRun } from '@/types/workflows';
 import { useAppStore } from '@/store/useAppStore';
@@ -621,9 +622,47 @@ export interface AiClientSnippet {
 const aiClientUrl = (id: string, action: string) =>
     `${API_BASE}/ai-clients/${encodeURIComponent(id)}/${action}`;
 
-export async function listAiClients(): Promise<AiClient[]> {
+export interface AiClientList {
+    clients: AiClient[];
+    /** The stdio command line the installer writes (`<binary> --mcp`). */
+    command: string;
+}
+
+export async function listAiClients(): Promise<AiClientList> {
     const response = await fetch(`${API_BASE}/ai-clients`);
-    return (await handleResponse<{ clients: AiClient[] }>(response)).clients;
+    return handleResponse<AiClientList>(response);
+}
+
+export type AiAccessField = 'keys' | 'values' | 'write' | 'workflows' | 'ask';
+
+export interface AiAccessRow extends Record<AiAccessField, boolean> {
+    id: string;
+    tier: ConnectionTier;
+    readOnly: boolean;
+}
+
+export async function listAiAccess(): Promise<AiAccessRow[]> {
+    const response = await fetch(`${API_BASE}/ai-access`);
+    const result = await handleResponse<{ connections: AiAccessRow[] }>(
+        response
+    );
+    return result.connections;
+}
+
+/** Saves one change; the server applies the dependency rules and returns the row. */
+export async function setAiAccess(
+    id: string,
+    patch: Partial<Record<AiAccessField, boolean>>
+): Promise<Record<AiAccessField, boolean>> {
+    const response = await fetch(
+        `${API_BASE}/ai-access/${encodeURIComponent(id)}`,
+        {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch)
+        }
+    );
+    return handleResponse(response);
 }
 
 export async function installAiClient(id: string): Promise<void> {
@@ -644,9 +683,9 @@ export async function getAiClientSnippet(id: string): Promise<AiClientSnippet> {
     );
 }
 
-// AI activity: MCP writes and refused write attempts, plus the "Log AI
+// AI activity: every MCP call (reads, writes, refusals), plus the "Log AI
 // operations" toggle. App settings, not Redis writes (no write guard).
-export type AiActivityResult = 'done' | 'denied' | 'blocked' | 'failed';
+export type AiActivityResult = 'ok' | 'denied' | 'blocked' | 'error';
 
 export interface AiActivityEntry {
     id: number;
@@ -659,24 +698,55 @@ export interface AiActivityEntry {
     target: string | null;
     result: AiActivityResult;
     error: string | null;
+    /** Masked request args, JSON text */
+    args: string | null;
+    /** Masked response, JSON text, capped (may end mid-JSON) */
+    response: string | null;
+    durationMs: number | null;
 }
 
 export interface AiActivityPage {
     entries: AiActivityEntry[];
     total: number;
+    counts: Record<AiActivityResult, number>;
 }
 
 export async function listAiActivity(params: {
     connectionId?: string;
+    /** Text matched against tool, Key and Connection */
+    q?: string;
+    status?: AiActivityResult | '';
+    client?: string;
     limit?: number;
     offset?: number;
 }): Promise<AiActivityPage> {
     const query = new URLSearchParams();
     if (params.connectionId) query.set('connectionId', params.connectionId);
+    if (params.q) query.set('q', params.q);
+    if (params.status) query.set('status', params.status);
+    if (params.client) query.set('client', params.client);
     if (params.limit !== undefined) query.set('limit', String(params.limit));
     if (params.offset !== undefined) query.set('offset', String(params.offset));
     return handleResponse<AiActivityPage>(
         await fetch(`${API_BASE}/ai-activity?${query.toString()}`)
+    );
+}
+
+export interface AiActivityClient {
+    client: string;
+    /** ms since epoch */
+    lastCallAt: number;
+}
+
+export async function listAiActivityClients(): Promise<AiActivityClient[]> {
+    const response = await fetch(`${API_BASE}/ai-activity/clients`);
+    return (await handleResponse<{ clients: AiActivityClient[] }>(response))
+        .clients;
+}
+
+export async function clearAiActivity(): Promise<void> {
+    await handleResponse(
+        await fetch(`${API_BASE}/ai-activity`, { method: 'DELETE' })
     );
 }
 
@@ -692,4 +762,51 @@ export const setAiActivityLogging = (logEnabled: boolean): Promise<boolean> =>
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logEnabled })
+    });
+
+// MCP tool switches: which tools AI clients may see and call (one global
+// setting). The list comes from the tools the server really registers.
+export interface AiTool {
+    name: string;
+    description: string;
+    /** Changes data (tagged "write" on the page) */
+    write: boolean;
+    enabled: boolean;
+}
+
+export async function listAiTools(): Promise<AiTool[]> {
+    return (
+        await handleResponse<{ tools: AiTool[] }>(
+            await fetch(`${API_BASE}/ai-tools`)
+        )
+    ).tools;
+}
+
+export async function setAiToolEnabled(
+    name: string,
+    enabled: boolean
+): Promise<AiTool[]> {
+    return (
+        await handleResponse<{ tools: AiTool[] }>(
+            await fetch(`${API_BASE}/ai-tools/${encodeURIComponent(name)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled })
+            })
+        )
+    ).tools;
+}
+// Hidden fields: names whose values AI clients never see (masked as ●●●).
+const aiHiddenFields = async (init?: RequestInit): Promise<string[]> => {
+    const response = await fetch(`${API_BASE}/ai-hidden-fields`, init);
+    return (await handleResponse<{ fields: string[] }>(response)).fields;
+};
+
+export const getAiHiddenFields = (): Promise<string[]> => aiHiddenFields();
+
+export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
+    aiHiddenFields({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields })
     });

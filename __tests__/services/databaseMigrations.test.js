@@ -52,11 +52,12 @@ describe('database migrations', () => {
         fs.rmSync(dataDir, { recursive: true, force: true });
     });
 
-    test('a fresh data folder starts at data version 2 with today’s tables and no backup', () => {
+    test('a fresh data folder starts at data version 4 with today’s tables and no backup', () => {
         const state = startApp(dataDir);
 
-        expect(state.version).toBe(2);
+        expect(state.version).toBe(4);
         expect(state.tables).toEqual([
+            'ai_access',
             'ai_activity',
             'connections',
             'idx_ai_activity_connection',
@@ -79,7 +80,7 @@ describe('database migrations', () => {
         const second = startApp(dataDir);
 
         expect(second).toEqual(first);
-        expect(second.version).toBe(2);
+        expect(second.version).toBe(4);
         expect(second.connections).toEqual(['test:kept']);
         expect(backups(dataDir)).toEqual([]);
     });
@@ -117,6 +118,34 @@ describe('database migrations', () => {
             expect(result.stderr).toMatch(/update the app/i);
         });
     });
+    test('data version 4 turns done / failed activity rows into ok / error and keeps the rest', () => {
+        const raw = new Database(path.join(dataDir, DB_FILE));
+        migrate(raw, migrations.slice(0, 3));
+        const ins = raw.prepare(
+            "INSERT INTO ai_activity (created_at, client, connection_id, operation, result, error) VALUES (?, 'c', 'k', 'set_key', ?, ?)"
+        );
+        ins.run(1, 'done', null);
+        ins.run(2, 'failed', 'boom');
+        ins.run(3, 'denied', 'no');
+        ins.run(4, 'blocked', 'ro');
+
+        migrate(raw, migrations);
+
+        const rows = raw
+            .prepare(
+                'SELECT result, error, args, response, duration_ms AS d FROM ai_activity ORDER BY created_at'
+            )
+            .all();
+        raw.close();
+        const empty = { args: null, response: null, d: null };
+        expect(rows).toEqual([
+            { result: 'ok', error: null, ...empty },
+            { result: 'error', error: 'boom', ...empty },
+            { result: 'denied', error: 'no', ...empty },
+            { result: 'blocked', error: 'ro', ...empty }
+        ]);
+    });
+
     describe('an older versioned database', () => {
         let file;
         // Previous-version fixture: the current list is the "earlier" release.

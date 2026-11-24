@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Logo } from '@/components/common/Logo';
-import { ChartIcon, KeyIcon, SlidersIcon } from '@/components/ui/Icons';
+import {
+    ChartIcon,
+    KeyIcon,
+    SlidersIcon,
+    SparkIcon
+} from '@/components/ui/Icons';
 import { ConnectionSwitcher } from './ConnectionSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import {
@@ -130,6 +135,10 @@ export function Sidebar() {
                 <NavLink to="/connections" className={navClass}>
                     <SlidersIcon />
                     <span>Settings</span>
+                </NavLink>
+                <NavLink to="/ai" className={navClass}>
+                    <SparkIcon />
+                    <span>AI</span>
                 </NavLink>
                 <ThemeToggle />
                 <div className="status mono xs">

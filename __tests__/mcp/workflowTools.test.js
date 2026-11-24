@@ -2,6 +2,8 @@
  * @jest-environment node
  */
 const { connectMcp } = require('../helpers/mcpClient');
+const { setAiAccess } = require('../../services/aiAccess');
+const { setToolEnabled } = require('../../services/mcp/toolSwitches');
 const { keyExists, deleteKey } = require('../../services/keyStore');
 const { getHistory } = require('../../services/workflows');
 const { db } = require('../../services/database');
@@ -31,11 +33,14 @@ describe('MCP Workflow tools', () => {
     let mcp;
 
     beforeAll(() => {
+        setToolEnabled('run_workflow', true); // off by default
         addGuardedConnection(READ_ONLY, { readOnly: true });
-        addGuardedConnection(CONFIRM, { confirmWrites: true });
+        addGuardedConnection(CONFIRM, {});
+        setAiAccess(CONFIRM, { write: true, workflows: true });
     });
 
     afterAll(() => {
+        setToolEnabled('run_workflow', false);
         removeConnections(READ_ONLY, CONFIRM);
         // Only this file's runs: other suites share these Connections.
         db.prepare(
@@ -120,7 +125,7 @@ describe('MCP Workflow tools', () => {
                 client: 'test-client',
                 operation: 'run_workflow',
                 target: SET,
-                result: 'done',
+                result: 'ok',
                 error: null
             })
         );
@@ -151,7 +156,7 @@ describe('MCP Workflow tools', () => {
             expect(res.ok).toBe(true);
         });
 
-        test('Confirm writes asks the approver, naming the Workflow', async () => {
+        test('Ask before writes asks the approver, naming the Workflow', async () => {
             const approver = jest.fn(async () => 'deny');
             mcp = await connectMcp({ approver });
 
@@ -176,7 +181,7 @@ describe('MCP Workflow tools', () => {
             );
         });
 
-        test('Confirm writes runs once the user allows it', async () => {
+        test('Ask before writes runs once the user allows it', async () => {
             mcp = await connectMcp({ approver: async () => 'once' });
 
             const res = await runMarker(mcp, CONFIRM);

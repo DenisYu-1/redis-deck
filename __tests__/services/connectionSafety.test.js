@@ -12,6 +12,7 @@ const ID = 'test-safety-conn';
 
 afterEach(() => {
     db.prepare('DELETE FROM connections WHERE id = ?').run(ID);
+    db.prepare('DELETE FROM ai_access WHERE connection_id = ?').run(ID);
 });
 
 describe('connection safety columns', () => {

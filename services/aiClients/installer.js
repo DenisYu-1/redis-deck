@@ -92,7 +92,10 @@ function createInstaller({
         });
     }
 
-    return { list, status, install, remove, snippet };
+    // The stdio command line the installer writes into client configs.
+    const commandLine = () => [command, ...args].join(' ');
+
+    return { list, status, install, remove, snippet, commandLine };
 }
 
 module.exports = { createInstaller, SERVER_NAME };

@@ -4,6 +4,7 @@
     flex-direction: column;
     min-width: 0;
     margin: -16px 0;
+    padding-top: var(--tb, 0px);
 }
 .viewhead {
     display: flex;

@@ -686,7 +686,7 @@ kbd {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 16px;
+    padding: calc(8px + var(--tb, 0px)) 16px 8px;
     background: var(--acs);
     color: var(--ac);
     border-bottom: 1px solid var(--bd);
@@ -853,7 +853,7 @@ kbd {
     flex-direction: column;
     gap: 14px;
     max-width: 760px;
-    padding: 20px;
+    padding: calc(20px + var(--tb, 0px)) 20px 20px;
     overflow: auto;
 }
 .wf-page h1 {
@@ -944,6 +944,7 @@ kbd {
 
 /* ---------- connections page ---------- */
 .cwrap {
+    padding-top: var(--tb, 0px);
     flex: 1;
     min-height: 0;
     display: grid;
@@ -1041,7 +1042,23 @@ kbd {
 }
 .aic-name {
     font-weight: 500;
-    width: 40%;
+}
+/* Fits the card: no min-width, actions wrap instead of scrolling. */
+.aic-table {
+    min-width: 0;
+}
+.aic-table td {
+    white-space: normal;
+}
+.aic-table .aic-name,
+.aic-table .aic-status {
+    white-space: nowrap;
+}
+.aic-actions {
+    text-align: right;
+}
+.aic-actions .btn {
+    margin: 2px 0 2px 6px;
 }
 .aic-status {
     font-size: 12px;
@@ -1055,12 +1072,6 @@ kbd {
 }
 .aic-status.error {
     color: var(--ac);
-}
-.aic-actions {
-    text-align: right;
-}
-.aic-actions .btn + .btn {
-    margin-left: 6px;
 }
 .aic-snippet {
     margin: 0;
@@ -1080,20 +1091,36 @@ kbd {
     gap: 12px;
 }
 .aic-log-toggle {
+    flex: none;
+    white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 13px;
 }
+.aic-row {
+    cursor: pointer;
+}
+.aic-activity-cell {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.aic-activity-detail pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
 .aic-activity-target {
     word-break: break-all;
 }
 .aic-activity-error,
-.aic-result.failed,
+.aic-result.error,
 .aic-result.blocked {
     color: var(--ac);
 }
-.aic-result.done {
+.aic-result.ok {
     color: var(--ok);
 }
 .aic-result.denied {
@@ -1235,32 +1262,208 @@ kbd {
     }
 }
 
-/* Electron custom title bar: drag strip under the native window buttons. */
+/* Electron custom title bar: the app extends under the native window
+   buttons. The strip itself is invisible; the top 36px of the app is the
+   window drag area and interactive elements opt out of dragging. */
 .titlebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 36px;
-    z-index: 50;
-    background: var(--bg);
-    -webkit-app-region: drag;
+    display: none;
 }
 /* Desktop window is the frame: no outer margin, border, radius or shadow. */
 html body:has(.titlebar) {
-    padding: 36px 0 0;
+    padding: 0;
 }
 body:has(.titlebar) .app {
+    position: relative;
     border: 0;
     border-radius: 0;
     box-shadow: none;
 }
-/* Sidebar meets the title bar strip: soften its top-right corner. */
-body:has(.titlebar) .side {
-    border-top-right-radius: 12px;
-    border-top: 1px solid var(--bd);
+body:has(.titlebar) .app::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 36px;
+    z-index: 1;
+    pointer-events: none;
+    -webkit-app-region: drag;
 }
-/* The 36px title bar already gives the toolbar its top space. */
+body:has(.titlebar)
+    .app
+    :is(button, a, input, select, textarea, label, summary) {
+    -webkit-app-region: no-drag;
+}
+/* Keep the brand clear of the native window buttons. */
+body:has(.titlebar) .side {
+    padding-top: 50px;
+}
+/* Pages add --tb of top space themselves (0 on web), so scrolled content
+   can show in the strip. A banner takes that space for the page under it. */
+body:has(.titlebar) {
+    --tb: 36px;
+}
+.banner ~ * {
+    --tb: 0px;
+}
 body:has(.titlebar) .toolbar {
     padding-top: 2px;
+}
+
+/* AI page */
+.aiwrap {
+    padding: calc(18px + var(--tb, 0px)) 20px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 1320px;
+}
+.aihead h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+.aihead p {
+    margin: 4px 0 0;
+    color: var(--tx2);
+    max-width: 72ch;
+}
+.aigrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+.aicol {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+.aicol:empty {
+    display: none;
+}
+.sect {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+.sect h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+.sechead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.aic-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.aic-new {
+    animation: aic-flash 2.5s ease-out;
+}
+@keyframes aic-flash {
+    from {
+        background: var(--okS);
+    }
+}
+.aic-connected {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.aic-connected li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.aic-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mu);
+}
+.aic-dot.on {
+    background: var(--ok);
+}
+.aic-cmd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--code);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+}
+.aic-cmd code {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    word-break: break-all;
+}
+/* AI page: hidden fields chips */
+.hfchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.hfchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 4px 0 10px;
+    border-radius: 12px;
+    border: 1px solid var(--bd);
+    color: var(--tx);
+    font-family: var(--f-mono);
+    font-size: 12px;
+}
+.hfchip button {
+    border: 0;
+    background: none;
+    color: var(--tx2);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 4px;
+}
+.hfchip button:hover {
+    color: var(--tx);
+}
+.hfadd {
+    display: flex;
+    gap: 8px;
+}
+.hfadd .input {
+    flex: 1;
+    min-width: 0;
+}
+@media (max-width: 1100px) {
+    .aigrid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+.ai-tool-main {
+    flex: 1;
+    min-width: 0;
+}
+.ai-tool-desc {
+    display: block;
+}
+.ai-write {
+    --tc: var(--warn);
+    margin-left: 6px;
 }

@@ -2,7 +2,10 @@
 // writes, so the write guard is not involved.
 const express = require('express');
 const {
+    RESULTS,
     listActivity,
+    listClients,
+    clearActivity,
     isLoggingEnabled,
     setLoggingEnabled
 } = require('../services/aiActivity');
@@ -26,8 +29,28 @@ router.get('/ai-activity', (req, res) => {
             error: `limit must be 1-${MAX_LIMIT} and offset a non-negative integer`
         });
     }
-    const connectionId = req.query.connectionId || undefined;
-    res.json(listActivity({ connectionId, limit, offset }));
+    const result = req.query.status || undefined;
+    if (result && !Object.hasOwn(RESULTS, result)) {
+        return res.status(400).json({ error: 'unknown status' });
+    }
+    res.json(
+        listActivity({
+            connectionId: req.query.connectionId || undefined,
+            client: req.query.client || undefined,
+            q: req.query.q || undefined,
+            result,
+            limit,
+            offset
+        })
+    );
+});
+
+router.get('/ai-activity/clients', (req, res) => {
+    res.json({ clients: listClients() });
+});
+
+router.delete('/ai-activity', (req, res) => {
+    res.json({ removed: clearActivity() });
 });
 
 router.get('/ai-activity/settings', (req, res) => {
