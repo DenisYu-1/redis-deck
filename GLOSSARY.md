@@ -50,6 +50,22 @@ A named Key pattern the user can re-run from the sidebar.
 The app installed and run as a regular program on the user's computer, without a separate server to start.
 _Avoid_: Native app, standalone, client
 
+**AI client**:
+An external AI program (Claude Desktop, Claude Code, Codex, Cursor) that uses Redis Deck's Connections through MCP.
+_Avoid_: Agent, assistant, integration
+
+**AI assistant**:
+The chat built into Redis Deck that answers questions about a Connection through the same tools AI clients use.
+_Avoid_: Agent, bot, copilot
+
+**AI access**:
+Per-Connection rules for what AI clients and the AI assistant may see and do: see Keys, see values, write, run Workflows, ask before writes.
+_Avoid_: Permissions, policy, ACL
+
+**AI activity**:
+The record of calls AI clients and the AI assistant made or attempted on Connections.
+_Avoid_: Audit log, history
+
 **Plugin**:
 A named bundle of Workflows, defined by a manifest and server-side handlers.
 

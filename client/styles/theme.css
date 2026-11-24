@@ -1085,18 +1085,8 @@ kbd {
     gap: 6px;
     font-size: 13px;
 }
-.aic-activity {
-    max-height: 50vh;
-    overflow: auto;
-}
-.aic-activity .ctable {
-    min-width: 0;
-}
 .aic-activity-target {
     word-break: break-all;
-}
-.aic-activity-count {
-    margin-right: auto;
 }
 .aic-activity-error,
 .aic-result.failed,
