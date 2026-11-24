@@ -87,7 +87,7 @@ function recordActivity({
 
 // Newest first. Filters: connectionId, client (exact), result (one of RESULTS),
 // q (substring of tool, Key or Connection). Returns { entries, total } (total =
-// all matching entries).
+// all matching entries, counts = matching entries per result).
 function listActivity({
     connectionId,
     client,
@@ -128,10 +128,17 @@ function listActivity({
              ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`
         )
         .all(...params, limit, offset);
-    const { total } = db
-        .prepare(`SELECT COUNT(*) AS total FROM ai_activity ${where}`)
-        .get(...params);
-    return { entries, total };
+    const counts = Object.fromEntries(Object.values(RESULTS).map((r) => [r, 0]));
+    let total = 0;
+    for (const row of db
+        .prepare(
+            `SELECT result, COUNT(*) AS n FROM ai_activity ${where} GROUP BY result`
+        )
+        .all(...params)) {
+        counts[row.result] = row.n;
+        total += row.n;
+    }
+    return { entries, total, counts };
 }
 
 // Each distinct client with the time of its last call, most recent first.

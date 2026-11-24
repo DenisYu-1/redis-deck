@@ -60,6 +60,7 @@ beforeEach(() => {
     });
     mocked.listAiActivity.mockResolvedValue({
         total: 1,
+        counts: { ok: 1, denied: 0, blocked: 0, error: 0 },
         entries: [
             {
                 id: 1,
@@ -139,10 +140,15 @@ test('log card: Show 25 more raises the limit; off switch reads Logging off', as
     const user = userEvent.setup();
     mocked.getAiActivityLogging.mockResolvedValue(false);
     const base = (await mocked.listAiActivity()).entries[0];
-    mocked.listAiActivity.mockResolvedValue({ total: 40, entries: [base] });
+    mocked.listAiActivity.mockResolvedValue({
+        total: 40,
+        counts: { ok: 36, denied: 0, blocked: 3, error: 1 },
+        entries: [base]
+    });
     renderPage();
 
     expect(await screen.findByText('Logging off')).toBeInTheDocument();
+    expect(screen.getByText('40 calls · 3 blocked · 1 errors')).toBeVisible();
     await user.click(
         await screen.findByRole('button', { name: 'Show 25 more' })
     );

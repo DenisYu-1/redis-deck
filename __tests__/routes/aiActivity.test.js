@@ -96,6 +96,30 @@ describe('AI activity routes', () => {
         expect((await targets('q=%25')).total).toBe(0);
     });
 
+    it('counts matching entries by result, beyond the page', async () => {
+        recordActivity(entry({ result: 'ok' }));
+        recordActivity(entry({ result: 'blocked' }));
+        recordActivity(entry({ result: 'blocked' }));
+        recordActivity(entry({ result: 'error' }));
+
+        const res = await request(app)
+            .get('/api/ai-activity?limit=1')
+            .expect(200);
+
+        expect(res.body.entries).toHaveLength(1);
+        expect(res.body.total).toBe(4);
+        expect(res.body.counts).toEqual({
+            ok: 1,
+            denied: 0,
+            blocked: 2,
+            error: 1
+        });
+        const blocked = await request(app)
+            .get('/api/ai-activity?status=blocked')
+            .expect(200);
+        expect(blocked.body.counts).toMatchObject({ blocked: 2, error: 0 });
+    });
+
     it('rejects an unknown status', async () => {
         await request(app).get('/api/ai-activity?status=nope').expect(400);
     });

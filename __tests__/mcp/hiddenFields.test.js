@@ -21,6 +21,7 @@ describe('MCP get_key hidden fields', () => {
 
     afterEach(async () => {
         await mcp.close();
+        db.prepare("DELETE FROM settings WHERE key = 'hidden_fields'").run();
         await deleteTestKeys('test:mcp:hf:*', CONN);
     });
 

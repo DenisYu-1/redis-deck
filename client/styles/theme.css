@@ -1085,6 +1085,9 @@ kbd {
     gap: 6px;
     font-size: 13px;
 }
+.aic-row {
+    cursor: pointer;
+}
 .aic-activity-cell {
     max-width: 260px;
     overflow: hidden;

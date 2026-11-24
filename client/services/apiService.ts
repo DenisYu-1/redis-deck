@@ -708,6 +708,7 @@ export interface AiActivityEntry {
 export interface AiActivityPage {
     entries: AiActivityEntry[];
     total: number;
+    counts: Record<AiActivityResult, number>;
 }
 
 export async function listAiActivity(params: {
