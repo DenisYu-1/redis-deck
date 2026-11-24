@@ -12,6 +12,7 @@ const {
     listActivity,
     setLoggingEnabled
 } = require('../../services/aiActivity');
+const { setAiAccess } = require('../../services/aiAccess');
 
 const CONN = global.TEST_CONNECTION_ID;
 const READ_ONLY = 'test-mcp-log-ro';
@@ -45,7 +46,7 @@ describe('MCP AI activity log', () => {
         await deleteTestKeys('test:mcpl:*', CONN);
     });
 
-    test('a write that runs is logged as done', async () => {
+    test('a write that runs is logged as ok', async () => {
         mcp = await connectMcp({ clock: () => NOW });
 
         const res = await mcp.call('set_key', {
@@ -63,8 +64,15 @@ describe('MCP AI activity log', () => {
                 connectionId: CONN,
                 operation: 'set_key',
                 target: 'test:mcpl:k',
-                result: 'done',
-                error: null
+                result: 'ok',
+                error: null,
+                args: JSON.stringify({
+                    connectionId: CONN,
+                    key: 'test:mcpl:k',
+                    value: 'v'
+                }),
+                response: expect.any(String),
+                durationMs: expect.any(Number)
             }
         ]);
     });
@@ -107,7 +115,7 @@ describe('MCP AI activity log', () => {
         ]);
     });
 
-    test('a write that throws is logged as failed', async () => {
+    test('a write that throws is logged as error', async () => {
         mcp = await connectMcp();
 
         const res = await mcp.call('rename_key', {
@@ -121,28 +129,120 @@ describe('MCP AI activity log', () => {
             {
                 operation: 'rename_key',
                 target: 'test:mcpl:{r}missing',
-                result: 'failed',
+                result: 'error',
                 error: res.error
             }
         ]);
     });
 
-    test('reads are not logged', async () => {
+    test('a read is logged with its args, response and duration', async () => {
+        mcp = await connectMcp({ clock: () => NOW });
+        await mcp.call('set_key', {
+            connectionId: CONN,
+            key: 'test:mcpl:r',
+            value: 'hello'
+        });
+        db.prepare('DELETE FROM ai_activity').run();
+
+        const res = await mcp.call('get_key', {
+            connectionId: CONN,
+            key: 'test:mcpl:r'
+        });
+
+        const [entry] = entries();
+        expect(entries()).toHaveLength(1);
+        expect(entry).toMatchObject({
+            time: NOW,
+            operation: 'get_key',
+            result: 'ok',
+            connectionId: CONN
+        });
+        expect(JSON.parse(entry.args)).toEqual({
+            connectionId: CONN,
+            key: 'test:mcpl:r'
+        });
+        expect(JSON.parse(entry.response)).toEqual(res.data);
+        expect(entry.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    test('a call without a Connection is logged with an empty Connection', async () => {
         mcp = await connectMcp();
 
         await mcp.call('list_connections');
+
+        expect(entries()).toMatchObject([
+            { operation: 'list_connections', connectionId: '', result: 'ok' }
+        ]);
+    });
+
+    test('hidden field values never reach the stored args or response', async () => {
+        mcp = await connectMcp();
+        await mcp.call('set_key', {
+            connectionId: CONN,
+            key: 'test:mcpl:h',
+            type: 'hash',
+            value: { name: 'ann', password: 'hunter2' }
+        });
+        await mcp.call('get_key', { connectionId: CONN, key: 'test:mcpl:h' });
+
+        const stored = entries()
+            .map((e) => `${e.args}${e.response}`)
+            .join('');
+        expect(stored).not.toContain('hunter2');
+        expect(stored).toContain('●●●');
+        expect(stored).toContain('ann');
+    });
+
+    test('a big response is capped', async () => {
+        mcp = await connectMcp();
+        await mcp.call('set_key', {
+            connectionId: CONN,
+            key: 'test:mcpl:big',
+            value: 'x'.repeat(20000)
+        });
+        db.prepare('DELETE FROM ai_activity').run();
+
         await mcp.call('get_key', {
             connectionId: CONN,
-            key: 'test:mcpl:none'
+            key: 'test:mcpl:big'
         });
 
-        expect(entries()).toEqual([]);
+        const [entry] = entries();
+        expect(entry.response.length).toBeLessThanOrEqual(4200);
+        expect(entry.response.length).toBeGreaterThan(1000);
+    });
+
+    test('a read on a Connection hidden from AI is logged as blocked', async () => {
+        mcp = await connectMcp();
+        setAiAccess(CONN, { keys: false });
+
+        await mcp.call('get_key', { connectionId: CONN, key: 'test:mcpl:k' });
+        setAiAccess(CONN, { keys: true });
+
+        expect(entries()).toMatchObject([
+            { operation: 'get_key', result: 'blocked' }
+        ]);
+    });
+
+    test.each([
+        ['claude-ai', 'Claude Desktop'],
+        ['claude-code', 'Claude Code'],
+        ['codex-mcp-client', 'Codex'],
+        ['cursor-vscode', 'Cursor'],
+        ['my-odd-client', 'my-odd-client']
+    ])('client %s is labelled %s', async (name, label) => {
+        mcp = await connectMcp({ clientName: name });
+
+        await mcp.call('list_connections');
+
+        expect(entries()[0].client).toBe(label);
     });
 
     test('nothing is logged while "Log AI operations" is off', async () => {
         mcp = await connectMcp();
         setLoggingEnabled(false);
 
+        await mcp.call('list_connections');
         await mcp.call('set_key', {
             connectionId: CONN,
             key: 'test:mcpl:k',
