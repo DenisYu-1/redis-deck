@@ -8,6 +8,7 @@ const {
 } = require('../helpers/guardedConnections');
 const { db } = require('../../services/database');
 const { setAiAccess } = require('../../services/aiAccess');
+const { setToolEnabled } = require('../../services/mcp/toolSwitches');
 const { deleteTestKeys } = require('../helpers/testHelpers');
 
 const CONN = global.TEST_CONNECTION_ID;
@@ -28,6 +29,7 @@ describe('MCP AI access: write / workflows / ask', () => {
             .run(tier, ID);
 
     beforeEach(async () => {
+        setToolEnabled('run_workflow', true);
         addGuardedConnection(ID, {});
         approver = jest.fn(async () => 'once');
         mcp = await connectMcp({ approver });
