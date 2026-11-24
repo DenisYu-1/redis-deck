@@ -42,15 +42,24 @@ export function Sidebar() {
         getKeyCount(env)
             .then((r) => !cancelled && setCounts({ env, n: r.count }))
             .catch(() => undefined);
-        const poll = () =>
-            getServerStatus(env)
-                .then((s) => !cancelled && setInfo({ env, s }))
-                .catch(() => !cancelled && setInfo({ env, s: null }));
+        let timer: ReturnType<typeof setTimeout>;
+        // Chained (never overlapping) so a slow old request can't overwrite a newer result;
+        // retry fast while unreachable so the label recovers soon after the connection comes up.
+        const poll = async () => {
+            let next = 10_000;
+            try {
+                const st = await getServerStatus(env);
+                if (!cancelled) setInfo({ env, s: st });
+            } catch {
+                next = 3_000;
+                if (!cancelled) setInfo({ env, s: null });
+            }
+            if (!cancelled) timer = setTimeout(() => void poll(), next);
+        };
         void poll();
-        const timer = setInterval(() => void poll(), 10_000);
         return () => {
             cancelled = true;
-            clearInterval(timer);
+            clearTimeout(timer);
         };
     }, [env]);
 
