@@ -72,6 +72,61 @@ describe('AI activity routes', () => {
         expect(res.body.entries.map((e) => e.target)).toEqual(['test:b']);
     });
 
+    it('filters by text (tool, key, connection), status and client', async () => {
+        recordActivity(entry({ operation: 'get_key', target: 'user:1' }));
+        recordActivity(
+            entry({ operation: 'scan', target: 'order:9', result: 'blocked' })
+        );
+        recordActivity(
+            entry({
+                client: 'Cursor',
+                connectionId: 'prod-eu',
+                result: 'error'
+            })
+        );
+        const targets = async (q) =>
+            (await request(app).get(`/api/ai-activity?${q}`).expect(200)).body;
+
+        expect((await targets('q=get_key')).total).toBe(1);
+        expect((await targets('q=order')).total).toBe(1);
+        expect((await targets('q=prod-eu')).total).toBe(1);
+        expect((await targets('status=blocked')).total).toBe(1);
+        expect((await targets('client=Cursor')).total).toBe(1);
+        expect((await targets('client=Cursor&status=ok')).total).toBe(0);
+        expect((await targets('q=%25')).total).toBe(0);
+    });
+
+    it('rejects an unknown status', async () => {
+        await request(app).get('/api/ai-activity?status=nope').expect(400);
+    });
+
+    it('lists distinct clients with their last call', async () => {
+        recordActivity(entry({ client: 'Cursor', time: NOW - 5000 }));
+        recordActivity(entry({ client: 'Cursor', time: NOW - 1000 }));
+        recordActivity(entry({ client: 'Codex', time: NOW }));
+
+        const res = await request(app)
+            .get('/api/ai-activity/clients')
+            .expect(200);
+
+        expect(res.body.clients).toEqual([
+            { client: 'Codex', lastCallAt: NOW },
+            { client: 'Cursor', lastCallAt: NOW - 1000 }
+        ]);
+    });
+
+    it('clear deletes every entry', async () => {
+        recordActivity(entry({}));
+        recordActivity(entry({}));
+
+        await request(app)
+            .delete('/api/ai-activity')
+            .expect(200, { removed: 2 });
+
+        const res = await request(app).get('/api/ai-activity').expect(200);
+        expect(res.body.total).toBe(0);
+    });
+
     it('pages with limit and offset', async () => {
         for (let i = 0; i < 5; i++) {
             recordActivity(entry({ time: NOW + i, target: `test:${i}` }));

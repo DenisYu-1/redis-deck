@@ -1,4 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import {
+    cleanup,
+    render,
+    screen,
+    waitFor,
+    within
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { AiPage } from '@/pages/Ai/AiPage';
@@ -31,6 +37,7 @@ beforeEach(() => {
         connections: [{ id: 'prod' }, { id: 'dev' }] as RedisConnection[]
     });
     mocked.getAiActivityLogging.mockResolvedValue(true);
+    mocked.listAiActivityClients.mockResolvedValue([]);
     mocked.listAiTools.mockResolvedValue([]);
     mocked.getAiHiddenFields.mockResolvedValue(['password']);
     mocked.listAiAccess.mockResolvedValue([]);
@@ -91,15 +98,72 @@ test('outside Desktop: log and switch show, AI clients section does not', async 
     mocked.setAiActivityLogging.mockResolvedValue(false);
     await user.click(toggle);
     expect(mocked.setAiActivityLogging).toHaveBeenCalledWith(false);
+});
 
-    await user.selectOptions(screen.getByLabelText('Connection'), 'prod');
+test('log card: filters, Show more, Clear and Logging off marker', async () => {
+    const user = userEvent.setup();
+    mocked.listAiActivityClients.mockResolvedValue([
+        { client: 'Cursor', lastCallAt: Date.now() }
+    ]);
+    mocked.clearAiActivity.mockResolvedValue(undefined);
+    renderPage();
+    await screen.findAllByTestId('ai-activity-row');
+    expect(screen.getByText('Live')).toBeInTheDocument();
+    expect(screen.getByText('1 calls · 0 blocked · 0 errors')).toBeVisible();
+
+    await user.type(screen.getByLabelText('Filter calls'), 'user');
+    await user.click(screen.getByRole('button', { name: 'Denied' }));
+    await user.selectOptions(screen.getByLabelText('Client'), 'Cursor');
     await waitFor(() =>
         expect(mocked.listAiActivity).toHaveBeenLastCalledWith({
-            connectionId: 'prod',
-            limit: 50,
+            q: 'user',
+            status: 'denied',
+            client: 'Cursor',
+            limit: 25,
             offset: 0
         })
     );
+
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
+    await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+            name: 'Clear'
+        })
+    );
+    expect(mocked.clearAiActivity).toHaveBeenCalled();
+
+    mocked.getAiActivityLogging.mockResolvedValue(false);
+});
+
+test('log card: Show 25 more raises the limit; off switch reads Logging off', async () => {
+    const user = userEvent.setup();
+    mocked.getAiActivityLogging.mockResolvedValue(false);
+    const base = (await mocked.listAiActivity()).entries[0];
+    mocked.listAiActivity.mockResolvedValue({ total: 40, entries: [base] });
+    renderPage();
+
+    expect(await screen.findByText('Logging off')).toBeInTheDocument();
+    await user.click(
+        await screen.findByRole('button', { name: 'Show 25 more' })
+    );
+    await waitFor(() =>
+        expect(mocked.listAiActivity).toHaveBeenLastCalledWith(
+            expect.objectContaining({ limit: 50 })
+        )
+    );
+});
+
+test('Desktop: Connected clients lists recent clients, or says none yet', async () => {
+    setDesktop(true);
+    renderPage();
+    expect(await screen.findByText('No AI clients yet.')).toBeVisible();
+    cleanup();
+
+    mocked.listAiActivityClients.mockResolvedValue([
+        { client: 'Cursor', lastCallAt: Date.now() - 5 * 60000 }
+    ]);
+    renderPage();
+    expect(await screen.findByText('last call 5 min ago')).toBeVisible();
 });
 
 test('Desktop: MCP server card shows the command and copies it', async () => {
