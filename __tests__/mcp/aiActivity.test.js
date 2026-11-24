@@ -14,7 +14,6 @@ const {
     setLoggingEnabled
 } = require('../../services/aiActivity');
 const { run } = require('../../services/keyStore');
-const { setAiAccess } = require('../../services/aiAccess');
 
 const CONN = global.TEST_CONNECTION_ID;
 const READ_ONLY = 'test-mcp-log-ro';

@@ -1328,6 +1328,49 @@ body:has(.titlebar) .toolbar {
     gap: 10px;
     flex-wrap: wrap;
 }
+.aic-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.aic-live {
+    font-size: 12px;
+    color: var(--ok);
+}
+.aic-live.off {
+    color: var(--mu);
+}
+.aic-new {
+    animation: aic-flash 2.5s ease-out;
+}
+@keyframes aic-flash {
+    from {
+        background: var(--okS);
+    }
+}
+.aic-connected {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.aic-connected li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.aic-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mu);
+}
+.aic-dot.on {
+    background: var(--ok);
+}
 .aic-cmd {
     display: flex;
     align-items: center;

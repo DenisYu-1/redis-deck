@@ -712,15 +712,40 @@ export interface AiActivityPage {
 
 export async function listAiActivity(params: {
     connectionId?: string;
+    /** Text matched against tool, Key and Connection */
+    q?: string;
+    status?: AiActivityResult | '';
+    client?: string;
     limit?: number;
     offset?: number;
 }): Promise<AiActivityPage> {
     const query = new URLSearchParams();
     if (params.connectionId) query.set('connectionId', params.connectionId);
+    if (params.q) query.set('q', params.q);
+    if (params.status) query.set('status', params.status);
+    if (params.client) query.set('client', params.client);
     if (params.limit !== undefined) query.set('limit', String(params.limit));
     if (params.offset !== undefined) query.set('offset', String(params.offset));
     return handleResponse<AiActivityPage>(
         await fetch(`${API_BASE}/ai-activity?${query.toString()}`)
+    );
+}
+
+export interface AiActivityClient {
+    client: string;
+    /** ms since epoch */
+    lastCallAt: number;
+}
+
+export async function listAiActivityClients(): Promise<AiActivityClient[]> {
+    const response = await fetch(`${API_BASE}/ai-activity/clients`);
+    return (await handleResponse<{ clients: AiActivityClient[] }>(response))
+        .clients;
+}
+
+export async function clearAiActivity(): Promise<void> {
+    await handleResponse(
+        await fetch(`${API_BASE}/ai-activity`, { method: 'DELETE' })
     );
 }
 

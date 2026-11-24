@@ -85,10 +85,39 @@ function recordActivity({
         );
 }
 
-// Newest first. Returns { entries, total } (total = all matching entries).
-function listActivity({ connectionId, limit = 50, offset = 0 } = {}) {
-    const where = connectionId ? 'WHERE connection_id = ?' : '';
-    const params = connectionId ? [connectionId] : [];
+// Newest first. Filters: connectionId, client (exact), result (one of RESULTS),
+// q (substring of tool, Key or Connection). Returns { entries, total } (total =
+// all matching entries).
+function listActivity({
+    connectionId,
+    client,
+    result,
+    q,
+    limit = 50,
+    offset = 0
+} = {}) {
+    const conds = [];
+    const params = [];
+    if (connectionId) {
+        conds.push('connection_id = ?');
+        params.push(connectionId);
+    }
+    if (client) {
+        conds.push('client = ?');
+        params.push(client);
+    }
+    if (result) {
+        conds.push('result = ?');
+        params.push(result);
+    }
+    if (q) {
+        const like = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
+        conds.push(
+            "(operation LIKE ? ESCAPE '\\' OR target LIKE ? ESCAPE '\\' OR connection_id LIKE ? ESCAPE '\\')"
+        );
+        params.push(like, like, like);
+    }
+    const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
     const db = getDatabase();
     const entries = db
         .prepare(
@@ -105,6 +134,21 @@ function listActivity({ connectionId, limit = 50, offset = 0 } = {}) {
     return { entries, total };
 }
 
+// Each distinct client with the time of its last call, most recent first.
+function listClients() {
+    return getDatabase()
+        .prepare(
+            `SELECT client, MAX(created_at) AS lastCallAt FROM ai_activity
+             GROUP BY client ORDER BY lastCallAt DESC`
+        )
+        .all();
+}
+
+// Deletes every entry. Returns the number removed.
+function clearActivity() {
+    return getDatabase().prepare('DELETE FROM ai_activity').run().changes;
+}
+
 // Removes entries older than daysToKeep. Returns the number removed.
 function cleanupOldActivity(daysToKeep = 30, now = Date.now()) {
     return getDatabase()
@@ -119,5 +163,7 @@ module.exports = {
     setLoggingEnabled,
     recordActivity,
     listActivity,
+    listClients,
+    clearActivity,
     cleanupOldActivity
 };

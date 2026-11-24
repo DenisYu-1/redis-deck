@@ -1,16 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { useAppStore } from '@/store/useAppStore';
+import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/hooks/useToast';
 import {
+    clearAiActivity,
     getAiActivityLogging,
     listAiActivity,
+    listAiActivityClients,
     setAiActivityLogging,
+    type AiActivityClient,
     type AiActivityEntry,
-    type AiActivityPage
+    type AiActivityPage,
+    type AiActivityResult
 } from '@/services/apiService';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 25;
+const POLL_MS = 5000;
+const HIGHLIGHT_MS = 2500;
+
+const STATUSES: { value: '' | AiActivityResult; label: string }[] = [
+    { value: '', label: 'All' },
+    { value: 'ok', label: 'OK' },
+    { value: 'denied', label: 'Denied' },
+    { value: 'blocked', label: 'Blocked' },
+    { value: 'error', label: 'Error' }
+];
 
 /** Pretty-prints stored JSON text; capped responses may not parse, so show them raw. */
 function pretty(text: string | null): string {
@@ -23,12 +37,19 @@ function pretty(text: string | null): string {
 }
 
 /** One call; click to see the request and response JSON. */
-function ActivityRow({ entry: e }: { entry: AiActivityEntry }) {
+function ActivityRow({
+    entry: e,
+    fresh
+}: {
+    entry: AiActivityEntry;
+    fresh: boolean;
+}) {
     const [open, setOpen] = useState(false);
     return (
         <>
             <tr
                 data-testid="ai-activity-row"
+                className={fresh ? 'aic-new' : undefined}
                 aria-expanded={open}
                 onClick={() => setOpen(!open)}
                 style={{ cursor: 'pointer' }}
@@ -60,14 +81,20 @@ function ActivityRow({ entry: e }: { entry: AiActivityEntry }) {
     );
 }
 
-/** AI activity log: every call an AI client made, per Connection. */
+/** AI activity log: every call an AI client made, with filters, paging and live refresh. */
 export function AiActivityLog() {
-    const connections = useAppStore((s) => s.connections);
-    const [connectionId, setConnectionId] = useState('');
-    const [offset, setOffset] = useState(0);
+    const [text, setText] = useState('');
+    const [status, setStatus] = useState<'' | AiActivityResult>('');
+    const [client, setClient] = useState('');
+    const [limit, setLimit] = useState(PAGE_SIZE);
+    const [tick, setTick] = useState(0);
     const [page, setPage] = useState<AiActivityPage | null>(null);
+    const [clients, setClients] = useState<AiActivityClient[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [logEnabled, setLogEnabled] = useState<boolean | null>(null);
+    const [confirmClear, setConfirmClear] = useState(false);
+    const [fresh, setFresh] = useState<ReadonlySet<number>>(new Set());
+    const seen = useRef<Set<number> | null>(null);
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -91,15 +118,33 @@ export function AiActivityLog() {
         }
     };
 
+    // Refresh every 5 s while the page is open.
+    useEffect(() => {
+        const timer = setInterval(() => setTick((t) => t + 1), POLL_MS);
+        return () => clearInterval(timer);
+    }, []);
+
     useEffect(() => {
         let cancelled = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
         listAiActivity({
-            connectionId, // '' = all Connections
-            limit: PAGE_SIZE,
-            offset
+            q: text,
+            status,
+            client,
+            limit,
+            offset: 0
         }).then(
             (p) => {
                 if (cancelled) return;
+                const known = seen.current;
+                const added = known
+                    ? p.entries.filter((e) => !known.has(e.id)).map((e) => e.id)
+                    : [];
+                seen.current = new Set(p.entries.map((e) => e.id));
+                if (added.length) {
+                    setFresh(new Set(added));
+                    timer = setTimeout(() => setFresh(new Set()), HIGHLIGHT_MS);
+                }
                 setPage(p);
                 setError(null);
             },
@@ -109,10 +154,45 @@ export function AiActivityLog() {
         );
         return () => {
             cancelled = true;
+            clearTimeout(timer);
         };
-    }, [connectionId, offset]);
+    }, [text, status, client, limit, tick]);
 
+    useEffect(() => {
+        let cancelled = false;
+        listAiActivityClients().then(
+            (list) => {
+                if (!cancelled) setClients(list);
+            },
+            () => undefined
+        );
+        return () => {
+            cancelled = true;
+        };
+    }, [tick]);
+
+    // A filter change starts a new view: nothing in it counts as new.
+    const refilter = (change: () => void) => {
+        seen.current = null;
+        setLimit(PAGE_SIZE);
+        change();
+    };
+
+    const clear = async () => {
+        try {
+            await clearAiActivity();
+            setConfirmClear(false);
+            seen.current = null;
+            setTick((t) => t + 1);
+        } catch (e) {
+            showToast((e as Error).message, 'error');
+        }
+    };
+
+    const entries = page?.entries ?? [];
     const total = page?.total ?? 0;
+    const blocked = entries.filter((e) => e.result === 'blocked').length;
+    const errors = entries.filter((e) => e.result === 'error').length;
 
     return (
         <section className="card sect" aria-label="AI activity">
@@ -120,39 +200,14 @@ export function AiActivityLog() {
                 <div className="cmain-title">
                     <h2>AI activity</h2>
                     <span className="sm mu">
-                        {total === 0
-                            ? 'No entries'
-                            : `${offset + 1}–${Math.min(offset + PAGE_SIZE, total)} of ${total}`}
+                        {`${total} calls · ${blocked} blocked · ${errors} errors`}
                     </span>
                 </div>
-                <select
-                    aria-label="Connection"
-                    className="select"
-                    value={connectionId}
-                    onChange={(e) => {
-                        setConnectionId(e.target.value);
-                        setOffset(0);
-                    }}
+                <span
+                    className={`aic-live${logEnabled === false ? ' off' : ''}`}
                 >
-                    <option value="">All Connections</option>
-                    {connections.map((c) => (
-                        <option key={c.id} value={c.id}>
-                            {c.id}
-                        </option>
-                    ))}
-                </select>
-                <Button
-                    disabled={offset === 0}
-                    onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-                >
-                    Newer
-                </Button>
-                <Button
-                    disabled={offset + PAGE_SIZE >= total}
-                    onClick={() => setOffset(offset + PAGE_SIZE)}
-                >
-                    Older
-                </Button>
+                    {logEnabled === false ? 'Logging off' : 'Live'}
+                </span>
                 <label className="aic-log-toggle">
                     <input
                         type="checkbox"
@@ -162,6 +217,49 @@ export function AiActivityLog() {
                     />
                     Log AI operations
                 </label>
+                <Button
+                    disabled={total === 0}
+                    onClick={() => setConfirmClear(true)}
+                >
+                    Clear
+                </Button>
+            </div>
+            <div className="aic-filters">
+                <input
+                    aria-label="Filter calls"
+                    className="input"
+                    placeholder="Filter by tool, key or connection"
+                    value={text}
+                    onChange={(e) => refilter(() => setText(e.target.value))}
+                />
+                <div role="group" aria-label="Status">
+                    {STATUSES.map((st) => (
+                        <Button
+                            key={st.value}
+                            size="sm"
+                            variant={
+                                status === st.value ? 'primary' : 'default'
+                            }
+                            aria-pressed={status === st.value}
+                            onClick={() => refilter(() => setStatus(st.value))}
+                        >
+                            {st.label}
+                        </Button>
+                    ))}
+                </div>
+                <select
+                    aria-label="Client"
+                    className="select"
+                    value={client}
+                    onChange={(e) => refilter(() => setClient(e.target.value))}
+                >
+                    <option value="">All clients</option>
+                    {clients.map((c) => (
+                        <option key={c.client} value={c.client}>
+                            {c.client}
+                        </option>
+                    ))}
+                </select>
             </div>
             <div>
                 {error && <p className="sm aic-activity-error">{error}</p>}
@@ -179,13 +277,45 @@ export function AiActivityLog() {
                             </tr>
                         </thead>
                         <tbody>
-                            {page?.entries.map((e) => (
-                                <ActivityRow key={e.id} entry={e} />
+                            {entries.map((e) => (
+                                <ActivityRow
+                                    key={e.id}
+                                    entry={e}
+                                    fresh={fresh.has(e.id)}
+                                />
                             ))}
                         </tbody>
                     </table>
                 </div>
+                {entries.length < total && (
+                    <Button onClick={() => setLimit(limit + PAGE_SIZE)}>
+                        Show {PAGE_SIZE} more
+                    </Button>
+                )}
             </div>
+            {confirmClear && (
+                <Modal
+                    title="Clear AI activity"
+                    onClose={() => setConfirmClear(false)}
+                    footer={
+                        <>
+                            <Button onClick={() => setConfirmClear(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="danger"
+                                onClick={() => void clear()}
+                            >
+                                Clear
+                            </Button>
+                        </>
+                    }
+                >
+                    <p className="sm tx2">
+                        This deletes every logged AI call. It cannot be undone.
+                    </p>
+                </Modal>
+            )}
         </section>
     );
 }

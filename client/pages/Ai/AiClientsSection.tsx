@@ -5,8 +5,10 @@ import { useToast } from '@/hooks/useToast';
 import {
     getAiClientSnippet,
     installAiClient,
+    listAiActivityClients,
     listAiClients,
     removeAiClient,
+    type AiActivityClient,
     type AiClient,
     type AiClientSnippet,
     type AiClientStatus
@@ -19,6 +21,16 @@ const STATUS_LABEL: Record<AiClientStatus, string> = {
     error: 'Error'
 };
 
+const RECENT_MS = 60 * 60 * 1000;
+
+function ago(ms: number): string {
+    const min = Math.floor(ms / 60000);
+    if (min < 1) return 'just now';
+    if (min < 60) return `${min} min ago`;
+    const h = Math.floor(min / 60);
+    return h < 24 ? `${h} h ago` : `${Math.floor(h / 24)} d ago`;
+}
+
 interface Snippet extends AiClientSnippet {
     name: string;
 }
@@ -27,6 +39,8 @@ interface Snippet extends AiClientSnippet {
 export function AiClientsSection() {
     const [clients, setClients] = useState<AiClient[]>([]);
     const [command, setCommand] = useState('');
+    const [active, setActive] = useState<AiActivityClient[]>([]);
+    const [now, setNow] = useState(0);
     const [busy, setBusy] = useState<string | null>(null);
     const [restartHint, setRestartHint] = useState<string | null>(null);
     const [snippet, setSnippet] = useState<Snippet | null>(null);
@@ -56,6 +70,25 @@ export function AiClientsSection() {
             cancelled = true;
         };
     }, [showToast]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const load = () =>
+            listAiActivityClients().then(
+                (list) => {
+                    if (cancelled) return;
+                    setActive(list);
+                    setNow(Date.now());
+                },
+                () => undefined
+            );
+        void load();
+        const timer = setInterval(load, 5000);
+        return () => {
+            cancelled = true;
+            clearInterval(timer);
+        };
+    }, []);
 
     const act = async (c: AiClient, action: 'install' | 'remove') => {
         setBusy(c.id);
@@ -103,6 +136,27 @@ export function AiClientsSection() {
                         Copy
                     </Button>
                 </div>
+                <h3>Connected clients</h3>
+                {active.length === 0 ? (
+                    <p className="sm mu">No AI clients yet.</p>
+                ) : (
+                    <ul className="aic-connected">
+                        {active.map((a) => {
+                            const age = now - a.lastCallAt;
+                            return (
+                                <li key={a.client}>
+                                    <span
+                                        className={`aic-dot${age < RECENT_MS ? ' on' : ''}`}
+                                    />
+                                    <span>{a.client}</span>
+                                    <span className="sm mu">
+                                        last call {ago(age)}
+                                    </span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
             </section>
             <section className="card sect" aria-label="Add to a client">
                 <h2>Add to a client</h2>
