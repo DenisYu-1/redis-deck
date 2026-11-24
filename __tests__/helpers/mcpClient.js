@@ -4,9 +4,9 @@ const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const { createMcpServer } = require('../../services/mcp/server');
 
-async function connectMcp(deps = {}) {
+async function connectMcp({ clientName = 'test-client', ...deps } = {}) {
     const server = createMcpServer(deps);
-    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    const client = new Client({ name: clientName, version: '0.0.0' });
     const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
     await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
 

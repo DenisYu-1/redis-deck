@@ -17,7 +17,7 @@ function entry(overrides) {
         connectionId: 'test-a',
         operation: 'set_key',
         target: 'test:k',
-        result: 'done',
+        result: 'ok',
         ...overrides
     };
 }
