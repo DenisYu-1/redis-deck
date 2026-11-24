@@ -21,11 +21,13 @@ function lockReason(row: AiAccessRow, field: AiAccessField): string | null {
     if (field === 'keys') return null;
     if (field === 'ask') {
         if (row.tier === 'production') return 'Always on for production';
-        if (!row.write && !row.workflows) return 'Needs write or Workflows';
+        if (!row.write && !row.workflows)
+            return 'Allow writes or workflows first';
         return null;
     }
-    if (!row.keys) return 'Needs See keys';
-    if (row.readOnly && field !== 'values') return 'Connection is Read-only';
+    if (!row.keys) return 'Allow keys first';
+    if (row.readOnly && field !== 'values')
+        return 'The connection itself is read-only';
     return null;
 }
 

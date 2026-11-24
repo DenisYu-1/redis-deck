@@ -56,3 +56,26 @@ test('production ask is locked on; write needs see keys', async () => {
     expect(ask).toBeChecked();
     expect(ask).toBeDisabled();
 });
+
+test('disabled cells say why', async () => {
+    mocked.listAiAccess.mockResolvedValue([
+        row({ id: 'prod', tier: 'production', ask: true }),
+        row({ id: 'nokeys', keys: false, values: false, write: false }),
+        row({ id: 'ro', readOnly: true, write: false, workflows: false }),
+        row({ id: 'stg', tier: 'staging', write: false, workflows: false })
+    ]);
+    render(<AiAccessGrid />);
+
+    const title = async (label: string) =>
+        (await screen.findByLabelText(label)).getAttribute('title');
+    expect(await title('Ask before writes for prod')).toBe(
+        'Always on for production'
+    );
+    expect(await title('Write for nokeys')).toBe('Allow keys first');
+    expect(await title('Write for ro')).toBe(
+        'The connection itself is read-only'
+    );
+    expect(await title('Ask before writes for stg')).toBe(
+        'Allow writes or workflows first'
+    );
+});

@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 const { connectMcp } = require('../helpers/mcpClient');
+const { setAiAccess } = require('../../services/aiAccess');
 const { setToolEnabled } = require('../../services/mcp/toolSwitches');
 const {
     addGuardedConnection,
@@ -27,7 +28,8 @@ describe('MCP write tools', () => {
     beforeAll(() => {
         setToolEnabled('run_workflow', true); // off by default
         addGuardedConnection(READ_ONLY, { readOnly: true });
-        addGuardedConnection(CONFIRM, { confirmWrites: true });
+        addGuardedConnection(CONFIRM, {});
+        setAiAccess(CONFIRM, { write: true, workflows: true });
     });
 
     afterAll(() => {
@@ -236,7 +238,7 @@ describe('MCP write tools', () => {
             }
         );
 
-        test('a Confirm writes Connection is denied when no approver is given', async () => {
+        test('an Ask before writes Connection is denied when no approver is given', async () => {
             const res = await mcp.call('set_key', {
                 connectionId: CONFIRM,
                 key: 'test:mcpw:g',
