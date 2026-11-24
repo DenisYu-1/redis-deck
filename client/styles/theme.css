@@ -1337,3 +1337,24 @@ body:has(.titlebar) .toolbar {
         grid-template-columns: minmax(0, 1fr);
     }
 }
+.ai-tool {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--bd);
+}
+.ai-tool-main {
+    flex: 1;
+    min-width: 0;
+}
+.ai-tool-desc {
+    display: block;
+}
+.ai-tool-tag {
+    margin-left: 6px;
+    padding: 0 6px;
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    font-size: 11px;
+}

@@ -11,9 +11,11 @@
 // call with a message scrubbed of Connection config.
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { version } = require('../../package.json');
-const readTools = require('./tools/read');
-const writeTools = require('./tools/write');
-const workflowTools = require('./tools/workflows');
+const {
+    ListToolsRequestSchema
+} = require('@modelcontextprotocol/sdk/types.js');
+const allTools = require('./tools');
+const { isToolEnabled } = require('./toolSwitches');
 const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
 const { createApprovals } = require('./approvals');
@@ -24,13 +26,15 @@ const { checkWrite } = require('../../guards/writeGuard');
 // checkWrite's status when the write needs the user's confirmation.
 const CONFIRM_REQUIRED = 428;
 
+const TURNED_OFF = 'tool is turned off';
+
 const denyAll = async () => 'deny';
 
 function createMcpServer({
     approver = denyAll,
     clock = Date.now,
     approvalTimeoutMs,
-    tools = [...readTools, ...writeTools, ...workflowTools]
+    tools = allTools
 } = {}) {
     const server = new McpServer({ name: 'redis-deck', version });
     const ctx = {
@@ -54,7 +58,24 @@ function createMcpServer({
             (args) => invoke(tool, args ?? {}, ctx)
         );
     }
+    hideTurnedOffTools(server);
     return server;
+}
+
+// Turned-off tools drop out of tools/list. The switch is read on every list,
+// so it applies to a running session too; the call itself is refused in
+// invoke(). Wraps the SDK's own handler (it holds the schema conversion); the
+// handler map is private SDK state, hence the guard.
+function hideTurnedOffTools(server) {
+    const original = server.server._requestHandlers?.get('tools/list');
+    if (!original) return;
+    server.server.setRequestHandler(ListToolsRequestSchema, async (...args) => {
+        const result = await original(...args);
+        return {
+            ...result,
+            tools: result.tools.filter((t) => isToolEnabled(t.name))
+        };
+    });
 }
 
 // MCP write guard: guards/writeGuard.js decides, called without a confirm
@@ -127,6 +148,10 @@ function hiddenFrom(args) {
 }
 
 async function invoke(tool, args, ctx) {
+    if (!isToolEnabled(tool.name)) {
+        logActivity(tool, args, ctx, RESULTS.blocked, TURNED_OFF);
+        return errorResult(TURNED_OFF);
+    }
     if (hiddenFrom(args)) {
         const text = `Connection '${args.connectionId}' is not available to AI clients`;
         logActivity(tool, args, ctx, RESULTS.blocked, text);

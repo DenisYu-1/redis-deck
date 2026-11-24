@@ -732,3 +732,36 @@ export const setAiActivityLogging = (logEnabled: boolean): Promise<boolean> =>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logEnabled })
     });
+
+// MCP tool switches: which tools AI clients may see and call (one global
+// setting). The list comes from the tools the server really registers.
+export interface AiTool {
+    name: string;
+    description: string;
+    /** Changes data (tagged "write" on the page) */
+    write: boolean;
+    enabled: boolean;
+}
+
+export async function listAiTools(): Promise<AiTool[]> {
+    return (
+        await handleResponse<{ tools: AiTool[] }>(
+            await fetch(`${API_BASE}/ai-tools`)
+        )
+    ).tools;
+}
+
+export async function setAiToolEnabled(
+    name: string,
+    enabled: boolean
+): Promise<AiTool[]> {
+    return (
+        await handleResponse<{ tools: AiTool[] }>(
+            await fetch(`${API_BASE}/ai-tools/${encodeURIComponent(name)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled })
+            })
+        )
+    ).tools;
+}
