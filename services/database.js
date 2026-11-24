@@ -4,6 +4,7 @@ const fs = require('fs');
 const { migrate } = require('./migrate');
 const migrations = require('./migrations');
 const { getDataDir } = require('./dataDir');
+const { defaultAccess } = require('./aiAccessDefaults');
 
 // Ensure the data directory exists
 const dataDir = getDataDir();
@@ -82,21 +83,35 @@ function createConnection(connection) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    const result = stmt.run(
-        connection.id,
-        connection.host,
-        connection.port,
-        connection.username || '',
-        connection.password || '',
-        connection.tls ? 1 : 0,
-        connection.cluster ? 1 : 0,
-        connection.order !== undefined ? connection.order : nextOrder,
-        normalizeTier(connection.tier),
-        Number(connection.db) || 0,
-        connection.verifyTls === false ? 0 : 1,
-        connection.readOnly ? 1 : 0,
-        connection.confirmWrites ? 1 : 0
+    const tier = normalizeTier(connection.tier);
+    const a = defaultAccess({ tier, readOnly: !!connection.readOnly });
+    const insertAccess = db.prepare(
+        `INSERT INTO ai_access (connection_id, see_keys, see_values, write, workflows, ask)
+         VALUES (?, ?, ?, ?, ?, ?)`
     );
+
+    const result = db.transaction(() => {
+        const inserted = stmt.run(
+            connection.id,
+            connection.host,
+            connection.port,
+            connection.username || '',
+            connection.password || '',
+            connection.tls ? 1 : 0,
+            connection.cluster ? 1 : 0,
+            connection.order !== undefined ? connection.order : nextOrder,
+            tier,
+            Number(connection.db) || 0,
+            connection.verifyTls === false ? 0 : 1,
+            connection.readOnly ? 1 : 0,
+            connection.confirmWrites ? 1 : 0
+        );
+        insertAccess.run(
+            connection.id,
+            ...[a.keys, a.values, a.write, a.workflows, a.ask].map(Number)
+        );
+        return inserted;
+    })();
 
     return result.changes > 0;
 }
@@ -133,6 +148,7 @@ function deleteConnection(id) {
         db.prepare('DELETE FROM saved_searches WHERE connection_id = ?').run(
             id
         );
+        db.prepare('DELETE FROM ai_access WHERE connection_id = ?').run(id);
         return db.prepare('DELETE FROM connections WHERE id = ?').run(id);
     })();
     return result.changes > 0;
@@ -186,6 +202,7 @@ module.exports = {
     updateConnectionOrder,
     getConnectionConfig,
     safetyFields,
+    normalizeTier,
     getDatabase,
     db
 };

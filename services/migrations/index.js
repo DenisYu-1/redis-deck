@@ -2,5 +2,6 @@
 // Add a schema change by appending one new numbered module; never edit old ones.
 module.exports = [
     require('./001-initial-schema'),
-    require('./002-ai-activity')
+    require('./002-ai-activity'),
+    require('./003-ai-access')
 ];

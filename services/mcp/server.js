@@ -18,6 +18,7 @@ const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
 const { createApprovals } = require('./approvals');
 const { recordActivity, RESULTS } = require('../aiActivity');
+const { getAiAccess } = require('../aiAccess');
 const { checkWrite } = require('../../guards/writeGuard');
 
 // checkWrite's status when the write needs the user's confirmation.
@@ -119,7 +120,18 @@ function logActivity(tool, args, ctx, result, error) {
     }
 }
 
+// AI access "See keys" off: the Connection does not exist for AI clients.
+function hiddenFrom(args) {
+    const access = args.connectionId && getAiAccess(args.connectionId);
+    return access && !access.keys;
+}
+
 async function invoke(tool, args, ctx) {
+    if (hiddenFrom(args)) {
+        const text = `Connection '${args.connectionId}' is not available to AI clients`;
+        logActivity(tool, args, ctx, RESULTS.blocked, text);
+        return errorResult(text);
+    }
     if (tool.access !== 'read') {
         const refusal = await refuseWrite(tool, args, ctx);
         if (refusal) {
