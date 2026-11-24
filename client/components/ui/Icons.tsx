@@ -66,3 +66,8 @@ export const LockIcon = () => (
         <path d="M8 11V8a4 4 0 018 0v3" />
     </Svg>
 );
+export const SparkIcon = () => (
+    <Svg>
+        <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7z" />
+    </Svg>
+);

@@ -15,7 +15,10 @@ function createAiClientsRouter(installer) {
 
     router.get(
         '/ai-clients',
-        handle(() => ({ clients: installer.list() }))
+        handle(() => ({
+            clients: installer.list(),
+            command: installer.commandLine()
+        }))
     );
     router.get(
         '/ai-clients/:id/snippet',

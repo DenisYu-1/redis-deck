@@ -621,9 +621,15 @@ export interface AiClientSnippet {
 const aiClientUrl = (id: string, action: string) =>
     `${API_BASE}/ai-clients/${encodeURIComponent(id)}/${action}`;
 
-export async function listAiClients(): Promise<AiClient[]> {
+export interface AiClientList {
+    clients: AiClient[];
+    /** The stdio command line the installer writes (`<binary> --mcp`). */
+    command: string;
+}
+
+export async function listAiClients(): Promise<AiClientList> {
     const response = await fetch(`${API_BASE}/ai-clients`);
-    return (await handleResponse<{ clients: AiClient[] }>(response)).clients;
+    return handleResponse<AiClientList>(response);
 }
 
 export async function installAiClient(id: string): Promise<void> {

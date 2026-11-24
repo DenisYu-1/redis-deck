@@ -1264,3 +1264,76 @@ body:has(.titlebar) .side {
 body:has(.titlebar) .toolbar {
     padding-top: 2px;
 }
+
+/* AI page */
+.aiwrap {
+    padding: 18px 20px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 1320px;
+}
+.aihead h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+.aihead p {
+    margin: 4px 0 0;
+    color: var(--tx2);
+    max-width: 72ch;
+}
+.aigrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+.aicol {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+.aicol:empty {
+    display: none;
+}
+.sect {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+.sect h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+.sechead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.aic-cmd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--code);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+}
+.aic-cmd code {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    word-break: break-all;
+}
+@media (max-width: 1100px) {
+    .aigrid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

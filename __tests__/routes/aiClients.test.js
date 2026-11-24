@@ -27,6 +27,11 @@ describe('AI client installer routes', () => {
             await request(app).get('/api/ai-clients').expect(200)
         ).body.clients.find((c) => c.id === 'claude-code');
 
+    it('lists the stdio command the installer writes', async () => {
+        const res = await request(app).get('/api/ai-clients').expect(200);
+        expect(res.body.command).toBe('/bin/redis-deck --mcp');
+    });
+
     it('installs, lists and removes Claude Code', async () => {
         expect((await claudeCode()).status).toBe('not-installed');
 
