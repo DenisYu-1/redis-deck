@@ -699,3 +699,18 @@ export const setAiActivityLogging = (logEnabled: boolean): Promise<boolean> =>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logEnabled })
     });
+
+// Hidden fields: names whose values AI clients never see (masked as ●●●).
+const aiHiddenFields = async (init?: RequestInit): Promise<string[]> => {
+    const response = await fetch(`${API_BASE}/ai-hidden-fields`, init);
+    return (await handleResponse<{ fields: string[] }>(response)).fields;
+};
+
+export const getAiHiddenFields = (): Promise<string[]> => aiHiddenFields();
+
+export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
+    aiHiddenFields({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields })
+    });

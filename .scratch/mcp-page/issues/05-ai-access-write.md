@@ -1,6 +1,7 @@
 # 05: AI access: write / Workflows / ask before writes
 
 **What to build:** The write side of **AI access** takes effect:
+
 - **Write** off blocks the key write tools.
 - **Workflows** off blocks `run_workflow`. `plan_workflow` stays allowed, because it only reads.
 - **Ask before writes** is now the only trigger for the native approval dialog (Deny / Allow once / Allow for this session). On a production Tier it is always on and cannot be turned off.

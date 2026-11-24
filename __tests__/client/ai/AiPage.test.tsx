@@ -31,6 +31,7 @@ beforeEach(() => {
         connections: [{ id: 'prod' }, { id: 'dev' }] as RedisConnection[]
     });
     mocked.getAiActivityLogging.mockResolvedValue(true);
+    mocked.getAiHiddenFields.mockResolvedValue(['password']);
     mocked.listAiClients.mockResolvedValue({
         command: '/bin/redis-deck --mcp',
         clients: [

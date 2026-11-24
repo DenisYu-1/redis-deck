@@ -1332,6 +1332,44 @@ body:has(.titlebar) .toolbar {
     font-size: 12px;
     word-break: break-all;
 }
+/* AI page: hidden fields chips */
+.hfchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.hfchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 4px 0 10px;
+    border-radius: 12px;
+    border: 1px solid var(--bd);
+    color: var(--tx);
+    font-family: var(--f-mono);
+    font-size: 12px;
+}
+.hfchip button {
+    border: 0;
+    background: none;
+    color: var(--tx2);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 4px;
+}
+.hfchip button:hover {
+    color: var(--tx);
+}
+.hfadd {
+    display: flex;
+    gap: 8px;
+}
+.hfadd .input {
+    flex: 1;
+    min-width: 0;
+}
 @media (max-width: 1100px) {
     .aigrid {
         grid-template-columns: minmax(0, 1fr);

@@ -1,6 +1,7 @@
 import { isDesktop } from '@/utils/desktopTitleBar';
 import { AiActivityLog } from './AiActivityLog';
 import { AiClientsSection } from './AiClientsSection';
+import { AiMayDoSection } from './AiMayDoSection';
 
 /** AI page: what AI may do (later), the MCP server and its clients, and the activity log. */
 export function AiPage() {
@@ -15,7 +16,9 @@ export function AiPage() {
                     </p>
                 </div>
                 <div className="aigrid">
-                    <div className="aicol" />
+                    <div className="aicol">
+                        <AiMayDoSection />
+                    </div>
                     <div className="aicol">
                         {isDesktop() && <AiClientsSection />}
                     </div>
