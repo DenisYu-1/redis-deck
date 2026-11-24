@@ -72,15 +72,15 @@ A new "AI clients (MCP)" panel on the Connections page has one row per **AI clie
 - **Shared SQLite**: the app and one or more `--mcp` processes open the same database. Per-process state (the `redis-cli` cap and the topology cache) stays per process. This is acceptable.
 - **MCP server module (new, deep)**: built with injected dependencies. The main one is an `approver(request) → 'deny' | 'once' | 'session'`, plus a clock for the session cap. In production the approver is the native dialog. In tests it is a stub. The module owns the tool registry, the guard rules, the session grants and the AI activity logging.
 - **Tools.** They call the existing services and never go through HTTP.
-  - Reads: list Connections, scan Keys (capped count), get Key (truncated value), INFO, list Workflows.
-  - Writes: set Key, delete Key, rename Key, set/remove TTL, sorted-set add, collection member edits, Workflow plan, Workflow run.
-  - Not exposed: flush, bulk delete Job by Key pattern, Connection management, generic command execution.
-  - Workflow plan is a read; Workflow run is a write.
+    - Reads: list Connections, scan Keys (capped count), get Key (truncated value), INFO, list Workflows.
+    - Writes: set Key, delete Key, rename Key, set/remove TTL, sorted-set add, collection member edits, Workflow plan, Workflow run.
+    - Not exposed: flush, bulk delete Job by Key pattern, Connection management, generic command execution.
+    - Workflow plan is a read; Workflow run is a write.
 - **Guard rules for MCP writes.** These reuse the write guard's Connection lookup; the decision is made in the MCP module.
-  - Read-only connection: blocked.
-  - Confirm writes: ask the approver.
-  - Otherwise: allowed right away.
-  - Confirm writes never accepts a confirmation sent by the AI client.
+    - Read-only connection: blocked.
+    - Confirm writes: ask the approver.
+    - Otherwise: allowed right away.
+    - Confirm writes never accepts a confirmation sent by the AI client.
 - **Approval dialog**: Deny / Allow once / Allow for this session, with Deny as the default and cancel button. A 60 s timeout counts as Deny. The dialog text names the AI client (from the MCP initialize client info), the Connection name, the Tier, the operation and the Key or Workflow.
 - **Session grant**: kept in memory and keyed by Connection within the `--mcp` process. It expires 1 h after it was granted or when the process exits.
 - **No secrets in output**: the Connection listing strips passwords, usernames-with-secrets and TLS key material. Error messages never echo Connection config.
@@ -88,11 +88,11 @@ A new "AI clients (MCP)" panel on the Connections page has one row per **AI clie
 - **Log toggle**: a single app setting, "Log AI operations", on by default and stored in SQLite. The `--mcp` process reads it when it logs, so a change applies without restarting the AI client.
 - **AI activity API**: a new router with list (filter by Connection, paged, newest first) and get/set of the log toggle. These are app settings, not Redis writes, so the write guard is not involved.
 - **Client config installer module (new, deep)**: works on an injectable home directory. Interface: `status(client)`, `install(client)`, `remove(client)` and `snippet(client)`, where `snippet` returns the path plus the text for the Manual setup popup.
-  - Clients and files: Claude Desktop (macOS app-support JSON), Claude Code (`~/.claude.json`), Cursor (`~/.cursor/mcp.json`), all patched as JSON `mcpServers` entries; Codex (`~/.codex/config.toml`), handled as text: replace or append one `[mcp_servers.redis-deck]` block, with no TOML library and no other lines touched.
-  - Server entry name: `redis-deck`.
-  - Status rules: Installed when the entry's command and args match the current binary; Stale when the entry exists but differs; Not installed when absent.
-  - Missing files and folders are created on install. Remove deletes only the `redis-deck` entry.
-  - The installer writes files directly and never shells out to the clients' CLIs, because apps launched from Finder do not get the shell PATH.
+    - Clients and files: Claude Desktop (macOS app-support JSON), Claude Code (`~/.claude.json`), Cursor (`~/.cursor/mcp.json`), all patched as JSON `mcpServers` entries; Codex (`~/.codex/config.toml`), handled as text: replace or append one `[mcp_servers.redis-deck]` block, with no TOML library and no other lines touched.
+    - Server entry name: `redis-deck`.
+    - Status rules: Installed when the entry's command and args match the current binary; Stale when the entry exists but differs; Not installed when absent.
+    - Missing files and folders are created on install. Remove deletes only the `redis-deck` entry.
+    - The installer writes files directly and never shells out to the clients' CLIs, because apps launched from Finder do not get the shell PATH.
 - **Binary path**: when packaged, the app executable plus `--mcp`. In `electron:dev`, the dev Electron binary plus the repo path plus `--mcp`.
 - **Installer API**: Desktop-only routes for the list with status, install, remove and snippet. They are mounted only when the server runs embedded in the Desktop app.
 - **Frontend**: an "AI clients (MCP)" panel on the Connections page, rendered only in the Desktop app. It has a row per AI client with status and buttons, a Manual setup popup with a Copy button, a restart hint after install, the "Log AI operations" checkbox and the View activity modal with a Connection filter.
@@ -103,14 +103,14 @@ A new "AI clients (MCP)" panel on the Connections page has one row per **AI clie
 
 - A good test checks only external behavior: the tool results an AI client sees, the Redis state afterwards, the config file contents, and the HTTP responses. It does not check internals.
 - **Seam 1 — MCP server, in-process (main seam)**: connect through the SDK's in-memory transport against a real Redis (the existing `__tests__/` setup and the `test:*` Key prefix). Use a stub approver and a fake clock. Cover:
-  - each read tool, including the scan cap and value truncation
-  - password stripping in the Connection listing
-  - each write tool's effect on Redis
-  - Read-only blocks writes
-  - Confirm writes with Deny, Allow once (the next write asks again) and Allow for this session (the next write skips the prompt; after 1 h it asks again)
-  - plain Connections write with no prompt
-  - excluded operations are not listed
-  - AI activity rows for done, denied and blocked writes, no rows for reads, and no rows when the toggle is off
+    - each read tool, including the scan cap and value truncation
+    - password stripping in the Connection listing
+    - each write tool's effect on Redis
+    - Read-only blocks writes
+    - Confirm writes with Deny, Allow once (the next write asks again) and Allow for this session (the next write skips the prompt; after 1 h it asks again)
+    - plain Connections write with no prompt
+    - excluded operations are not listed
+    - AI activity rows for done, denied and blocked writes, no rows for reads, and no rows when the toggle is off
 - **Seam 2 — client config installer**: a temp home directory. For each AI client, cover install on a missing file, install into an existing file with unrelated content (kept byte-for-byte for TOML outside our block), Installed / Stale / Not installed status, Reinstall fixing Stale, and Remove leaving other entries alone.
 - **Seam 3 — AI activity routes**: route tests in the style of the existing route suites. Cover the list with the Connection filter and ordering, the toggle get/set, and the 30-day cleanup.
 - **Packaged smoke**: extend the existing packaged-app smoke script to start the binary with `--mcp`, send `initialize` and assert a valid response.

@@ -1,4 +1,5 @@
 import { isDesktop } from '@/utils/desktopTitleBar';
+import { AiAccessGrid } from './AiAccessGrid';
 import { AiActivityLog } from './AiActivityLog';
 import { AiClientsSection } from './AiClientsSection';
 
@@ -15,7 +16,9 @@ export function AiPage() {
                     </p>
                 </div>
                 <div className="aigrid">
-                    <div className="aicol" />
+                    <div className="aicol">
+                        <AiAccessGrid />
+                    </div>
                     <div className="aicol">
                         {isDesktop() && <AiClientsSection />}
                     </div>

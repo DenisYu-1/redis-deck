@@ -7,6 +7,7 @@ const {
     parseRedisInfo
 } = require('../../redis');
 const { readKey, readMeta } = require('../../keyStore');
+const { getAiAccess } = require('../../aiAccess');
 
 const MAX_VALUE_CHARS = 4096;
 const MAX_VALUE_ITEMS = 100;
@@ -25,13 +26,15 @@ const listConnections = {
     inputSchema: {},
     run: async () => ({
         // Whitelist: never spread the row, it carries host/user/TLS fields.
-        connections: getAllConnections().map((c) => ({
-            id: c.id,
-            name: c.id,
-            tier: c.tier,
-            readOnly: c.readOnly,
-            confirmWrites: c.confirmWrites
-        }))
+        connections: getAllConnections()
+            .filter((c) => getAiAccess(c.id).keys)
+            .map((c) => ({
+                id: c.id,
+                name: c.id,
+                tier: c.tier,
+                readOnly: c.readOnly,
+                confirmWrites: c.confirmWrites
+            }))
     })
 };
 
@@ -122,8 +125,8 @@ const getKey = {
             type,
             ttl,
             size: { bytes: memory, length },
-            value: shown,
-            truncated
+            // AI access "See values" off: no value, no truncation to report.
+            ...(getAiAccess(id).values && { value: shown, truncated })
         };
     }
 };
