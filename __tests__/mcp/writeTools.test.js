@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 const { connectMcp } = require('../helpers/mcpClient');
+const { setToolEnabled } = require('../../services/mcp/toolSwitches');
 const {
     addGuardedConnection,
     removeConnections
@@ -24,11 +25,13 @@ describe('MCP write tools', () => {
     let mcp;
 
     beforeAll(() => {
+        setToolEnabled('run_workflow', true); // off by default
         addGuardedConnection(READ_ONLY, { readOnly: true });
         addGuardedConnection(CONFIRM, { confirmWrites: true });
     });
 
     afterAll(() => {
+        setToolEnabled('run_workflow', false);
         removeConnections(READ_ONLY, CONFIRM);
     });
 

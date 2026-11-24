@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 const { connectMcp } = require('../helpers/mcpClient');
+const { setToolEnabled } = require('../../services/mcp/toolSwitches');
 const { keyExists, deleteKey } = require('../../services/keyStore');
 const { getHistory } = require('../../services/workflows');
 const { db } = require('../../services/database');
@@ -31,11 +32,13 @@ describe('MCP Workflow tools', () => {
     let mcp;
 
     beforeAll(() => {
+        setToolEnabled('run_workflow', true); // off by default
         addGuardedConnection(READ_ONLY, { readOnly: true });
         addGuardedConnection(CONFIRM, { confirmWrites: true });
     });
 
     afterAll(() => {
+        setToolEnabled('run_workflow', false);
         removeConnections(READ_ONLY, CONFIRM);
         // Only this file's runs: other suites share these Connections.
         db.prepare(
