@@ -32,6 +32,7 @@ beforeEach(() => {
     });
     mocked.getAiActivityLogging.mockResolvedValue(true);
     mocked.listAiTools.mockResolvedValue([]);
+    mocked.listAiAccess.mockResolvedValue([]);
     mocked.listAiClients.mockResolvedValue({
         command: '/bin/redis-deck --mcp',
         clients: [

@@ -11,7 +11,8 @@ import type {
     HistoryResponse,
     DeleteProgress,
     ExportProgress,
-    Job
+    Job,
+    ConnectionTier
 } from '@/types';
 import type { WorkflowPlugin, WorkflowRun } from '@/types/workflows';
 import { useAppStore } from '@/store/useAppStore';
@@ -630,6 +631,38 @@ export interface AiClientList {
 export async function listAiClients(): Promise<AiClientList> {
     const response = await fetch(`${API_BASE}/ai-clients`);
     return handleResponse<AiClientList>(response);
+}
+
+export type AiAccessField = 'keys' | 'values' | 'write' | 'workflows' | 'ask';
+
+export interface AiAccessRow extends Record<AiAccessField, boolean> {
+    id: string;
+    tier: ConnectionTier;
+    readOnly: boolean;
+}
+
+export async function listAiAccess(): Promise<AiAccessRow[]> {
+    const response = await fetch(`${API_BASE}/ai-access`);
+    const result = await handleResponse<{ connections: AiAccessRow[] }>(
+        response
+    );
+    return result.connections;
+}
+
+/** Saves one change; the server applies the dependency rules and returns the row. */
+export async function setAiAccess(
+    id: string,
+    patch: Partial<Record<AiAccessField, boolean>>
+): Promise<Record<AiAccessField, boolean>> {
+    const response = await fetch(
+        `${API_BASE}/ai-access/${encodeURIComponent(id)}`,
+        {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch)
+        }
+    );
+    return handleResponse(response);
 }
 
 export async function installAiClient(id: string): Promise<void> {

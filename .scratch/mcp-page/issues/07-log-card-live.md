@@ -1,6 +1,7 @@
 # 07: Log card: filters, clear, live, Connected clients
 
 **What to build:** The rest of the AI activity card:
+
 - a text filter (matches tool, Key and Connection), status buttons (All / OK / Denied / Blocked / Error) and a client select
 - a call count summary ("N calls · N blocked · N errors")
 - "Show 25 more"

@@ -1,6 +1,7 @@
 # 06: Log every call
 
 **What to build:** **AI activity** records every call an AI client makes, reads included. Each entry stores:
+
 - time, client label, Connection and tool
 - the request args and the response (capped at about 4 KB), both masked with the hidden field list
 - the duration in ms
