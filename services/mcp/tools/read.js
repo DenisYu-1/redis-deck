@@ -7,6 +7,7 @@ const {
     parseRedisInfo
 } = require('../../redis');
 const { readKey, readMeta } = require('../../keyStore');
+const { maskValue } = require('../../hiddenFields');
 const { getAiAccess } = require('../../aiAccess');
 
 const MAX_VALUE_CHARS = 4096;
@@ -119,7 +120,7 @@ const getKey = {
     run: async ({ connectionId: id, key }) => {
         const { type, ttl, value } = await readKey(id, key);
         const { memory, length } = await readMeta(id, key);
-        const [shown, truncated] = truncate(value);
+        const [shown, truncated] = truncate(maskValue(value));
         return {
             key,
             type,
