@@ -41,14 +41,17 @@ export function AiToolsSection() {
                 on.
             </p>
             {tools.map((tool) => (
-                <label key={tool.name} className="ai-tool">
+                <label key={tool.name} className="sw-row">
                     <input
                         type="checkbox"
                         aria-label={tool.name}
                         checked={tool.enabled}
                         onChange={(e) => void toggle(tool, e.target.checked)}
                     />
-                    <span className="ai-tool-main">
+                    <span className="track">
+                        <i />
+                    </span>
+                    <span className="sw-text ai-tool-main">
                         <code className="mono">{tool.name}</code>
                         {tool.write && (
                             <span className="ai-tool-tag sm">write</span>

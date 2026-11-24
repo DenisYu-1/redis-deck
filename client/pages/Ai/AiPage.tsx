@@ -21,10 +21,10 @@ export function AiPage() {
                     <div className="aicol">
                         <AiAccessGrid />
                         <AiMayDoSection />
+                        <AiToolsSection />
                     </div>
                     <div className="aicol">
                         {isDesktop() && <AiClientsSection />}
-                        <AiToolsSection />
                     </div>
                 </div>
                 <AiActivityLog />
