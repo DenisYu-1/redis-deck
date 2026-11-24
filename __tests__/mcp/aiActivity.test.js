@@ -39,6 +39,7 @@ describe('MCP AI activity log', () => {
 
     beforeEach(async () => {
         db.prepare('DELETE FROM ai_activity').run();
+        db.prepare("DELETE FROM settings WHERE key = 'hidden_fields'").run();
         setLoggingEnabled(true);
         await deleteTestKeys('test:mcpl:*', CONN);
     });
@@ -46,6 +47,7 @@ describe('MCP AI activity log', () => {
     afterEach(async () => {
         await mcp?.close();
         mcp = undefined;
+        db.prepare("DELETE FROM settings WHERE key = 'hidden_fields'").run();
         setLoggingEnabled(true);
         await deleteTestKeys('test:mcpl:*', CONN);
     });

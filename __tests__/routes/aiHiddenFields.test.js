@@ -10,6 +10,10 @@ describe('AI hidden fields routes', () => {
         db.prepare("DELETE FROM settings WHERE key = 'hidden_fields'").run();
     });
 
+    afterEach(() => {
+        db.prepare("DELETE FROM settings WHERE key = 'hidden_fields'").run();
+    });
+
     test('defaults to password, token, secret', async () => {
         const res = await request(app).get('/api/ai-hidden-fields');
         expect(res.body).toEqual({ fields: ['password', 'token', 'secret'] });

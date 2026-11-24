@@ -155,7 +155,7 @@ function logActivity(
             error,
             args,
             response,
-            durationMs: Date.now() - started
+            durationMs: ctx.clock() - started
         });
     } catch (logError) {
         console.error('Failed to log AI activity:', logError.message);
@@ -169,7 +169,7 @@ function hiddenFrom(args) {
 }
 
 async function invoke(tool, args, ctx) {
-    const started = Date.now();
+    const started = ctx.clock();
     if (!isToolEnabled(tool.name)) {
         logActivity(tool, args, ctx, started, RESULTS.blocked, {
             error: TURNED_OFF

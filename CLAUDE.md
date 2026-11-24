@@ -31,18 +31,18 @@ Two processes, one repo:
 
 - `server.js` — entry: creates app, starts two `setInterval` loops (stats snapshot every 5 min, cleanup every 24 h), listens on `PORT` (default 3000).
 - `config/app.js` — builds the Express app: JSON middleware, static `dist/` + `/public`, mounts routers under `/api` (+ `/api/stats`), SPA fallback serves `dist/index.html` for all other routes.
-- `routes/` — one router per concern: `connections`, `keys`, `environment`, `info`, `stats`, `searches` (saved searches), `workflows`, `jobs` (bulk delete/export jobs).
+- `routes/` — one router per concern: `connections`, `keys`, `environment`, `info`, `stats`, `searches` (saved searches), `workflows`, `jobs` (bulk delete/export jobs), and the AI page's `aiAccess`, `aiTools`, `aiHiddenFields`, `aiActivity` (AI activity log, `/api/ai-activity`) and `aiClients`.
 - `guards/writeGuard.js` — enforces Read-only / Confirm-writes connections on every write route (403 / 428). Any new write route or Workflow must go through it.
 - `services/redis.js` — **on clustered Connections every Redis call shells out to `redis-cli`** (async `execFile`, no shell; ADR 0002). Non-clustered Connections use the persistent client in `services/redisClient.js` for scans and Page meta. Builds CLI args from stored connection config, handles `--csv`/`--raw`/`--json` modes, parallel cluster Node scans, INFO parsing, batched stdin sessions. `redis-cli` must be on PATH.
 - `services/connectionState.js` — per-Connection in-memory state: the 4-process `redis-cli` cap (applied at the single spawn point) and the 30 s topology cache.
 - `services/perNode.js` — runs per-Key commands batched per owning Node (MOVED retried once per owner); used by Page meta, sizes and the jobs.
-- `services/database.js` — `better-sqlite3` at `data/redis-config.sqlite`. Stores connection definitions (incl. passwords), saved searches, workflow run history and stats snapshots; contains an inline schema-migration check on startup.
+- `services/database.js` — `better-sqlite3` at `data/redis-config.sqlite`. Stores connection definitions (incl. passwords), saved searches, workflow run history and stats snapshots; schema changes run as versioned migrations on startup (ADR 0004).
 - `services/{keyMeta,keyStore,bulkKeys,workflows}.js`, `services/statsCollector.js` — key metadata/pages, bulk TTL/export, the Workflow registry/runner, and INFO snapshots (30-day retention).
 - `services/{jobs,deleteJob,exportJob,scanPages}.js` — in-memory Jobs (lost on restart): one running Job per kind per Connection, one scan page at a time.
 
 **Frontend** — React 18 + TypeScript + Vite, in `client/`. Design reference: `design/`, spec: `docs/v2-redesign/SPEC.md`, terms: `GLOSSARY.md`.
 
-- `client/App.tsx` — routes inside `AppShell`: `/` redirects to `/keys`; `/keys`, `/stats` and `/stats/:board`, `/connections`, `/workflows/:actionId`; `/settings` redirects to `/connections`. Pages live in `client/pages/<Name>/` (`Keys`, `Statistics`, `Workflows`, `Connections`, `Welcome`).
+- `client/App.tsx` — routes inside `AppShell`: `/` redirects to `/keys`; `/keys`, `/stats` and `/stats/:board`, `/connections`, `/ai` (AI clients, access, tools, hidden fields, activity log; replaces the old `/ai-activity` route), `/workflows/:actionId`; `/settings` redirects to `/connections`. Pages live in `client/pages/<Name>/` (`Keys`, `Statistics`, `Workflows`, `Connections`, `Ai`, `Welcome`).
 - Shared UI in `client/components/{layout,ui}/`; pure helpers in `client/utils/`; theme tokens in `client/styles/`.
 - State: Zustand single store `client/store/useAppStore.ts` (connections, current connection, theme). Path alias `@/` → `client/`.
 - API calls go through `client/services/apiService.ts`.

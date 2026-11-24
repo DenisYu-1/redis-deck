@@ -49,10 +49,9 @@ function ActivityRow({
         <>
             <tr
                 data-testid="ai-activity-row"
-                className={fresh ? 'aic-new' : undefined}
+                className={`aic-row${fresh ? ' aic-new' : ''}`}
                 aria-expanded={open}
                 onClick={() => setOpen(!open)}
-                style={{ cursor: 'pointer' }}
             >
                 <td className="mono sm">{new Date(e.time).toLocaleString()}</td>
                 <td>{e.client}</td>
@@ -191,8 +190,8 @@ export function AiActivityLog() {
 
     const entries = page?.entries ?? [];
     const total = page?.total ?? 0;
-    const blocked = entries.filter((e) => e.result === 'blocked').length;
-    const errors = entries.filter((e) => e.result === 'error').length;
+    const blocked = page?.counts.blocked ?? 0;
+    const errors = page?.counts.error ?? 0;
 
     return (
         <section className="card sect" aria-label="AI activity">

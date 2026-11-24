@@ -1,7 +1,6 @@
 # The Console runs commands from a fixed allowed list, for people only
 
 ADR 0001 removed generic command execution (`/api/custom/execute`), because it left safety to the browser. The Console brings back typed Redis commands, but only for people in the app, and on these terms:
-
 - The server accepts only commands on a fixed allowed list. Each command on it is marked read or write.
 - Every write goes through the write guard: Read-only refuses it, and Confirm writes needs the typed confirmation.
 - Commands that can wipe or stall a server are never on the list: FLUSHDB, FLUSHALL, CONFIG SET, SHUTDOWN, DEBUG, MONITOR, SUBSCRIBE.
