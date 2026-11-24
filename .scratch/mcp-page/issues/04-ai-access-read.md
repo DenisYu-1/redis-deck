@@ -1,6 +1,7 @@
 # 04: AI access: see Keys / see values
 
 **What to build:** The **AI access** grid in **What AI clients may do**. It has one row per Connection, with its Tier badge, and the columns See keys, See values, Write, Workflows and Ask before writes. Every Connection, existing or new, gets the Tier defaults:
+
 - keys on
 - values off on production
 - write and Workflows on for local only, and only when the Connection is not Read-only
