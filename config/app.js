@@ -13,6 +13,7 @@ const jobRoutes = require('../routes/jobs');
 const { createAiClientsRouter } = require('../routes/aiClients');
 const aiActivityRoutes = require('../routes/aiActivity');
 const aiToolsRoutes = require('../routes/aiTools');
+const aiHiddenFieldsRoutes = require('../routes/aiHiddenFields');
 const aiAccessRoutes = require('../routes/aiAccess');
 
 // aiClients: client config installer; given only when embedded in the
@@ -46,6 +47,7 @@ function createApp({ middleware = [], searchBudgetMs, aiClients } = {}) {
     app.use('/api', jobRoutes);
     app.use('/api', aiActivityRoutes);
     app.use('/api', aiToolsRoutes);
+    app.use('/api', aiHiddenFieldsRoutes);
     app.use('/api', aiAccessRoutes);
     app.use('/api/stats', statsRoutes);
     if (aiClients) app.use('/api', createAiClientsRouter(aiClients));
