@@ -7,6 +7,7 @@ const {
     removeConnections
 } = require('../helpers/guardedConnections');
 const { getKeyValue, deleteTestKeys } = require('../helpers/testHelpers');
+const { setAiAccess } = require('../../services/aiAccess');
 const { keyExists } = require('../../services/keyStore');
 
 const CONN = global.TEST_CONNECTION_ID;
@@ -27,14 +28,16 @@ function setKey(mcp, value, connectionId = CONFIRM) {
     });
 }
 
-describe('MCP approval for Confirm writes', () => {
+describe('MCP approval for Ask before writes', () => {
     let mcp;
     let now;
     const clock = () => now;
 
     beforeAll(() => {
-        addGuardedConnection(CONFIRM, { confirmWrites: true });
-        addGuardedConnection(CONFIRM_OTHER, { confirmWrites: true });
+        addGuardedConnection(CONFIRM, {});
+        setAiAccess(CONFIRM, { write: true });
+        addGuardedConnection(CONFIRM_OTHER, {});
+        setAiAccess(CONFIRM_OTHER, { write: true });
     });
 
     afterAll(() => {
@@ -199,7 +202,7 @@ describe('MCP approval for Confirm writes', () => {
         expect(signal.aborted).toBe(false);
     });
 
-    test('plain Connections write without asking', async () => {
+    test('Connections with ask off write without asking', async () => {
         const approver = stubApprover('deny');
         mcp = await connectMcp({ approver, clock });
 

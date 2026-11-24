@@ -23,7 +23,8 @@ const { recordActivity, clientLabel, RESULTS } = require('../aiActivity');
 const { getAiAccess } = require('../aiAccess');
 const { checkWrite } = require('../../guards/writeGuard');
 
-// checkWrite's status when the write needs the user's confirmation.
+// checkWrite's status when the write needs the user's confirmation. That is
+// for people in the app only (ADR 0005); for AI clients AI access decides.
 const CONFIRM_REQUIRED = 428;
 
 const TURNED_OFF = 'tool is turned off';
@@ -80,8 +81,9 @@ function hideTurnedOffTools(server) {
 
 // MCP write guard: guards/writeGuard.js decides, called without a confirm
 // header because the AI client can never confirm a write itself (tool schemas
-// have no such field and unknown arguments are dropped). Where the HTTP API
-// would answer 428, the user is asked through ctx.approvals instead.
+// have no such field and unknown arguments are dropped). Its 428 is ignored;
+// AI access (write / workflows / ask) decides, and the user is asked through
+// ctx.approvals when ask is on.
 // Returns null when the write may run, else { outcome, text } with outcome
 // RESULTS.blocked (not allowed at all) or RESULTS.denied (the user said no).
 async function refuseWrite(tool, args, ctx) {
@@ -94,11 +96,21 @@ async function refuseWrite(tool, args, ctx) {
         };
     }
     const refusal = checkWrite(connectionId);
-    if (!refusal) {
-        return null;
-    }
-    if (refusal.status !== CONFIRM_REQUIRED) {
+    if (refusal && refusal.status !== CONFIRM_REQUIRED) {
         return { outcome: RESULTS.blocked, text: refusal.error };
+    }
+    const access = getAiAccess(connectionId);
+    const allowed =
+        tool.name === 'run_workflow' ? access.workflows : access.write;
+    if (!allowed) {
+        const what = tool.name === 'run_workflow' ? 'Workflows' : 'Writes';
+        return {
+            outcome: RESULTS.blocked,
+            text: `${what} are not allowed for AI clients on Connection '${connectionId}'`
+        };
+    }
+    if (!access.ask) {
+        return null;
     }
     const approved = await ctx.approvals.approve({
         clientName: ctx.clientName(),
