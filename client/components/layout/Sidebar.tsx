@@ -27,12 +27,14 @@ export function Sidebar() {
     const [counts, setCounts] = useState<{ env: string; n: number } | null>(
         null
     );
-    const [info, setInfo] = useState<{ env: string; s: ServerStatus } | null>(
-        null
-    );
+    const [info, setInfo] = useState<{
+        env: string;
+        s: ServerStatus | null;
+    } | null>(null);
     const workflowPlugins = useWorkflows() ?? [];
     const keyCount = counts?.env === env ? counts.n : null;
     const status = info?.env === env ? info.s : null;
+    const unreachable = info?.env === env && info.s === null;
 
     useEffect(() => {
         if (!env) return;
@@ -40,11 +42,15 @@ export function Sidebar() {
         getKeyCount(env)
             .then((r) => !cancelled && setCounts({ env, n: r.count }))
             .catch(() => undefined);
-        getServerStatus(env)
-            .then((s) => !cancelled && setInfo({ env, s }))
-            .catch(() => undefined);
+        const poll = () =>
+            getServerStatus(env)
+                .then((s) => !cancelled && setInfo({ env, s }))
+                .catch(() => !cancelled && setInfo({ env, s: null }));
+        void poll();
+        const timer = setInterval(() => void poll(), 10_000);
         return () => {
             cancelled = true;
+            clearInterval(timer);
         };
     }, [env]);
 
@@ -121,9 +127,11 @@ export function Sidebar() {
                     <span className="dot" style={{ width: 6, height: 6 }} />
                     {status
                         ? `Redis ${status.version} · ${String(status.pingMs)} ms`
-                        : env
-                          ? 'Connecting…'
-                          : 'No connection'}
+                        : unreachable
+                          ? 'Unreachable'
+                          : env
+                            ? 'Connecting…'
+                            : 'No connection'}
                 </div>
             </div>
         </aside>
