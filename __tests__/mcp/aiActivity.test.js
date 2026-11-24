@@ -12,11 +12,13 @@ const {
     listActivity,
     setLoggingEnabled
 } = require('../../services/aiActivity');
+const { run } = require('../../services/keyStore');
 const { setAiAccess } = require('../../services/aiAccess');
 
 const CONN = global.TEST_CONNECTION_ID;
 const READ_ONLY = 'test-mcp-log-ro';
 const CONFIRM = 'test-mcp-log-confirm';
+const HIDDEN = 'test-mcp-log-hidden';
 const NOW = 1_700_000_000_000;
 
 const entries = () => listActivity({ limit: 50 }).entries;
@@ -27,10 +29,11 @@ describe('MCP AI activity log', () => {
     beforeAll(() => {
         addGuardedConnection(READ_ONLY, { readOnly: true });
         addGuardedConnection(CONFIRM, { confirmWrites: true });
+        addGuardedConnection(HIDDEN, {});
     });
 
     afterAll(() => {
-        removeConnections(READ_ONLY, CONFIRM);
+        removeConnections(READ_ONLY, CONFIRM, HIDDEN);
     });
 
     beforeEach(async () => {
@@ -69,7 +72,9 @@ describe('MCP AI activity log', () => {
                 args: JSON.stringify({
                     connectionId: CONN,
                     key: 'test:mcpl:k',
-                    value: 'v'
+                    type: 'string',
+                    value: 'v',
+                    ttl: 0
                 }),
                 response: expect.any(String),
                 durationMs: expect.any(Number)
@@ -180,8 +185,7 @@ describe('MCP AI activity log', () => {
         await mcp.call('set_key', {
             connectionId: CONN,
             key: 'test:mcpl:h',
-            type: 'hash',
-            value: { name: 'ann', password: 'hunter2' }
+            value: JSON.stringify({ name: 'ann', password: 'hunter2' })
         });
         await mcp.call('get_key', { connectionId: CONN, key: 'test:mcpl:h' });
 
@@ -195,11 +199,11 @@ describe('MCP AI activity log', () => {
 
     test('a big response is capped', async () => {
         mcp = await connectMcp();
-        await mcp.call('set_key', {
-            connectionId: CONN,
-            key: 'test:mcpl:big',
-            value: 'x'.repeat(20000)
-        });
+        const fields = Array.from({ length: 60 }, (_, i) => [
+            `f${i}`,
+            'x'.repeat(200)
+        ]).flat();
+        await run(CONN, ['HSET', 'test:mcpl:big', ...fields]);
         db.prepare('DELETE FROM ai_activity').run();
 
         await mcp.call('get_key', {
@@ -214,10 +218,12 @@ describe('MCP AI activity log', () => {
 
     test('a read on a Connection hidden from AI is logged as blocked', async () => {
         mcp = await connectMcp();
-        setAiAccess(CONN, { keys: false });
+        setAiAccess(HIDDEN, { keys: false });
 
-        await mcp.call('get_key', { connectionId: CONN, key: 'test:mcpl:k' });
-        setAiAccess(CONN, { keys: true });
+        await mcp.call('get_key', {
+            connectionId: HIDDEN,
+            key: 'test:mcpl:k'
+        });
 
         expect(entries()).toMatchObject([
             { operation: 'get_key', result: 'blocked' }

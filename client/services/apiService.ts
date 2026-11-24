@@ -683,9 +683,9 @@ export async function getAiClientSnippet(id: string): Promise<AiClientSnippet> {
     );
 }
 
-// AI activity: MCP writes and refused write attempts, plus the "Log AI
+// AI activity: every MCP call (reads, writes, refusals), plus the "Log AI
 // operations" toggle. App settings, not Redis writes (no write guard).
-export type AiActivityResult = 'done' | 'denied' | 'blocked' | 'failed';
+export type AiActivityResult = 'ok' | 'denied' | 'blocked' | 'error';
 
 export interface AiActivityEntry {
     id: number;
@@ -698,6 +698,11 @@ export interface AiActivityEntry {
     target: string | null;
     result: AiActivityResult;
     error: string | null;
+    /** Masked request args, JSON text */
+    args: string | null;
+    /** Masked response, JSON text, capped (may end mid-JSON) */
+    response: string | null;
+    durationMs: number | null;
 }
 
 export interface AiActivityPage {

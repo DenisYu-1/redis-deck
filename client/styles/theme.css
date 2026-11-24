@@ -1085,15 +1085,26 @@ kbd {
     gap: 6px;
     font-size: 13px;
 }
+.aic-activity-cell {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.aic-activity-detail pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
 .aic-activity-target {
     word-break: break-all;
 }
 .aic-activity-error,
-.aic-result.failed,
+.aic-result.error,
 .aic-result.blocked {
     color: var(--ac);
 }
-.aic-result.done {
+.aic-result.ok {
     color: var(--ok);
 }
 .aic-result.denied {

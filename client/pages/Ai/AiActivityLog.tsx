@@ -6,12 +6,61 @@ import {
     getAiActivityLogging,
     listAiActivity,
     setAiActivityLogging,
+    type AiActivityEntry,
     type AiActivityPage
 } from '@/services/apiService';
 
 const PAGE_SIZE = 50;
 
-/** AI activity log: what AI clients wrote, or tried to write, per Connection. */
+/** Pretty-prints stored JSON text; capped responses may not parse, so show them raw. */
+function pretty(text: string | null): string {
+    if (!text) return '';
+    try {
+        return JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+        return text;
+    }
+}
+
+/** One call; click to see the request and response JSON. */
+function ActivityRow({ entry: e }: { entry: AiActivityEntry }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <>
+            <tr
+                data-testid="ai-activity-row"
+                aria-expanded={open}
+                onClick={() => setOpen(!open)}
+                style={{ cursor: 'pointer' }}
+            >
+                <td className="mono sm">{new Date(e.time).toLocaleString()}</td>
+                <td>{e.client}</td>
+                <td className="mono sm">{e.operation}</td>
+                <td>{e.connectionId}</td>
+                <td className="mono sm aic-activity-cell">{e.args ?? ''}</td>
+                <td>
+                    <span className={`aic-result ${e.result}`}>{e.result}</span>
+                    {e.error && <span className="sm mu"> {e.error}</span>}
+                </td>
+                <td className="sm mu">
+                    {e.durationMs === null ? '' : `${e.durationMs} ms`}
+                </td>
+            </tr>
+            {open && (
+                <tr data-testid="ai-activity-detail">
+                    <td colSpan={7} className="aic-activity-detail mono sm">
+                        <strong>Request</strong>
+                        <pre>{pretty(e.args)}</pre>
+                        <strong>Response</strong>
+                        <pre>{pretty(e.response)}</pre>
+                    </td>
+                </tr>
+            )}
+        </>
+    );
+}
+
+/** AI activity log: every call an AI client made, per Connection. */
 export function AiActivityLog() {
     const connections = useAppStore((s) => s.connections);
     const [connectionId, setConnectionId] = useState('');
@@ -121,35 +170,17 @@ export function AiActivityLog() {
                         <thead>
                             <tr>
                                 <th scope="col">Time</th>
-                                <th scope="col">AI client</th>
+                                <th scope="col">Client</th>
+                                <th scope="col">Tool</th>
                                 <th scope="col">Connection</th>
-                                <th scope="col">Operation</th>
-                                <th scope="col">Key or Workflow</th>
+                                <th scope="col">Arguments</th>
                                 <th scope="col">Result</th>
-                                <th scope="col">Error</th>
+                                <th scope="col">Took</th>
                             </tr>
                         </thead>
                         <tbody>
                             {page?.entries.map((e) => (
-                                <tr key={e.id} data-testid="ai-activity-row">
-                                    <td className="mono sm">
-                                        {new Date(e.time).toLocaleString()}
-                                    </td>
-                                    <td>{e.client}</td>
-                                    <td>{e.connectionId}</td>
-                                    <td className="mono sm">{e.operation}</td>
-                                    <td className="mono sm aic-activity-target">
-                                        {e.target ?? ''}
-                                    </td>
-                                    <td>
-                                        <span
-                                            className={`aic-result ${e.result}`}
-                                        >
-                                            {e.result}
-                                        </span>
-                                    </td>
-                                    <td className="sm mu">{e.error ?? ''}</td>
-                                </tr>
+                                <ActivityRow key={e.id} entry={e} />
                             ))}
                         </tbody>
                     </table>

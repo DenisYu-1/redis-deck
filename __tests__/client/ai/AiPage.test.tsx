@@ -62,7 +62,10 @@ beforeEach(() => {
                 operation: 'set_key',
                 target: 'user:1',
                 result: 'denied',
-                error: 'The user denied set_key'
+                error: 'The user denied set_key',
+                args: '{"connectionId":"prod","key":"user:1"}',
+                response: null,
+                durationMs: 12
             }
         ]
     });
@@ -75,7 +78,12 @@ test('outside Desktop: log and switch show, AI clients section does not', async 
     renderPage();
 
     expect(await screen.findAllByTestId('ai-activity-row')).toHaveLength(1);
-    expect(screen.getByText('The user denied set_key')).toBeInTheDocument();
+    expect(screen.getByText(/The user denied set_key/)).toBeInTheDocument();
+    expect(screen.getByText('12 ms')).toBeInTheDocument();
+    await user.click(screen.getByTestId('ai-activity-row'));
+    expect(screen.getByTestId('ai-activity-detail')).toHaveTextContent(
+        '"key": "user:1"'
+    );
     expect(screen.queryByText('MCP server')).not.toBeInTheDocument();
     expect(mocked.listAiClients).not.toHaveBeenCalled();
 

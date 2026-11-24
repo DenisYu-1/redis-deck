@@ -19,7 +19,7 @@ const { isToolEnabled } = require('./toolSwitches');
 const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
 const { createApprovals } = require('./approvals');
-const { recordActivity, RESULTS } = require('../aiActivity');
+const { recordActivity, clientLabel, RESULTS } = require('../aiActivity');
 const { getAiAccess } = require('../aiAccess');
 const { checkWrite } = require('../../guards/writeGuard');
 
@@ -122,19 +122,28 @@ const errorResult = (text) => ({
     content: [{ type: 'text', text }]
 });
 
-// AI activity entry for a write or refused write; reads are never logged.
-// A failing log write never fails the tool call.
-function logActivity(tool, args, ctx, result, error) {
-    if (tool.access === 'read') return;
+// AI activity entry for every call, reads and refusals included. A failing
+// log write never fails the tool call.
+function logActivity(
+    tool,
+    args,
+    ctx,
+    started,
+    result,
+    { error, response } = {}
+) {
     try {
         recordActivity({
             time: ctx.clock(),
-            client: ctx.clientName(),
+            client: clientLabel(ctx.clientName()),
             connectionId: args.connectionId,
             operation: tool.name,
             target: tool.target?.of(args),
             result,
-            error
+            error,
+            args,
+            response,
+            durationMs: Date.now() - started
         });
     } catch (logError) {
         console.error('Failed to log AI activity:', logError.message);
@@ -148,29 +157,36 @@ function hiddenFrom(args) {
 }
 
 async function invoke(tool, args, ctx) {
+    const started = Date.now();
     if (!isToolEnabled(tool.name)) {
-        logActivity(tool, args, ctx, RESULTS.blocked, TURNED_OFF);
+        logActivity(tool, args, ctx, started, RESULTS.blocked, {
+            error: TURNED_OFF
+        });
         return errorResult(TURNED_OFF);
     }
     if (hiddenFrom(args)) {
         const text = `Connection '${args.connectionId}' is not available to AI clients`;
-        logActivity(tool, args, ctx, RESULTS.blocked, text);
+        logActivity(tool, args, ctx, started, RESULTS.blocked, { error: text });
         return errorResult(text);
     }
     if (tool.access !== 'read') {
         const refusal = await refuseWrite(tool, args, ctx);
         if (refusal) {
-            logActivity(tool, args, ctx, refusal.outcome, refusal.text);
+            logActivity(tool, args, ctx, started, refusal.outcome, {
+                error: refusal.text
+            });
             return errorResult(refusal.text);
         }
     }
     try {
         const data = await tool.run(args, ctx);
-        logActivity(tool, args, ctx, RESULTS.done);
+        logActivity(tool, args, ctx, started, RESULTS.ok, { response: data });
         return { content: [{ type: 'text', text: JSON.stringify(data) }] };
     } catch (error) {
         const message = safeMessage(error, args.connectionId);
-        logActivity(tool, args, ctx, RESULTS.failed, message);
+        logActivity(tool, args, ctx, started, RESULTS.error, {
+            error: message
+        });
         return errorResult(message);
     }
 }

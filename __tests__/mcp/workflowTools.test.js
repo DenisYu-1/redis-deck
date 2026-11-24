@@ -123,7 +123,7 @@ describe('MCP Workflow tools', () => {
                 client: 'test-client',
                 operation: 'run_workflow',
                 target: SET,
-                result: 'done',
+                result: 'ok',
                 error: null
             })
         );
