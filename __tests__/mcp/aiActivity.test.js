@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 const { connectMcp } = require('../helpers/mcpClient');
+const { setAiAccess } = require('../../services/aiAccess');
 const {
     addGuardedConnection,
     removeConnections
@@ -25,7 +26,8 @@ describe('MCP AI activity log', () => {
 
     beforeAll(() => {
         addGuardedConnection(READ_ONLY, { readOnly: true });
-        addGuardedConnection(CONFIRM, { confirmWrites: true });
+        addGuardedConnection(CONFIRM, {});
+        setAiAccess(CONFIRM, { write: true, workflows: true });
     });
 
     afterAll(() => {

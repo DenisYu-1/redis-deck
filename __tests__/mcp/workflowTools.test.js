@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 const { connectMcp } = require('../helpers/mcpClient');
+const { setAiAccess } = require('../../services/aiAccess');
 const { keyExists, deleteKey } = require('../../services/keyStore');
 const { getHistory } = require('../../services/workflows');
 const { db } = require('../../services/database');
@@ -32,7 +33,8 @@ describe('MCP Workflow tools', () => {
 
     beforeAll(() => {
         addGuardedConnection(READ_ONLY, { readOnly: true });
-        addGuardedConnection(CONFIRM, { confirmWrites: true });
+        addGuardedConnection(CONFIRM, {});
+        setAiAccess(CONFIRM, { write: true, workflows: true });
     });
 
     afterAll(() => {
@@ -151,7 +153,7 @@ describe('MCP Workflow tools', () => {
             expect(res.ok).toBe(true);
         });
 
-        test('Confirm writes asks the approver, naming the Workflow', async () => {
+        test('Ask before writes asks the approver, naming the Workflow', async () => {
             const approver = jest.fn(async () => 'deny');
             mcp = await connectMcp({ approver });
 
@@ -176,7 +178,7 @@ describe('MCP Workflow tools', () => {
             );
         });
 
-        test('Confirm writes runs once the user allows it', async () => {
+        test('Ask before writes runs once the user allows it', async () => {
             mcp = await connectMcp({ approver: async () => 'once' });
 
             const res = await runMarker(mcp, CONFIRM);

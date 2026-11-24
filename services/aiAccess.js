@@ -1,5 +1,5 @@
 // AI access (ADR 0005): what AI clients may do per Connection. Columns:
-// keys, values, write, workflows, ask. Only keys/values take effect so far.
+// keys, values, write, workflows, ask.
 // A Connection without a row (e.g. inserted by a test) reads as Tier defaults.
 const { getDatabase, getConnection, normalizeTier } = require('./database');
 const { defaultAccess } = require('./aiAccessDefaults');
@@ -90,6 +90,14 @@ function setAiAccess(connectionId, patch) {
         ...(storedAccess(connectionId) ?? defaultAccess(safety)),
         ...patch
     };
+    if (
+        'ask' in patch &&
+        safety.tier !== 'production' &&
+        !next.write &&
+        !next.workflows
+    ) {
+        throw new AiAccessError('ask needs write or workflows');
+    }
     if (patch.keys === false) {
         NEEDS_KEYS.forEach((f) => (next[f] = false));
     }
