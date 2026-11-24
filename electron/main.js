@@ -6,12 +6,15 @@ const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { execFile } = require('child_process');
 const path = require('path');
 const { applyBundledRedisCli } = require('./redisCli');
+const { mcpBinary } = require('./mcpBinary');
 const { isSafeExternalUrl, isSameOrigin } = require('./navGuard');
 
 const ROOT = path.join(__dirname, '..');
 const isDev = process.env.ELECTRON_DEV === '1';
 // --smoke: headless check for packaged builds (see scripts/smoke-packaged.js).
 const isSmoke = process.argv.includes('--smoke');
+// --mcp: run as an AI client's stdio MCP server (see startMcp).
+const isMcp = process.argv.includes('--mcp');
 
 let server;
 let viteServer;
@@ -43,12 +46,51 @@ async function startVite(apiPort) {
     return viteServer.resolvedUrls.local[0];
 }
 
-async function boot() {
+// Same data folder and redis-cli for the window app and --mcp.
+function applyAppEnv() {
     process.env.DATA_DIR = path.join(app.getPath('userData'), 'data');
     applyBundledRedisCli({
         packaged: app.isPackaged,
         resourcesPath: process.resourcesPath
     });
+}
+
+// macOS: LaunchServices treats a running --mcp process as the app, so opening
+// Redis Deck (Finder, Dock, `open`) only re-activates it and no window comes.
+// Launch a new, normal instance instead; its single-instance lock hands off to
+// a window app that is already running.
+function openWindowApp() {
+    const bundle = path.resolve(process.execPath, '../../..');
+    const args = app.isPackaged ? [] : ['--args', app.getAppPath()];
+    execFile('open', ['-n', bundle, ...args], (err) => {
+        if (err) console.error('Failed to open Redis Deck:', err.message);
+    });
+}
+
+// --mcp: stdio MCP server for an AI client. No window, no HTTP listener, no
+// single-instance lock, so it runs beside the normal app. Errors go to
+// stderr only: stdout belongs to the protocol.
+function startMcp() {
+    app.dock?.hide();
+    app.on('activate', openWindowApp);
+    app.whenReady()
+        .then(() => {
+            applyAppEnv();
+            const { startStdio } = require('../services/mcp/stdio');
+            const { approvalDialog } = require('./approvalDialog');
+            return startStdio(
+                { approver: approvalDialog },
+                { onClose: () => app.quit() }
+            );
+        })
+        .catch((err) => {
+            console.error('Redis Deck MCP failed to start:', err);
+            app.exit(1);
+        });
+}
+
+async function boot() {
+    applyAppEnv();
 
     const cliError = await checkRedisCli();
     if (cliError && !isSmoke) {
@@ -70,7 +112,12 @@ async function boot() {
     server = await startServer({
         port: 0,
         host: '127.0.0.1',
-        embedded: true
+        embedded: true,
+        mcpBinary: mcpBinary({
+            packaged: app.isPackaged,
+            execPath: process.execPath,
+            appPath: app.getAppPath()
+        })
     });
     const apiPort = server.address().port;
 
@@ -128,7 +175,9 @@ async function boot() {
     await win.loadURL(url);
 }
 
-if (!app.requestSingleInstanceLock()) {
+if (isMcp) {
+    startMcp();
+} else if (!app.requestSingleInstanceLock()) {
     app.quit();
 } else {
     app.on('second-instance', () => {

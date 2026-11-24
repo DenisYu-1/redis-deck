@@ -27,12 +27,14 @@ export function Sidebar() {
     const [counts, setCounts] = useState<{ env: string; n: number } | null>(
         null
     );
-    const [info, setInfo] = useState<{ env: string; s: ServerStatus } | null>(
-        null
-    );
+    const [info, setInfo] = useState<{
+        env: string;
+        s: ServerStatus | null;
+    } | null>(null);
     const workflowPlugins = useWorkflows() ?? [];
     const keyCount = counts?.env === env ? counts.n : null;
     const status = info?.env === env ? info.s : null;
+    const unreachable = info?.env === env && info.s === null;
 
     useEffect(() => {
         if (!env) return;
@@ -40,11 +42,24 @@ export function Sidebar() {
         getKeyCount(env)
             .then((r) => !cancelled && setCounts({ env, n: r.count }))
             .catch(() => undefined);
-        getServerStatus(env)
-            .then((s) => !cancelled && setInfo({ env, s }))
-            .catch(() => undefined);
+        let timer: ReturnType<typeof setTimeout>;
+        // Chained (never overlapping) so a slow old request can't overwrite a newer result;
+        // retry fast while unreachable so the label recovers soon after the connection comes up.
+        const poll = async () => {
+            let next = 10_000;
+            try {
+                const st = await getServerStatus(env);
+                if (!cancelled) setInfo({ env, s: st });
+            } catch {
+                next = 3_000;
+                if (!cancelled) setInfo({ env, s: null });
+            }
+            if (!cancelled) timer = setTimeout(() => void poll(), next);
+        };
+        void poll();
         return () => {
             cancelled = true;
+            clearTimeout(timer);
         };
     }, [env]);
 
@@ -121,9 +136,11 @@ export function Sidebar() {
                     <span className="dot" style={{ width: 6, height: 6 }} />
                     {status
                         ? `Redis ${status.version} · ${String(status.pingMs)} ms`
-                        : env
-                          ? 'Connecting…'
-                          : 'No connection'}
+                        : unreachable
+                          ? 'Unreachable'
+                          : env
+                            ? 'Connecting…'
+                            : 'No connection'}
                 </div>
             </div>
         </aside>

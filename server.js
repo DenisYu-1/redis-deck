@@ -1,10 +1,14 @@
 const { createApp } = require('./config/app');
 const { hostGuard } = require('./guards/hostGuard');
 const { getAllConnections } = require('./services/database');
+const { createInstaller } = require('./services/aiClients/installer');
 const statsCollector = require('./services/statsCollector');
+const { cleanupOldActivity } = require('./services/aiActivity');
 
 const COLLECTION_INTERVAL = 5 * 60 * 1000;
 const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000;
+const SNAPSHOT_RETENTION_DAYS = 30;
+const AI_ACTIVITY_RETENTION_DAYS = 30;
 
 // Background loops; started once the server is listening. Timers are unref'd so
 // they never keep the process alive on their own.
@@ -31,9 +35,14 @@ function startTimers() {
         }, COLLECTION_INTERVAL),
         setInterval(() => {
             try {
-                statsCollector.cleanupOldSnapshots(30);
+                statsCollector.cleanupOldSnapshots(SNAPSHOT_RETENTION_DAYS);
             } catch (error) {
                 console.error('Error cleaning up old snapshots:', error);
+            }
+            try {
+                cleanupOldActivity(AI_ACTIVITY_RETENTION_DAYS);
+            } catch (error) {
+                console.error('Error cleaning up old AI activity:', error);
             }
         }, CLEANUP_INTERVAL)
     ];
@@ -43,15 +52,20 @@ function startTimers() {
 
 // Starts the app + background loops. Resolves with the listening http.Server;
 // closing it also stops the loops. Electron main calls this with port 0 and
-// embedded: true, which rejects requests with a foreign Host header (DNS rebinding).
+// embedded: true, which rejects requests with a foreign Host header (DNS rebinding),
+// and mcpBinary ({ command, args } that start the app in --mcp mode), which
+// enables the AI client installer routes.
 function startServer({
     port = process.env.PORT || 3000,
     host,
-    embedded = false
+    embedded = false,
+    mcpBinary
 } = {}) {
     let server;
     const app = createApp({
-        middleware: embedded ? [hostGuard(() => server.address().port)] : []
+        middleware: embedded ? [hostGuard(() => server.address().port)] : [],
+        aiClients:
+            embedded && mcpBinary ? createInstaller(mcpBinary) : undefined
     });
 
     return new Promise((resolve, reject) => {
