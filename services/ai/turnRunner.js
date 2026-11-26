@@ -1,18 +1,17 @@
 // One turn of the AI assistant: the model streams text and asks for tool calls,
 // which run on the assistant's MCP server, until it has answered.
-const { getConnection, normalizeTier } = require('../database');
 const { safeMessage } = require('../mcp/errors');
-const { systemPrompt } = require('./systemPrompt');
 const { createAssistantServer } = require('./assistantServer');
 const { openToolSession } = require('./toolSession');
 const { runAgentTurn } = require('./agentTurn');
+const { turnSystemPrompt, toolEvents } = require('./turnSetup');
+const { maskSecret } = require('./text');
 
 // A provider error can quote the request: never show the key or Connection
 // config in the chat.
 function errorText(error, apiKey, connectionId) {
     const text = String(error?.message || error);
-    const keyless = apiKey ? text.replaceAll(apiKey, '●●●') : text;
-    return safeMessage(keyless, connectionId);
+    return safeMessage(maskSecret(text, apiKey), connectionId);
 }
 
 // model: { agent, path, args } (a Local agent, see agentTurn.js) or
@@ -41,14 +40,13 @@ async function runAdapterTurn({
     emit,
     signal
 }) {
-    const { tier } = getConnection(connectionId);
+    const system = turnSystemPrompt(connectionId);
     let limitReached = null;
     const session = await openToolSession(
         createAssistantServer({
             chatId,
             signal,
-            onCard: (card) => emit({ type: 'approval', ...card }),
-            onCall: (call) => emit({ type: 'tool', ...call }),
+            ...toolEvents(emit),
             onLimit: (message) => (limitReached = message)
         })
     );
@@ -57,10 +55,7 @@ async function runAdapterTurn({
             apiKey: model.apiKey,
             model: model.model,
             baseUrl: model.baseUrl,
-            system: systemPrompt({
-                id: connectionId,
-                tier: normalizeTier(tier)
-            }),
+            system,
             tools: await session.listTools(),
             messages
         });

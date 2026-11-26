@@ -24,8 +24,6 @@ const STATUS_LABEL: Record<AiClientStatus, string> = {
 };
 
 const RECENT_MS = 60 * 60 * 1000;
-// The built-in chat logs its calls like a client, but is not an AI client.
-const ASSISTANT = 'Redis Deck Assistant';
 
 function ago(ms: number): string {
     const min = Math.floor(ms / 60000);
@@ -82,10 +80,10 @@ export function AiClientsSection() {
     useEffect(() => {
         let cancelled = false;
         const load = () =>
-            listAiActivityClients().then(
+            listAiActivityClients({ aiClientsOnly: true }).then(
                 (list) => {
                     if (cancelled) return;
-                    setActive(list.filter((c) => c.client !== ASSISTANT));
+                    setActive(list);
                     setNow(Date.now());
                 },
                 () => undefined

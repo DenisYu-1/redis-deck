@@ -1,12 +1,12 @@
 // One turn of the assistant on a Local agent. The CLI runs its own tool loop
 // against this turn's endpoint: rows and approval cards come from there, and
 // its stdout is the answer, as plain text.
-const { getConnection, normalizeTier } = require('../database');
 const { safeMessage } = require('../mcp/errors');
-const { systemPrompt } = require('./systemPrompt');
 const { createAssistantServer } = require('./assistantServer');
 const { agentById } = require('./agents');
 const { runAgent, failureOf } = require('./agentProcess');
+const { turnSystemPrompt, toolEvents } = require('./turnSetup');
+const { maskSecret } = require('./text');
 
 const SPEAKERS = { user: 'User', assistant: 'Assistant' };
 
@@ -45,7 +45,8 @@ async function runAgentTurn({
     signal
 }) {
     const agent = agentById(model.agent);
-    const { tier } = getConnection(connectionId);
+    const system = turnSystemPrompt(connectionId);
+    const events = toolEvents(emit);
     // Aborted once the agent is gone: no card may stay waiting for it.
     const ended = new AbortController();
     const limit = new AbortController();
@@ -55,9 +56,9 @@ async function runAgentTurn({
         chatId,
         restoreText: agent.restore,
         signal: AbortSignal.any([ended.signal, signal].filter(Boolean)),
-        onCard: (card) => emit({ type: 'approval', ...card }),
+        ...events,
         onCall: (call) => {
-            emit({ type: 'tool', ...call });
+            events.onCall(call);
             calls.track(call);
         },
         onLimit: (message) => {
@@ -73,10 +74,7 @@ async function runAgentTurn({
             path: model.path,
             args: model.args,
             server,
-            system: systemPrompt({
-                id: connectionId,
-                tier: normalizeTier(tier)
-            }),
+            system,
             prompt: promptOf(messages),
             signal: AbortSignal.any([limit.signal, signal].filter(Boolean)),
             onText: (text) => {
@@ -88,7 +86,7 @@ async function runAgentTurn({
         if (!failure && !answered) {
             failure = `${agent.name} printed no answer.`;
         }
-        failure = failure?.replaceAll(result.token, '●●●');
+        failure &&= maskSecret(failure, result.token);
     } catch (error) {
         failure = error.message;
     }

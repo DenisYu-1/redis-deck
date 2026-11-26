@@ -14,13 +14,8 @@ const NUMBERED = /^\s*\d+[.)]\s+(.*)$/;
 
 export function parseMarkdown(source: string): MarkdownBlock[] {
     const blocks: MarkdownBlock[] = [];
-    // The paragraph or list that the next line may continue.
-    let open: MarkdownBlock | null = null;
-    const start = <B extends MarkdownBlock>(block: B): B => {
-        blocks.push(block);
-        open = block;
-        return block;
-    };
+    // A blank line ends the paragraph or list a next line would continue.
+    let afterBlank = false;
     const lines = source.split('\n');
 
     for (let i = 0; i < lines.length; i += 1) {
@@ -29,7 +24,7 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
         const heading = HEADING.exec(line);
         const bullet = BULLET.exec(line);
         const item = bullet ?? NUMBERED.exec(line);
-        const current = open as MarkdownBlock | null;
+        const last = afterBlank ? undefined : blocks.at(-1);
 
         if (fence) {
             const indent = new RegExp(`^\\s{0,${fence[1]?.length ?? 0}}`);
@@ -40,27 +35,19 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
                 if (/^\s*```\s*$/.test(next)) break;
                 code.push(next.replace(indent, ''));
             }
-            start({ kind: 'code', text: code.join('\n') });
-            open = null;
-        } else if (line.trim() === '') {
-            open = null;
+            blocks.push({ kind: 'code', text: code.join('\n') });
         } else if (heading) {
-            start({ kind: 'heading', text: heading[1] ?? '' });
-            open = null;
+            blocks.push({ kind: 'heading', text: heading[1] ?? '' });
         } else if (item) {
             const kind = bullet ? 'ul' : 'ol';
-            const list =
-                current?.kind === kind
-                    ? current
-                    : start({ kind, items: [] as string[] });
-            list.items.push(item[1] ?? '');
-        } else {
-            const paragraph =
-                current?.kind === 'p'
-                    ? current
-                    : start({ kind: 'p' as const, lines: [] as string[] });
-            paragraph.lines.push(line);
+            const text = item[1] ?? '';
+            if (last?.kind === kind) last.items.push(text);
+            else blocks.push({ kind, items: [text] });
+        } else if (line.trim() !== '') {
+            if (last?.kind === 'p') last.lines.push(line);
+            else blocks.push({ kind: 'p', lines: [line] });
         }
+        afterBlank = line.trim() === '';
     }
     return blocks;
 }

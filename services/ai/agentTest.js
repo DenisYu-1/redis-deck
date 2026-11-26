@@ -6,6 +6,7 @@ const { agentById } = require('./agents');
 const { findAgent } = require('./agentLookup');
 const { runAgent, failureOf } = require('./agentProcess');
 const { createListingServer } = require('./assistantServer');
+const { maskSecret } = require('./text');
 
 const TIMEOUT_MS = 2 * 60 * 1000;
 const SYSTEM = 'You are checking the setup of the Redis Deck AI assistant.';
@@ -58,14 +59,14 @@ async function testAgent({ agent: id, agentPath, agentArgs }) {
         const detail = `${failure} ${said}`.trim();
         return failed(
             `${agent.name} did not answer`,
-            detail.replaceAll(result.token, '●●●')
+            maskSecret(detail, result.token)
         );
     }
     const count = toolsNamedIn(result.stdout);
     if (count === 0) {
         return failed(
             `${agent.name} listed no tools`,
-            said.replaceAll(result.token, '●●●') || 'It printed nothing.'
+            maskSecret(said, result.token) || 'It printed nothing.'
         );
     }
     return {

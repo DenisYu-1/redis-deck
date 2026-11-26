@@ -139,6 +139,19 @@ describe('AI activity routes', () => {
         ]);
     });
 
+    it('can leave the AI assistant out of the clients', async () => {
+        recordActivity(entry({ client: 'Redis Deck Assistant', time: NOW }));
+        recordActivity(entry({ client: 'Codex', time: NOW - 1000 }));
+
+        const res = await request(app)
+            .get('/api/ai-activity/clients?aiClientsOnly=true')
+            .expect(200);
+
+        expect(res.body.clients).toEqual([
+            { client: 'Codex', lastCallAt: NOW - 1000 }
+        ]);
+    });
+
     it('clear deletes every entry', async () => {
         recordActivity(entry({}));
         recordActivity(entry({}));

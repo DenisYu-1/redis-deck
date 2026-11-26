@@ -9,12 +9,13 @@ const { RESULTS } = require('../aiActivity');
 const { checkWrite } = require('../../guards/writeGuard');
 
 // checkWrite's status when the write needs the user's confirmation. That is
-// for people in the app only (ADR 0005); for AI clients AI access decides.
+// for people in the app only (ADR 0005); for AI clients and the AI assistant AI
+// access decides.
 const CONFIRM_REQUIRED = 428;
 
 const TURNED_OFF = 'tool is turned off';
 
-// AI access "See keys" off: the Connection does not exist for AI clients.
+// AI access "See keys" off: the Connection does not exist for any AI.
 function hiddenFrom(args) {
     const access = args.connectionId && getAiAccess(args.connectionId);
     return access && !access.keys;
@@ -38,7 +39,7 @@ function writeBlock(tool, { connectionId }) {
         return null;
     }
     const what = isWorkflow ? 'Workflows' : 'Writes';
-    return `${what} are not allowed for AI clients on Connection '${connectionId}'`;
+    return `${what} are not allowed by AI access on Connection '${connectionId}'`;
 }
 
 // Why the call may not run at all, or null.
@@ -47,7 +48,7 @@ function blockedReason(tool, args) {
         return TURNED_OFF;
     }
     if (hiddenFrom(args)) {
-        return `Connection '${args.connectionId}' is not available to AI clients`;
+        return `Connection '${args.connectionId}' is not available: AI access "See keys" is off`;
     }
     return tool.access === 'read' ? null : writeBlock(tool, args);
 }

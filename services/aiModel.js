@@ -15,6 +15,7 @@ const {
     parseAgent
 } = require('./ai/agentSettings');
 const { testAgent } = require('./ai/agentTest');
+const { maskSecret, trimmed } = require('./ai/text');
 
 const PROVIDERS = ['anthropic', 'openai', 'openai-compatible'];
 const DEFAULTS = Object.freeze({
@@ -42,25 +43,7 @@ const lastFour = (key) => {
 
 // What a turn runs on; null while the chosen mode is not set up. A Local agent
 // whose CLI is gone is returned all the same: its turn says so.
-function chatModelOf(row) {
-    if (row.mode === 'agent') return agentModelOf(row);
-    if (row.mode === 'local') {
-        if (!row.local_url || !row.local_model) return null;
-        return {
-            adapter: adapters.local,
-            model: row.local_model,
-            apiKey: '',
-            baseUrl: apiRoot(row.local_url)
-        };
-    }
-    if (!row.api_key) return null;
-    return {
-        adapter: adapters[row.provider],
-        model: row.model,
-        apiKey: row.api_key,
-        baseUrl: row.base_url
-    };
-}
+const chatModelOf = (row) => MODES[row.mode].chatModel(row);
 
 function getModelSettings() {
     const row = readRow();
@@ -76,15 +59,12 @@ function getModelSettings() {
         keyLast4: lastFour(row.api_key),
         agent: row.agent,
         agents: listAgents(row),
-        ready:
-            row.mode === 'agent' ? agentReady(row) : chatModelOf(row) !== null
+        ready: MODES[row.mode].ready(row)
     };
 }
 
 // Server-side only: it carries the key.
 const getChatModel = () => chatModelOf(readRow());
-
-const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
 
 // The key for this provider and Base URL: the typed one, else the stored one if
 // it was entered for exactly these. Error messages must never include it.
@@ -120,40 +100,23 @@ function parseApiKey({ provider, model, baseUrl, apiKey }) {
     };
 }
 
+const parseLocal = ({ localUrl, localModel }) => ({
+    mode: 'local',
+    localUrl: serverUrl(localUrl, 'server URL'),
+    localModel: trimmed(localModel)
+});
+
 // Validates a request body.
 function parse(body = {}) {
-    if (body.mode === 'api') return parseApiKey(body);
-    if (body.mode === 'agent') return parseAgent(body);
-    if (body.mode !== 'local') throw new Error('Unknown mode');
-    return {
-        mode: 'local',
-        localUrl: serverUrl(body.localUrl, 'server URL'),
-        localModel: trimmed(body.localModel)
-    };
-}
-
-// The columns a choice writes; the other modes' settings stay as they are.
-function columnsOf(choice) {
-    if (choice.mode === 'agent') return agentColumns(readRow(), choice);
-    if (choice.mode === 'local') {
-        if (!choice.localModel) throw new Error('Pick a model');
-        return {
-            mode: 'local',
-            local_url: choice.localUrl,
-            local_model: choice.localModel
-        };
-    }
-    return {
-        mode: 'api',
-        provider: choice.provider,
-        model: choice.model,
-        base_url: choice.baseUrl,
-        api_key: choice.apiKey
-    };
+    if (!Object.hasOwn(MODES, body.mode)) throw new Error('Unknown mode');
+    return MODES[body.mode].parse(body);
 }
 
 function saveModelSettings(body) {
-    const row = { ...readRow(), ...columnsOf(parse(body)), id: 1 };
+    const choice = parse(body);
+    // The columns of the chosen mode; the other modes' settings stay.
+    const columns = MODES[choice.mode].columns(choice);
+    const row = { ...readRow(), ...columns, id: 1 };
     getDatabase()
         .prepare(
             `INSERT OR REPLACE INTO ai_model
@@ -195,7 +158,7 @@ async function testApiKey({ provider, model, baseUrl, apiKey }) {
         return failed('No API key', 'Paste a key, then test again.');
     }
     const { LABEL, ping } = adapters[provider];
-    const scrub = (text) => String(text).replaceAll(apiKey, '●●●');
+    const scrub = (text) => maskSecret(text, apiKey);
     const started = Date.now();
     try {
         const result = await ping({ apiKey, model, baseUrl });
@@ -219,9 +182,63 @@ async function testApiKey({ provider, model, baseUrl, apiKey }) {
 // { ok, title, detail, models? }; throws only for invalid input.
 async function testModelSettings(body) {
     const choice = parse(body);
-    if (choice.mode === 'agent') return testAgent(choice);
-    return choice.mode === 'local' ? testLocal(choice) : testApiKey(choice);
+    return MODES[choice.mode].test(choice);
 }
+
+// Everything that differs by mode. parse validates a request body into a
+// choice; columns are what saving that choice writes.
+const MODES = {
+    api: {
+        chatModel: (row) =>
+            row.api_key
+                ? {
+                      adapter: adapters[row.provider],
+                      model: row.model,
+                      apiKey: row.api_key,
+                      baseUrl: row.base_url
+                  }
+                : null,
+        ready: (row) => Boolean(row.api_key),
+        parse: parseApiKey,
+        columns: ({ provider, model, baseUrl, apiKey }) => ({
+            mode: 'api',
+            provider,
+            model,
+            base_url: baseUrl,
+            api_key: apiKey
+        }),
+        test: testApiKey
+    },
+    agent: {
+        chatModel: agentModelOf,
+        ready: agentReady,
+        parse: parseAgent,
+        columns: (choice) => agentColumns(readRow(), choice),
+        test: testAgent
+    },
+    local: {
+        chatModel: (row) =>
+            row.local_url && row.local_model
+                ? {
+                      adapter: adapters.local,
+                      model: row.local_model,
+                      apiKey: '',
+                      baseUrl: apiRoot(row.local_url)
+                  }
+                : null,
+        ready: (row) => Boolean(row.local_url && row.local_model),
+        parse: parseLocal,
+        columns: ({ localUrl, localModel }) => {
+            if (!localModel) throw new Error('Pick a model');
+            return {
+                mode: 'local',
+                local_url: localUrl,
+                local_model: localModel
+            };
+        },
+        test: testLocal
+    }
+};
 
 module.exports = {
     getChatModel,

@@ -46,7 +46,8 @@ router.get('/ai-activity', (req, res) => {
 });
 
 router.get('/ai-activity/clients', (req, res) => {
-    res.json({ clients: listClients() });
+    const aiClientsOnly = req.query.aiClientsOnly === 'true';
+    res.json({ clients: listClients({ aiClientsOnly }) });
 });
 
 router.delete('/ai-activity', (req, res) => {

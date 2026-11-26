@@ -739,8 +739,12 @@ export interface AiActivityClient {
     lastCallAt: number;
 }
 
-export async function listAiActivityClients(): Promise<AiActivityClient[]> {
-    const response = await fetch(`${API_BASE}/ai-activity/clients`);
+/** aiClientsOnly leaves out the AI assistant, which also logs its calls. */
+export async function listAiActivityClients({
+    aiClientsOnly = false
+} = {}): Promise<AiActivityClient[]> {
+    const query = aiClientsOnly ? '?aiClientsOnly=true' : '';
+    const response = await fetch(`${API_BASE}/ai-activity/clients${query}`);
     return (await handleResponse<{ clients: AiActivityClient[] }>(response))
         .clients;
 }
