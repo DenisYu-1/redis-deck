@@ -1380,6 +1380,118 @@ body:has(.titlebar) .toolbar {
     gap: 10px;
     flex-wrap: wrap;
 }
+/* AI page: assistant model card */
+.aim-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.aim-pill {
+    margin-left: auto;
+}
+.aim-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    line-height: 18px;
+}
+.pill.ok {
+    color: var(--ok);
+    background: var(--okS);
+}
+.pill.off {
+    color: var(--tx2);
+    background: var(--r2);
+    border: 1px solid var(--bd);
+}
+.modes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+.mode {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid var(--bd);
+    border-radius: 9px;
+    background: var(--bg);
+    text-align: left;
+    color: var(--tx2);
+    font-size: 12px;
+}
+.mode b {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--tx);
+}
+.mode:hover {
+    border-color: var(--bd2);
+}
+.mode[aria-checked='true'] {
+    border-color: var(--ac);
+    background: var(--acs);
+}
+.callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    overflow-wrap: anywhere;
+}
+.callout svg {
+    flex: none;
+    margin-top: 2px;
+}
+.callout div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.callout b {
+    font-weight: 500;
+}
+.callout.ok {
+    background: var(--okS);
+}
+.callout.ok svg {
+    color: var(--ok);
+}
+.callout.err {
+    background: var(--acs);
+}
+.callout.err svg {
+    color: var(--ac);
+}
+.spin {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--bd2);
+    border-top-color: var(--ac);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 .aic-new {
     animation: aic-flash 2.5s ease-out;
 }

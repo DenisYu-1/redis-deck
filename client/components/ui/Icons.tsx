@@ -86,3 +86,19 @@ export const CloseIcon = () => (
         <path d="M6 6l12 12M18 6 6 18" />
     </Svg>
 );
+export const CloudIcon = () => (
+    <Svg>
+        <path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 10 4 4 0 0 1 18 18z" />
+    </Svg>
+);
+export const CheckIcon = () => (
+    <Svg>
+        <path d="m5 12 5 5L20 7" />
+    </Svg>
+);
+export const AlertIcon = () => (
+    <Svg>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v5M12 16h.01" />
+    </Svg>
+);

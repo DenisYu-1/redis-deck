@@ -62,7 +62,7 @@ export function AiAccessGrid() {
 
     return (
         <section className="card sect" aria-label="AI access">
-            <h2>What AI clients may do</h2>
+            <h2>What AI may do</h2>
             <p className="sm tx2">
                 Set per Connection. Values, write and Workflows need See keys.
             </p>

@@ -1,11 +1,14 @@
 import { isDesktop } from '@/utils/desktopTitleBar';
 import { AiAccessGrid } from './AiAccessGrid';
 import { AiActivityLog } from './AiActivityLog';
+import { AiAssistantSection } from './AiAssistantSection';
 import { AiClientsSection } from './AiClientsSection';
-import { AiToolsSection } from './AiToolsSection';
 import { AiMayDoSection } from './AiMayDoSection';
 
-/** AI page: what AI may do (later), the MCP server and its clients, and the activity log. */
+/**
+ * AI page: the assistant's model, what AI may do, AI clients (Desktop only) and
+ * the activity log.
+ */
 export function AiPage() {
     return (
         <div className="scroll">
@@ -13,15 +16,15 @@ export function AiPage() {
                 <div className="aihead">
                     <h1>AI</h1>
                     <p>
-                        Connect AI clients to Redis Deck and see every call they
-                        make.
+                        Choose the model behind the AI assistant, decide what AI
+                        may do on each Connection, and see every call it makes.
                     </p>
                 </div>
                 <div className="aigrid">
                     <div className="aicol">
+                        <AiAssistantSection />
                         <AiAccessGrid />
                         <AiMayDoSection />
-                        <AiToolsSection />
                     </div>
                     <div className="aicol">
                         {isDesktop() && <AiClientsSection />}
