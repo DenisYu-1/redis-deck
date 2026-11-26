@@ -812,6 +812,28 @@ export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
         body: JSON.stringify({ fields })
     });
 
+export interface ConsoleCommands {
+    /** The allowed list (ADR 0006), by command name */
+    commands: Record<string, { access: 'read' | 'write'; warning?: string }>;
+    /** Why each turned-off command is refused, in the server's words */
+    turnedOff: Record<string, string>;
+    /** The refusal of any other command; `{command}` stands for its name */
+    unsupported: string;
+}
+
+let consoleCommands: Promise<ConsoleCommands> | undefined;
+
+/** Fetched once per page load; after a failure the next call tries again. */
+export function getConsoleCommands(): Promise<ConsoleCommands> {
+    consoleCommands ??= fetch(`${API_BASE}/console/commands`)
+        .then((response) => handleResponse<ConsoleCommands>(response))
+        .catch((error: unknown) => {
+            consoleCommands = undefined;
+            throw error;
+        });
+    return consoleCommands;
+}
+
 export interface ConsoleResult {
     line: number;
     text: string;

@@ -2,7 +2,11 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConsolePage } from '@/pages/Console/ConsolePage';
 
-jest.mock('@/services/apiService', () => ({ runConsole: jest.fn() }));
+jest.mock('@/services/apiService', () => ({
+    runConsole: jest.fn(),
+    // the line check never gets its list here
+    getConsoleCommands: () => new Promise(() => {})
+}));
 
 beforeEach(() => localStorage.clear());
 afterEach(() => jest.restoreAllMocks());

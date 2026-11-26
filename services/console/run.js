@@ -4,7 +4,7 @@ const { RESP_TYPES } = require('redis');
 const { tokenize } = require('../redis');
 const { getClient } = require('../redisClient');
 const { safeMessage } = require('../mcp/errors');
-const { lookupCommand } = require('./commands');
+const { lookupCommand, refusalMessage } = require('./commands');
 
 // Without a mapping node-redis returns status and bulk replies both as strings.
 // The client speaks RESP3: maps become flat arrays again (an object would lose
@@ -45,7 +45,7 @@ const failure = (reply) => ({ kind: 'error', reply });
 async function runStatement(connectionId, argv) {
     const { name, entry } = lookupCommand(argv);
     if (!entry) {
-        return failure(`${name} is not supported in this console`);
+        return failure(refusalMessage(name));
     }
     try {
         const client = await readyClient(connectionId);
