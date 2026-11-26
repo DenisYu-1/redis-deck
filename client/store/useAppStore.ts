@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import type { RedisConnection, KeyDetails } from '@/types';
+import type { OutputLine } from '@/pages/Console/output';
+
+const MAX_OUTPUT_LINES = 200;
 
 interface AppState {
     connections: RedisConnection[];
@@ -9,6 +12,9 @@ interface AppState {
     isLoading: boolean;
     /** Key pattern applied on the Keys page (shared so the sidebar can apply saved searches). */
     keyPattern: string;
+    /** Console Output history, newest first. In memory only. */
+    consoleOutput: OutputLine[];
+    addConsoleOutput: (lines: OutputLine[]) => void;
     setKeyPattern: (pattern: string) => void;
     setConnections: (connections: RedisConnection[]) => void;
     setCurrentEnvironment: (environment: string) => void;
@@ -24,6 +30,14 @@ export const useAppStore = create<AppState>((set) => ({
     keyDetails: null,
     isLoading: false,
     keyPattern: '*',
+    consoleOutput: [],
+    addConsoleOutput: (lines) =>
+        set((s) => ({
+            consoleOutput: [...lines, ...s.consoleOutput].slice(
+                0,
+                MAX_OUTPUT_LINES
+            )
+        })),
     setKeyPattern: (pattern) => set({ keyPattern: pattern }),
     setConnections: (connections) => set({ connections }),
     // A key belongs to one connection: switching drops the open key and its details.

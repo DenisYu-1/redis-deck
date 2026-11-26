@@ -811,3 +811,94 @@ export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields })
     });
+
+export interface ConsoleCommands {
+    /** The allowed list (ADR 0006), by command name */
+    commands: Record<string, { access: 'read' | 'write'; warning?: string }>;
+    /** Why each turned-off command is refused, in the server's words */
+    turnedOff: Record<string, string>;
+    /** The refusal of any other command; `{command}` stands for its name */
+    unsupported: string;
+}
+
+let consoleCommands: Promise<ConsoleCommands> | undefined;
+
+/** Fetched once per page load; after a failure the next call tries again. */
+export function getConsoleCommands(): Promise<ConsoleCommands> {
+    consoleCommands ??= fetch(`${API_BASE}/console/commands`)
+        .then((response) => handleResponse<ConsoleCommands>(response))
+        .catch((error: unknown) => {
+            consoleCommands = undefined;
+            throw error;
+        });
+    return consoleCommands;
+}
+
+export interface ConsoleResult {
+    line: number;
+    text: string;
+    /** 'not-run': an earlier statement failed, so this one did not run */
+    kind: 'integer' | 'status' | 'bulk' | 'nil' | 'array' | 'error' | 'not-run';
+    /** The plain Redis reply; the error text when `kind` is 'error' */
+    reply: unknown;
+    ms: number;
+    /** Clusters: the Node that answered a command without a Key */
+    node?: string;
+}
+
+/** The design's dialog; only production asks for the typed Connection name. */
+function confirmConsoleWrites(
+    environment: string,
+    writes: { text: string }[],
+    reads: number
+): Promise<boolean> {
+    const conn = useAppStore
+        .getState()
+        .connections.find((c) => c.id === environment);
+    const plural = (n: number) => (n === 1 ? '' : 's');
+    return requestWriteConfirmation(environment, {
+        title: `Run ${writes.length} write${plural(writes.length)} on ${environment}?`,
+        confirmLabel: 'Run',
+        lines: writes.map((w) => w.text),
+        note: reads
+            ? `The ${reads} read statement${plural(reads)} run${reads === 1 ? 's' : ''} too.`
+            : undefined,
+        typeName: conn?.tier === 'production'
+    });
+}
+
+/**
+ * Runs Console statements in order on a Connection (ADR 0006). When the server
+ * asks to confirm the writes (428), asks the user and retries; null when they
+ * cancel, and nothing has run.
+ */
+export async function runConsole(
+    environment: string,
+    statements: { line: number; text: string }[]
+): Promise<ConsoleResult[] | null> {
+    const send = (headers: Record<string, string> = {}) => {
+        const init = jsonPost({ statements });
+        return fetch(
+            `${API_BASE}/console/run?env=${encodeURIComponent(environment)}`,
+            { ...init, headers: { ...init.headers, ...headers } }
+        );
+    };
+    let response = await send();
+    if (response.status === 428) {
+        const { writes } = (await response.json()) as {
+            writes: { text: string }[];
+        };
+        const reads = statements.length - writes.length;
+        if (!(await confirmConsoleWrites(environment, writes, reads))) {
+            return null;
+        }
+        response = await send({ 'X-Confirm-Connection': environment });
+    }
+    if (response.status === 403) {
+        // not handleResponse: it would toast, and the Console toasts errors too
+        const { error } = (await response.json()) as { error: string };
+        throw new Error(error);
+    }
+    return (await handleResponse<{ results: ConsoleResult[] }>(response))
+        .results;
+}

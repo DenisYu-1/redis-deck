@@ -29,6 +29,11 @@ export const ChartIcon = () => (
         <path d="M4 20V10M10 20V4M16 20v-8M22 20H2" />
     </Svg>
 );
+export const ConsoleIcon = () => (
+    <Svg>
+        <path d="m4 17 6-5-6-5M12 19h8" />
+    </Svg>
+);
 export const SlidersIcon = () => (
     <Svg>
         <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
@@ -69,5 +74,15 @@ export const LockIcon = () => (
 export const SparkIcon = () => (
     <Svg>
         <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7z" />
+    </Svg>
+);
+export const PlusIcon = () => (
+    <Svg>
+        <path d="M12 5v14M5 12h14" />
+    </Svg>
+);
+export const CloseIcon = () => (
+    <Svg>
+        <path d="M6 6l12 12M18 6 6 18" />
     </Svg>
 );

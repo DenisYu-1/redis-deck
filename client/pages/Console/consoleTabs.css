@@ -1,0 +1,81 @@
+.ctabs {
+    display: flex;
+    align-self: stretch;
+    min-width: 0;
+    margin: 0 auto 0 -14px;
+    padding: 5px 5px 0; /* room for the tab shadows, clipped otherwise */
+    overflow-x: auto;
+}
+.ctablist {
+    display: flex;
+}
+.ctab {
+    display: flex;
+    align-items: center;
+    padding: 0 6px 0 4px;
+    border-right: 1px solid var(--bd);
+    border-bottom: 2px solid transparent;
+    font-family: var(--f-mono);
+    white-space: nowrap;
+}
+.ctab.on {
+    color: var(--tx);
+    background: var(--bg);
+    border-bottom-color: var(--ac);
+}
+.ctabbtn:hover {
+    background: none; /* override legacy global `button:hover` */
+}
+.ctabbtn {
+    align-self: stretch;
+    padding: 0 6px 0 10px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+}
+.ctab .xb svg {
+    width: 11px;
+    height: 11px;
+}
+.ctab .xb {
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--mu);
+}
+.ctab .xb:hover {
+    background: var(--hv);
+    color: var(--tx);
+}
+.ctab,
+.ctnew {
+    border-radius: 6px 6px 0 0;
+    box-shadow: 0 0 5px var(--shadow);
+}
+.ctnew {
+    display: grid;
+    place-items: center;
+    flex: none;
+    padding: 0 12px;
+    border: 0;
+    border-right: 1px solid var(--bd);
+    background: none;
+    color: var(--tx2);
+}
+.ctnew:hover {
+    color: var(--tx);
+    background: var(--hv);
+}
+.chead > .mono {
+    white-space: nowrap;
+}
+/* the scrolling strip cuts off an outline drawn outside */
+.ctabs button:focus-visible {
+    outline-offset: -2px;
+}
