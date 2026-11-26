@@ -1,6 +1,6 @@
 {
     "name": "redis-deck",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "A UI for Redis cluster that uses redis-cli under the hood",
     "engines": {
         "node": ">=22.0.0"
