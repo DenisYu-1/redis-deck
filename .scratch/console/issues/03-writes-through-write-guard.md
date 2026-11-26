@@ -4,12 +4,12 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A batch with a write on a Read-only Connection answers 403 and no statement runs, reads included
-- [ ] A batch with a write on a Confirm writes Connection answers 428 and no statement runs
-- [ ] The modal lists the writes; on production the user must type the Connection name
-- [ ] The client retries with the confirmation and the batch runs; cancel runs nothing
-- [ ] A read-only batch needs no confirmation on any Connection
-- [ ] Writes that ran before a later error stay applied
-- [ ] Route tests: 403, 428, confirmed retry
+- [x] A batch with a write on a Read-only Connection answers 403 and no statement runs, reads included
+- [x] A batch with a write on a Confirm writes Connection answers 428 and no statement runs
+- [x] The modal lists the writes; on production the user must type the Connection name
+- [x] The client retries with the confirmation and the batch runs; cancel runs nothing
+- [x] A read-only batch needs no confirmation on any Connection
+- [x] Writes that ran before a later error stay applied
+- [x] Route tests: 403, 428, confirmed retry

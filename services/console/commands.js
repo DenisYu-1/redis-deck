@@ -3,6 +3,7 @@
 // allowed subcommand. Never add FLUSHDB, FLUSHALL, CONFIG SET, SHUTDOWN, DEBUG,
 // MONITOR, SUBSCRIBE or PSUBSCRIBE.
 const read = { access: 'read' };
+const write = { access: 'write' };
 
 const COMMANDS = {
     PING: read,
@@ -35,7 +36,18 @@ const COMMANDS = {
     'SLOWLOG GET': read,
     'CLIENT LIST': read,
     'CONFIG GET': read,
-    RANDOMKEY: read
+    RANDOMKEY: read,
+    SET: write,
+    HSET: write,
+    HDEL: write,
+    LPUSH: write,
+    RPUSH: write,
+    DEL: write,
+    UNLINK: write,
+    EXPIRE: write,
+    PERSIST: write,
+    RENAME: write,
+    INCR: write
 };
 
 const NAMES = Object.keys(COMMANDS);

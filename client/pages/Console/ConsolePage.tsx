@@ -47,6 +47,7 @@ export function ConsolePage() {
         running.current = true;
         try {
             const results = await runConsole(env, statements);
+            if (!results) return; // the writes were not confirmed
             setRun({ env, results });
             setTab(0);
             addConsoleOutput(outputLines(env, results));
