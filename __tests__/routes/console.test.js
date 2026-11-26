@@ -204,6 +204,19 @@ standalone('Console routes', () => {
         expect(lower).toMatchObject({ kind: 'integer', reply: 3 });
     });
 
+    test.each([
+        ['"CONFIG GET" maxmemory', '"CONFIG GET"'],
+        ["'memory usage' test:console01:k", '"MEMORY USAGE"'],
+        ['"CONFIG SET" test-console01-no-such-setting 0', '"CONFIG SET"']
+    ])('refuses the quoted multi-word command in %s', async (text, name) => {
+        const [result] = await results(text);
+
+        expect(result).toMatchObject({
+            kind: 'error',
+            reply: `${name} is not supported in this console`
+        });
+    });
+
     test('keeps quoted arguments together', async () => {
         const key = `${PREFIX}:with space`;
         await createTestHash(key, { 'a field': 'v' });
@@ -217,6 +230,25 @@ standalone('Console routes', () => {
         expect(double.reply).toBe('v');
         expect(single.reply).toBe('v');
         expect(escaped.reply).toBe('say "hi"');
+    });
+
+    test('keeps the quote character of an unterminated quote', async () => {
+        const key = `${PREFIX}:unterminated`;
+
+        const [, double, single] = await results(
+            `SET ${key} "abc`,
+            `GET ${key}`,
+            "ECHO 'abc"
+        );
+
+        expect(double.reply).toBe('"abc');
+        expect(single.reply).toBe("'abc");
+    });
+
+    test('reads a quote inside a word as part of the word', async () => {
+        const [result] = await results('ECHO say"hi"');
+
+        expect(result.reply).toBe('say"hi"');
     });
 
     test('tells status, nil, array and integer replies apart', async () => {
@@ -390,6 +422,26 @@ standalone('Console routes', () => {
                 kind: 'error',
                 reply: 'connect ECONNREFUSED ***:***'
             });
+        });
+
+        test('does not log argv or credentials when the cluster cannot be asked', async () => {
+            const id = connection(`test-console01-nohost-${Date.now()}`, {
+                host: 'nohost.invalid',
+                password: 'never-logged-password',
+                cluster: true
+            });
+            const spies = ['log', 'info', 'warn', 'error', 'debug'].map(
+                (method) => jest.spyOn(console, method)
+            );
+
+            const { body } = await run(['DBSIZE'], id).expect(200);
+
+            const output = spies.flatMap((spy) => spy.mock.calls).join('\n');
+            spies.forEach((spy) => spy.mockRestore());
+            expect(output).toBe('');
+            expect(body.results[0].kind).toBe('error');
+            expect(body.results[0].reply).toMatch(/Could not connect/);
+            expect(body.results[0].reply).not.toContain('never-logged');
         });
     });
 

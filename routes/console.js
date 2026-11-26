@@ -2,7 +2,6 @@
 // Commands are never logged here.
 const express = require('express');
 const { getConnection } = require('../services/database');
-const { tokenize } = require('../services/redis');
 const { checkWrite } = require('../guards/writeGuard');
 const {
     COMMANDS,
@@ -11,6 +10,7 @@ const {
     lookupCommand
 } = require('../services/console/commands');
 const { runStatements } = require('../services/console/run');
+const { tokenize } = require('../services/console/tokenize');
 
 const router = express.Router();
 

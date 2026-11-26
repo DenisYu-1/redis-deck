@@ -3,6 +3,7 @@ import type { ConsoleResult } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { ConsoleOutput } from './ConsoleOutput';
 import { ConsoleReply } from './ConsoleReply';
+import { commandWords } from './lineCheck';
 import type { Statement } from './statements';
 
 /** The Output history, or the index of a statement of the last run. */
@@ -17,7 +18,7 @@ interface Props {
     onRerun: (index: number, statement: Statement) => void;
 }
 
-const commandOf = (text: string) => text.split(/\s+/, 1).join('').toUpperCase();
+const commandOf = (text: string) => commandWords(text)[0]?.toUpperCase();
 
 const dotColor = (kind: ConsoleResult['kind']) => {
     if (kind === 'error') return 'var(--ac)';

@@ -75,8 +75,19 @@ it('marks a command that is turned off in the console', async () => {
 });
 
 it('reads quoted command names as the server does', async () => {
-    await open('"set" a 1\n\'CONFIG\' "GET" x\nP"IN"G');
-    expect(marks()).toEqual([['Line 1: Writes data', 'write']]);
+    await open('"set" a 1\n\'CONFIG\' "GET" x\nP"IN"G\n"PING');
+    expect(marks()).toEqual([
+        ['Line 1: Writes data', 'write'],
+        ['Line 3: P"IN"G is not supported in this console', 'error'],
+        ['Line 4: "PING is not supported in this console', 'error']
+    ]);
+});
+
+it('marks a quoted multi-word command as unsupported', async () => {
+    await open('"CONFIG GET" maxmemory');
+    expect(marks()).toEqual([
+        ['Line 1: "CONFIG GET" is not supported in this console', 'error']
+    ]);
 });
 
 it('marks a write as writing data', async () => {

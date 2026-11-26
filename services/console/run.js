@@ -2,11 +2,12 @@
 // persistent client, on a clustered one through redis-cli (./cluster.js).
 // Nothing here logs: Console commands are never recorded.
 const { RESP_TYPES } = require('redis');
-const { tokenize, isClusterMode } = require('../redis');
+const { isClusterMode } = require('../redis');
 const { getClient } = require('../redisClient');
 const { safeMessage } = require('../mcp/errors');
 const { lookupCommand, refusalMessage } = require('./commands');
 const { keylessNode, sendToCluster } = require('./cluster');
+const { tokenize } = require('./tokenize');
 
 // Without a mapping node-redis returns status and bulk replies both as strings.
 // The client speaks RESP3: maps become flat arrays again (an object would lose

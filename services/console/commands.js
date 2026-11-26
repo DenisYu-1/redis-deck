@@ -84,6 +84,10 @@ const refusalMessage = (name) =>
 // -> { name, entry }; entry is undefined when the command is not allowed.
 function lookupCommand([command = '', subcommand = '']) {
     const base = command.toUpperCase();
+    // one quoted word is not two: "CONFIG GET" is not CONFIG GET
+    if (/\s/.test(base)) {
+        return { name: `"${base}"`, entry: undefined };
+    }
     const hasSubcommands = NAMES.some((n) => n.startsWith(`${base} `));
     const name =
         hasSubcommands && subcommand
