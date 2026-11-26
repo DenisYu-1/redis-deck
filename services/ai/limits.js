@@ -1,7 +1,6 @@
-// Rules of an assistant turn, shared by the system prompt and the MCP server.
+// Rules of an assistant turn.
 const MAX_TOOL_CALLS = 20;
-// Until the chat has approval cards, no write of the assistant runs.
-const WRITES_UNAVAILABLE =
-    'Writes from the AI assistant are not available yet, so every write call is refused.';
+// An approval card without an answer counts as Deny after this.
+const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
 
-module.exports = { MAX_TOOL_CALLS, WRITES_UNAVAILABLE };
+module.exports = { MAX_TOOL_CALLS, APPROVAL_TIMEOUT_MS };

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { SendIcon } from '@/components/ui/Icons';
 import { useAppStore } from '@/store/useAppStore';
+import { WritesNote } from './WritesNote';
 
 const MAX_HEIGHT = 140;
 
@@ -9,7 +10,7 @@ export function ChatComposer() {
     const connection = useAppStore((s) => s.currentEnvironment);
     const draft = useAppStore((s) => s.chat.draft);
     const busy = useAppStore((s) => s.chat.busy);
-    const noModel = useAppStore((s) => s.aiModel?.keyLast4 === null);
+    const noModel = useAppStore((s) => s.aiModel?.ready === false);
     const setDraft = useAppStore((s) => s.setChatDraft);
     const send = useAppStore((s) => s.sendChatMessage);
     const input = useRef<HTMLTextAreaElement>(null);
@@ -59,7 +60,11 @@ export function ChatComposer() {
                     <SendIcon />
                 </button>
             </div>
-            {noModel && <span className="xs mu">No model is set up yet</span>}
+            {noModel ? (
+                <span className="xs mu">No model is set up yet</span>
+            ) : (
+                <WritesNote />
+            )}
         </form>
     );
 }

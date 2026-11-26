@@ -1,21 +1,25 @@
 // Anthropic Messages API over plain fetch (no SDK): the model adapter of the
 // turn runner (see turnRunner.js) and the Test call of the model settings.
 const { sseData } = require('./sse');
+const {
+    NOTICES: SHARED_NOTICES,
+    TIMEOUT_MS,
+    openReply,
+    pingResult
+} = require('./providerHttp');
 
 const MESSAGES_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2026-10-21';
-const TIMEOUT_MS = 30_000;
-// One streamed reply of a turn.
-const REPLY_TIMEOUT_MS = 10 * 60 * 1000;
 const MAX_TOKENS = 16000;
 
 const LABEL = 'Anthropic';
 const MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'];
 const DEFAULT_MODEL = 'claude-sonnet-5-5';
 
+// By stop_reason.
 const NOTICES = {
-    max_tokens: 'The answer was cut off at the length limit.',
-    refusal: 'The model declined to answer.'
+    max_tokens: SHARED_NOTICES.length,
+    refusal: SHARED_NOTICES.refusal
 };
 
 const post = (apiKey, body, signal) =>
@@ -30,11 +34,6 @@ const post = (apiKey, body, signal) =>
         signal
     });
 
-async function errorOf(response) {
-    const body = await response.json().catch(() => null);
-    return body?.error?.message || response.statusText;
-}
-
 // The smallest call that proves the key and model work. Returns
 // { ok, status, error }; throws when Anthropic cannot be reached.
 async function ping({ apiKey, model }) {
@@ -43,32 +42,7 @@ async function ping({ apiKey, model }) {
         { model, max_tokens: 1, messages: [{ role: 'user', content: 'Hi' }] },
         AbortSignal.timeout(TIMEOUT_MS)
     );
-    if (response.ok) return { ok: true, status: response.status };
-    return {
-        ok: false,
-        status: response.status,
-        error: await errorOf(response)
-    };
-}
-
-async function openReply(apiKey, body, signal) {
-    const timeout = AbortSignal.timeout(REPLY_TIMEOUT_MS);
-    let response;
-    try {
-        response = await post(
-            apiKey,
-            body,
-            signal ? AbortSignal.any([signal, timeout]) : timeout
-        );
-    } catch (error) {
-        const cause = error.cause?.message || error.message;
-        throw new Error(`Could not reach ${LABEL}: ${cause}`);
-    }
-    if (!response.ok) {
-        const message = await errorOf(response);
-        throw new Error(`${LABEL} returned ${response.status}: ${message}`);
-    }
-    return response;
+    return pingResult(response);
 }
 
 // Adds one delta to the content block it belongs to.
@@ -125,16 +99,17 @@ function start({ apiKey, model, system, tools, messages }) {
 
     return {
         async step({ onText, signal }) {
+            const body = {
+                model,
+                max_tokens: MAX_TOKENS,
+                stream: true,
+                system,
+                tools: definitions,
+                messages: history
+            };
             const response = await openReply(
-                apiKey,
-                {
-                    model,
-                    max_tokens: MAX_TOKENS,
-                    stream: true,
-                    system,
-                    tools: definitions,
-                    messages: history
-                },
+                LABEL,
+                (abort) => post(apiKey, body, abort),
                 signal
             );
             const reply = await readReply(response.body, onText);
