@@ -14,6 +14,7 @@ const result = (
 ): ConsoleResult => ({ line: 1, text, kind, reply, ms: 1.5 });
 
 beforeEach(() => {
+    localStorage.clear(); // the editor text is kept there
     run.mockReset().mockResolvedValue([]);
     useAppStore.setState({
         connections: [
