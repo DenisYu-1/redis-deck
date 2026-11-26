@@ -5,6 +5,7 @@
     flex-direction: column;
 }
 .chead {
+    margin-bottom: 0; /* override legacy global `header` margin */
     display: flex;
     justify-content: flex-end;
     align-items: center;
@@ -105,8 +106,18 @@
     font-family: var(--f-mono);
     font-size: 13px;
     line-height: 22px;
+    border-radius: 0; /* override legacy global `textarea` radius */
+}
+/* inside the box: outside, the neighbouring panes cut it off */
+.ced:focus-visible {
+    outline-offset: -2px;
 }
 .results {
+    /* override legacy global `section` card styles */
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     min-height: 0;

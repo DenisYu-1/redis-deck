@@ -3,6 +3,7 @@
     align-self: stretch;
     min-width: 0;
     margin: 0 auto 0 -14px;
+    padding: 5px 5px 0; /* room for the tab shadows, clipped otherwise */
     overflow-x: auto;
 }
 .ctablist {
@@ -21,6 +22,9 @@
     color: var(--tx);
     background: var(--bg);
     border-bottom-color: var(--ac);
+}
+.ctabbtn:hover {
+    background: none; /* override legacy global `button:hover` */
 }
 .ctabbtn {
     align-self: stretch;
@@ -49,6 +53,11 @@
     background: var(--hv);
     color: var(--tx);
 }
+.ctab,
+.ctnew {
+    border-radius: 6px 6px 0 0;
+    box-shadow: 0 0 5px var(--shadow);
+}
 .ctnew {
     display: grid;
     place-items: center;
@@ -65,4 +74,8 @@
 }
 .chead > .mono {
     white-space: nowrap;
+}
+/* the scrolling strip cuts off an outline drawn outside */
+.ctabs button:focus-visible {
+    outline-offset: -2px;
 }
