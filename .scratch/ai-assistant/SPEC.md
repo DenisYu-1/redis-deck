@@ -1,4 +1,4 @@
-Status: ready
+Status: done
 
 # AI assistant: built-in chat (design `design/RedisDeck (1).html`, chat panel + "Model" card)
 
