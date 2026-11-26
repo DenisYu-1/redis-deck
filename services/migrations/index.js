@@ -5,5 +5,6 @@ module.exports = [
     require('./002-ai-activity'),
     require('./003-ai-access'),
     require('./004-ai-activity-calls'),
-    require('./005-ai-model')
+    require('./005-ai-model'),
+    require('./006-ai-model-urls')
 ];

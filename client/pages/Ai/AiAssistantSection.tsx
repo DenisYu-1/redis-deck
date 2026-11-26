@@ -1,6 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { AlertIcon, CheckIcon, CloudIcon } from '@/components/ui/Icons';
+import {
+    AlertIcon,
+    CheckIcon,
+    CloudIcon,
+    ServerIcon
+} from '@/components/ui/Icons';
 import { useToast } from '@/hooks/useToast';
 import {
     getAiModel,
@@ -12,13 +17,35 @@ import {
 } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { modelLabel } from '@/utils/aiModelLabel';
+import { AiApiKeyFields } from './AiApiKeyFields';
+import { AiLocalModelFields } from './AiLocalModelFields';
+import { useLocalModels } from './useLocalModels';
 
-const draftOf = ({ mode, provider, model }: AiModelSettings): AiModelDraft => ({
-    mode,
-    provider,
-    model,
+const draftOf = (s: AiModelSettings): AiModelDraft => ({
+    mode: s.mode,
+    provider: s.provider,
+    model: s.model,
+    baseUrl: s.baseUrl,
+    localUrl: s.localUrl,
+    localModel: s.localModel,
     apiKey: ''
 });
+
+const MODES = [
+    {
+        mode: 'api',
+        title: 'API key',
+        description: 'Call a model provider directly with your key',
+        Icon: CloudIcon
+    },
+    {
+        mode: 'local',
+        title: 'Local model',
+        description:
+            'Ollama or a compatible server; nothing leaves your network',
+        Icon: ServerIcon
+    }
+] as const;
 
 /** "AI assistant": the model behind the built-in chat. */
 export function AiAssistantSection() {
@@ -45,6 +72,22 @@ export function AiAssistantSection() {
         };
     }, [showToast, setSaved]);
 
+    // A model the server does not list cannot stay selected.
+    const pickLocalModel = useCallback(
+        (models: string[]) =>
+            setDraft(
+                (d) =>
+                    d && {
+                        ...d,
+                        localModel: models.includes(d.localModel)
+                            ? d.localModel
+                            : (models[0] ?? '')
+                    }
+            ),
+        []
+    );
+    const local = useLocalModels(pickLocalModel);
+
     const edit = (change: Partial<AiModelDraft>) => {
         setDraft((d) => d && { ...d, ...change });
         setResult(null);
@@ -56,7 +99,9 @@ export function AiAssistantSection() {
         setResult(null);
         try {
             if (action === 'test') {
-                setResult(await testAiModel(draft));
+                const tested = await testAiModel(draft);
+                setResult(tested);
+                if (tested.models) local.offer(tested.models);
             } else {
                 const settings = await saveAiModel(draft);
                 setSaved(settings);
@@ -70,16 +115,17 @@ export function AiAssistantSection() {
         }
     };
 
-    const lastFour = saved?.keyLast4 ?? null;
-    const hasKey = lastFour !== null;
-
     return (
         <section className="card sect" aria-label="AI assistant">
             <div className="sechead">
                 <h2>AI assistant</h2>
                 {saved && (
-                    <span className={`pill aim-pill ${hasKey ? 'ok' : 'off'}`}>
-                        {hasKey ? modelLabel(saved) : 'No key saved'}
+                    <span
+                        className={`pill aim-pill ${saved.ready ? 'ok' : 'off'}`}
+                    >
+                        {!saved.ready && saved.mode === 'api'
+                            ? 'No key saved'
+                            : modelLabel(saved)}
                     </span>
                 )}
             </div>
@@ -96,69 +142,36 @@ export function AiAssistantSection() {
                         role="radiogroup"
                         aria-label="Where the model runs"
                     >
-                        <button
-                            type="button"
-                            className="mode"
-                            role="radio"
-                            aria-checked="true"
-                        >
-                            <b>
-                                <CloudIcon />
-                                API key
-                            </b>
-                            <span>
-                                Call a model provider directly with your key
-                            </span>
-                        </button>
-                    </div>
-                    <div className="grid2">
-                        <label className="field">
-                            Provider
-                            <select
-                                className="select"
-                                defaultValue={draft.provider}
+                        {MODES.map(({ mode, title, description, Icon }) => (
+                            <button
+                                key={mode}
+                                type="button"
+                                className="mode"
+                                role="radio"
+                                aria-checked={draft.mode === mode}
+                                onClick={() => edit({ mode, apiKey: '' })}
                             >
-                                <option value="anthropic">Anthropic</option>
-                            </select>
-                        </label>
-                        <label className="field">
-                            Model
-                            <select
-                                className="select"
-                                value={draft.model}
-                                onChange={(e) =>
-                                    edit({ model: e.target.value })
-                                }
-                            >
-                                {saved.models.map((m) => (
-                                    <option key={m}>{m}</option>
-                                ))}
-                            </select>
-                        </label>
-                        <div className="field span2">
-                            <label htmlFor="aim-key">API key</label>
-                            <input
-                                id="aim-key"
-                                className="input mono"
-                                type="password"
-                                autoComplete="off"
-                                aria-describedby="aim-key-hint"
-                                placeholder={
-                                    hasKey
-                                        ? `Saved: sk-ant-…${lastFour} — type to replace`
-                                        : 'Paste your key'
-                                }
-                                value={draft.apiKey}
-                                onChange={(e) =>
-                                    edit({ apiKey: e.target.value })
-                                }
-                            />
-                            <span id="aim-key-hint" className="hint">
-                                Stored on the Redis Deck server. The browser
-                                only ever sees the last four characters.
-                            </span>
-                        </div>
+                                <b>
+                                    <Icon />
+                                    {title}
+                                </b>
+                                <span>{description}</span>
+                            </button>
+                        ))}
                     </div>
+                    {draft.mode === 'api' ? (
+                        <AiApiKeyFields
+                            saved={saved}
+                            draft={draft}
+                            onChange={edit}
+                        />
+                    ) : (
+                        <AiLocalModelFields
+                            draft={draft}
+                            onChange={edit}
+                            local={local}
+                        />
+                    )}
                     {result && (
                         <div
                             className={`callout ${result.ok ? 'ok' : 'err'}`}

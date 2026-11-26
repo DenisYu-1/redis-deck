@@ -1,5 +1,14 @@
-import type { AiModelSettings } from '@/services/apiService';
+import type { AiModelSettings, AiProvider } from '@/services/apiService';
 
-/** The assistant's model as the chat header and the Model card name it. */
-export const modelLabel = ({ keyLast4, model }: AiModelSettings): string =>
-    keyLast4 === null ? 'No model' : `Anthropic · ${model}`;
+export const PROVIDER_LABELS: Record<AiProvider, string> = {
+    anthropic: 'Anthropic',
+    openai: 'OpenAI',
+    'openai-compatible': 'OpenAI-compatible'
+};
+
+/** The assistant's mode and model, as the chat header and the card name them. */
+export const modelLabel = (s: AiModelSettings): string => {
+    if (!s.ready) return 'No model';
+    if (s.mode === 'local') return `Local model · ${s.localModel}`;
+    return `${PROVIDER_LABELS[s.provider]} · ${s.model}`;
+};
