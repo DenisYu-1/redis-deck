@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react';
 import type { ChatPart } from '@/services/aiChat';
 import { useAppStore } from '@/store/useAppStore';
+import { ApprovalCard } from './ApprovalCard';
 import { Markdown } from './Markdown';
 import { ToolRow } from './ToolRow';
 
 function Part({ part }: { part: ChatPart }) {
     if (part.type === 'text') return <Markdown text={part.text} />;
     if (part.type === 'tool') return <ToolRow call={part} />;
+    if (part.type === 'approval') return <ApprovalCard card={part} />;
     if (part.type === 'notice') {
         return <p className="sm mu">{part.text}</p>;
     }
@@ -20,7 +22,11 @@ function Part({ part }: { part: ChatPart }) {
 /** Nothing is streaming right now, but the turn is not over. */
 const isThinking = (parts: ChatPart[]) => {
     const last = parts.at(-1);
-    return !last || (last.type === 'tool' && last.status !== 'running');
+    return (
+        !last ||
+        (last.type === 'tool' && last.status !== 'running') ||
+        (last.type === 'approval' && last.state !== 'pending')
+    );
 };
 
 function EmptyChat() {
@@ -30,7 +36,8 @@ function EmptyChat() {
             <b>Ask about {connection}</b>
             <p className="sm tx2">
                 The assistant reads keys and INFO through Redis Deck’s MCP tools
-                and drafts commands for you. It does not change data.
+                and drafts commands for you. Changes follow your AI access
+                rules.
             </p>
         </div>
     );

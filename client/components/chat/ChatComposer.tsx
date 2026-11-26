@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { SendIcon } from '@/components/ui/Icons';
 import { useAppStore } from '@/store/useAppStore';
+import { WritesNote } from './WritesNote';
 
 const MAX_HEIGHT = 140;
 
@@ -59,7 +60,11 @@ export function ChatComposer() {
                     <SendIcon />
                 </button>
             </div>
-            {noModel && <span className="xs mu">No model is set up yet</span>}
+            {noModel ? (
+                <span className="xs mu">No model is set up yet</span>
+            ) : (
+                <WritesNote />
+            )}
         </form>
     );
 }

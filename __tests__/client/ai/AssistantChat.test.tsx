@@ -22,6 +22,7 @@ jest.mock('@/services/apiService', () => ({
     getWorkflows: jest.fn().mockResolvedValue([]),
     getKeyCount: jest.fn().mockResolvedValue({ count: 1 }),
     getServerStatus: jest.fn().mockResolvedValue({}),
+    listAiAccess: jest.fn().mockResolvedValue([]),
     getAiModel: jest.fn().mockResolvedValue({
         mode: 'api',
         provider: 'anthropic',

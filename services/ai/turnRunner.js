@@ -20,13 +20,25 @@ function errorText(error, apiKey, connectionId) {
 // isError }]) }. The adapter keeps the provider's own message history.
 //
 // emit gets { type: 'text', text }, { type: 'tool', ... } (mcp/callMeter.js),
-// { type: 'notice', text }, { type: 'error', message } and, always last,
-// { type: 'done' }. Aborting signal stops the turn without an error.
-async function runTurn({ connectionId, messages, model, emit, signal }) {
+// { type: 'approval', ... } (assistantServer.js), { type: 'notice', text },
+// { type: 'error', message } and, last, { type: 'done' }. Aborting signal stops
+// the turn without an error and denies the writes still waiting for an answer.
+// chatId: the chat whose approval answers count (approvalDesk.js).
+async function runTurn({
+    chatId,
+    connectionId,
+    messages,
+    model,
+    emit,
+    signal
+}) {
     const { tier } = getConnection(connectionId);
     let limitReached = null;
     const session = await openToolSession(
         createAssistantServer({
+            chatId,
+            signal,
+            onCard: (card) => emit({ type: 'approval', ...card }),
             onCall: (call) => emit({ type: 'tool', ...call }),
             onLimit: (message) => (limitReached = message)
         })

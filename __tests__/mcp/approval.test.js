@@ -79,7 +79,10 @@ describe('MCP approval for Ask before writes', () => {
                 tier: 'production',
                 operation: 'set_key',
                 target: 'test:mcpa:k',
-                targetLabel: 'Key'
+                targetLabel: 'Key',
+                id: expect.any(String),
+                title: 'Set Key test:mcpa:k',
+                commands: ['SET test:mcpa:k v']
             },
             { signal: expect.any(AbortSignal) }
         );
