@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/Button';
+import { ChatIcon } from '@/components/ui/Icons';
 import type { ConsoleResult } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { ConsoleOutput } from './ConsoleOutput';
@@ -16,6 +18,7 @@ interface Props {
     onTab: (tab: ResultsTab) => void;
     /** Runs a statement whose result takes the place of result `index`. */
     onRerun: (index: number, statement: Statement) => void;
+    onAsk: (result: ConsoleResult) => void;
 }
 
 const commandOf = (text: string) => commandWords(text)[0]?.toUpperCase();
@@ -47,7 +50,14 @@ function Tab({
     );
 }
 
-export function ConsoleResults({ env, results, tab, onTab, onRerun }: Props) {
+export function ConsoleResults({
+    env,
+    results,
+    tab,
+    onTab,
+    onRerun,
+    onAsk
+}: Props) {
     const count = useAppStore((s) => s.consoleOutput.length);
     // no result: the Output tab, also once the results are gone
     const result = tab === 'output' ? undefined : results[tab];
@@ -77,12 +87,16 @@ export function ConsoleResults({ env, results, tab, onTab, onRerun }: Props) {
                 {result && typeof tab === 'number' ? (
                     <>
                         <div className="rhead mono xs">
-                            <span className="ellip">{result.text}</span>
+                            <span className="ellip rcmd">{result.text}</span>
                             <span className="mu">
                                 line {result.line} · {env}
                                 {result.node && ` · node ${result.node}`} ·{' '}
                                 {result.ms} ms
                             </span>
+                            <Button size="xs" onClick={() => onAsk(result)}>
+                                <ChatIcon />
+                                Ask about result
+                            </Button>
                         </div>
                         <ConsoleReply
                             key={`${tab} ${result.text}`}

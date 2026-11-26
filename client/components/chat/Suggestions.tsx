@@ -10,6 +10,7 @@ export function Suggestions() {
     const selectedKey = useAppStore((s) => s.selectedKey);
     const addChip = useAppStore((s) => s.addChatChip);
     const send = useAppStore((s) => s.sendChatMessage);
+    const askAboutCursorLine = useAppStore((s) => s.askAboutCursorLine);
 
     return (
         <div
@@ -22,6 +23,10 @@ export function Suggestions() {
                     key={s.text}
                     type="button"
                     onClick={() => {
+                        if (s.attachCursorLine) {
+                            askAboutCursorLine(s.text);
+                            return;
+                        }
                         if (s.attachKey && connectionId) {
                             addChip({
                                 kind: 'key',

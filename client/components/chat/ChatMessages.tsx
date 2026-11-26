@@ -1,14 +1,17 @@
 import { useEffect, useRef } from 'react';
 import type { ChatPart } from '@/services/aiChat';
 import { useAppStore } from '@/store/useAppStore';
+import { chipLabel, type LineChip } from '@/utils/chatChips';
+import { lineAskedAbout } from '@/utils/chatParts';
 import { ApprovalCard } from './ApprovalCard';
-import { chipLabel } from '@/utils/chatChips';
 import { Markdown } from './Markdown';
 import { Suggestions } from './Suggestions';
 import { ToolRow } from './ToolRow';
 
-function Part({ part }: { part: ChatPart }) {
-    if (part.type === 'text') return <Markdown text={part.text} />;
+function Part({ part, line }: { part: ChatPart; line: LineChip | undefined }) {
+    if (part.type === 'text') {
+        return <Markdown text={part.text} line={line} />;
+    }
     if (part.type === 'tool') return <ToolRow call={part} />;
     if (part.type === 'approval') return <ApprovalCard card={part} />;
     if (part.type === 'notice') {
@@ -84,7 +87,11 @@ export function ChatMessages() {
                 ) : (
                     <div key={i} className="chat-msg ai">
                         {message.parts.map((part, p) => (
-                            <Part key={p} part={part} />
+                            <Part
+                                key={p}
+                                part={part}
+                                line={lineAskedAbout(messages[i - 1])}
+                            />
                         ))}
                         {busy &&
                             i === messages.length - 1 &&

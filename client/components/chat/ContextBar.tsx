@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { TierBadge } from '@/components/ui/Badge';
-import { CloseIcon, KeyIcon } from '@/components/ui/Icons';
+import { CloseIcon, KeyIcon, ConsoleIcon } from '@/components/ui/Icons';
 import { listAiAccess } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { chipLabel } from '@/utils/chatChips';
@@ -15,6 +15,7 @@ export function ContextBar() {
     const chips = useAppStore((s) => s.chat.chips);
     const addChip = useAppStore((s) => s.addChatChip);
     const removeChip = useAppStore((s) => s.removeChatChip);
+    const addCursorLine = useAppStore((s) => s.addCursorLineChip);
     const selectedKey = useAppStore((s) => s.selectedKey);
     const { pathname } = useLocation();
     const valuesHidden = useAppStore(
@@ -47,7 +48,7 @@ export function ContextBar() {
                     className="chat-chip"
                     title={chipLabel(chip)}
                 >
-                    <KeyIcon />
+                    {chip.kind === 'key' ? <KeyIcon /> : <ConsoleIcon />}
                     <span className="mono ellip">{chipLabel(chip)}</span>
                     <button
                         type="button"
@@ -71,6 +72,15 @@ export function ContextBar() {
                     }
                 >
                     + Selected key
+                </button>
+            )}
+            {pathname === '/console' && current && (
+                <button
+                    type="button"
+                    className="chat-add"
+                    onClick={addCursorLine}
+                >
+                    + Current line
                 </button>
             )}
         </div>
