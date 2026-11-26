@@ -47,6 +47,8 @@ beforeEach(() => {
         baseUrl: '',
         localUrl: '',
         localModel: '',
+        agent: 'claude',
+        agents: [],
         defaultModel: 'claude-sonnet-5-5'
     });
     mocked.listAiActivityClients.mockResolvedValue([]);

@@ -97,6 +97,12 @@ export const CloseIcon = () => (
         <path d="M6 6l12 12M18 6 6 18" />
     </Svg>
 );
+export const CpuIcon = () => (
+    <Svg>
+        <rect x="5" y="5" width="14" height="14" rx="2" />
+        <path d="M9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
+    </Svg>
+);
 export const CloudIcon = () => (
     <Svg>
         <path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 10 4 4 0 0 1 18 18z" />

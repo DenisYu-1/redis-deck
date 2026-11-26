@@ -3,10 +3,8 @@
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const { version } = require('../../package.json');
-
-// The SDK gives up after 60 s by default; a call may wait for the user's
-// approval for 5 minutes.
-const CALL_TIMEOUT_MS = 10 * 60 * 1000;
+// The SDK gives up after 60 s by default.
+const { AGENT_CALL_TIMEOUT_MS } = require('./limits');
 
 // -> { listTools(), call({ name, args }, signal) -> { text, isError }, close() }
 async function openToolSession(server) {
@@ -21,7 +19,7 @@ async function openToolSession(server) {
                 const result = await client.callTool(
                     { name, arguments: args },
                     undefined,
-                    { signal, timeout: CALL_TIMEOUT_MS }
+                    { signal, timeout: AGENT_CALL_TIMEOUT_MS }
                 );
                 return {
                     text: result.content?.[0]?.text ?? '',

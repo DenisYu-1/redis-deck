@@ -37,6 +37,8 @@ describe('AI model routes', () => {
             localUrl: '',
             localModel: '',
             keyLast4: null,
+            agent: 'claude',
+            agents: [expect.objectContaining({ id: 'claude' })],
             ready: false
         });
     });
@@ -71,7 +73,7 @@ describe('AI model routes', () => {
     });
 
     it.each([
-        ['an unknown mode', { mode: 'agent' }],
+        ['an unknown mode', { mode: 'robot' }],
         ['an unknown provider', { provider: 'mistral' }],
         ['a model outside the list', { model: 'claude-2' }],
         ['a key with a line break', { apiKey: 'sk-ant-one\nsk-ant-two' }],

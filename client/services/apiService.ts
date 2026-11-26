@@ -816,9 +816,25 @@ export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
 // only its last four characters.
 export type AiProvider = 'anthropic' | 'openai' | 'openai-compatible';
 
-/** The API key and the Local model settings are kept side by side. */
+/** A Local agent: a CLI on the Redis Deck host. */
+export interface AiAgent {
+    id: string;
+    name: string;
+    command: string;
+    defaultArgs: string;
+    /** The saved path field; '' searches for the CLI */
+    path: string;
+    /** The saved Arguments, or the default ones */
+    args: string;
+    /** Where the CLI is; null: missing */
+    found: string | null;
+}
+
+/** The settings of every mode are kept side by side. */
 export interface AiModelChoice {
-    mode: 'api' | 'local';
+    mode: 'agent' | 'api' | 'local';
+    /** The chosen agent's id */
+    agent: string;
     provider: AiProvider;
     model: string;
     /** OpenAI-compatible only */
@@ -828,6 +844,7 @@ export interface AiModelChoice {
 }
 
 export interface AiModelSettings extends AiModelChoice {
+    agents: AiAgent[];
     /** The models Anthropic offers; the other providers take any model id */
     models: string[];
     defaultModel: string;
@@ -841,6 +858,9 @@ export interface AiModelSettings extends AiModelChoice {
 }
 
 export interface AiModelDraft extends AiModelChoice {
+    /** The chosen agent's path and Arguments fields */
+    agentPath: string;
+    agentArgs: string;
     /** A newly typed key; '' keeps the saved one */
     apiKey: string;
 }

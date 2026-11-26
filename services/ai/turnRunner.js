@@ -5,6 +5,7 @@ const { safeMessage } = require('../mcp/errors');
 const { systemPrompt } = require('./systemPrompt');
 const { createAssistantServer } = require('./assistantServer');
 const { openToolSession } = require('./toolSession');
+const { runAgentTurn } = require('./agentTurn');
 
 // A provider error can quote the request: never show the key or Connection
 // config in the chat.
@@ -14,7 +15,8 @@ function errorText(error, apiKey, connectionId) {
     return safeMessage(keyless, connectionId);
 }
 
-// model: { adapter, apiKey, model, baseUrl }. adapter.start({ apiKey, model,
+// model: { agent, path, args } (a Local agent, see agentTurn.js) or
+// { adapter, apiKey, model, baseUrl }. adapter.start({ apiKey, model,
 // baseUrl, system, tools (MCP tool list), messages }) -> { step({ onText, signal }) ->
 // { toolCalls: [{ id, name, args }], notice? }, addToolResults([{ id, text,
 // isError }]) }. The adapter keeps the provider's own message history.
@@ -24,7 +26,14 @@ function errorText(error, apiKey, connectionId) {
 // { type: 'error', message } and, last, { type: 'done' }. Aborting signal stops
 // the turn without an error and denies the writes still waiting for an answer.
 // chatId: the chat whose approval answers count (approvalDesk.js).
-async function runTurn({
+async function runTurn(request) {
+    return request.model.agent
+        ? runAgentTurn(request)
+        : runAdapterTurn(request);
+}
+
+// A turn whose tool loop runs here, against a provider.
+async function runAdapterTurn({
     chatId,
     connectionId,
     messages,
