@@ -36,9 +36,9 @@ export function AiToolsSection() {
         <section className="card sect" aria-label="Tools exposed">
             <h2>Tools exposed</h2>
             <p className="sm tx2">
-                A tool that is turned off is hidden from AI clients and refused
-                if called. Connection guards still apply to the tools that are
-                on.
+                A tool that is turned off is hidden from the assistant and AI
+                clients, and refused if called. Connection guards still apply to
+                the tools that are on.
             </p>
             {tools.map((tool) => (
                 <label key={tool.name} className="sw-row">

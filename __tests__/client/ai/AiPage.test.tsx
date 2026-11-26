@@ -104,24 +104,22 @@ test('sections come in order; AI clients cards are Desktop-only', async () => {
     renderPage();
     await screen.findAllByTestId('ai-activity-row');
     expect(sectionNames()).toEqual([
-        'AI assistant',
         'AI access',
         'Hidden fields',
+        'Tools exposed',
         'AI activity'
     ]);
-    expect(mocked.listAiTools).not.toHaveBeenCalled();
     cleanup();
 
     setDesktop(true);
     renderPage();
     await screen.findAllByTestId('ai-client-row');
     expect(sectionNames()).toEqual([
-        'AI assistant',
         'AI access',
         'Hidden fields',
         'MCP server',
-        'Tools exposed',
         'Add to a client',
+        'Tools exposed',
         'AI activity'
     ]);
 });

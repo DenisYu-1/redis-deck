@@ -11,19 +11,16 @@ A user who looks at a Connection wants to ask plain questions: "Which keys have 
 A chat panel in web, Docker and Desktop:
 
 - A floating button opens a side panel on every page except Welcome.
-- The model behind it is picked in the **AI assistant** section of the `/ai` page. There are three modes: **Local agent**, **API key** and **Local model**.
+- The model behind it is picked in the `/assistant` page. There are three modes: **Local agent**, **API key** and **Local model**.
 - The assistant uses the **same MCP tool registry** as AI clients. So **AI access**, hidden fields, tool switches and **AI activity** apply to it, and its client label is "Redis Deck Assistant".
 - Before a write, the chat shows an approval card instead of the native dialog.
 
 ## Decisions
 
-### Page (changes mcp-page ticket 01)
+### Pages (changes mcp-page ticket 01)
 
-- `/ai` (nav label **AI**) shows in every mode. Its sections:
-    - **AI assistant** (Model): all modes
-    - **What AI may do** (AI access, hidden fields): all modes
-    - **AI clients** (MCP server, Tools exposed, Add to a client): Desktop only
-    - **AI activity**: all modes
+- `/assistant` (nav label **Assistant**), all modes: the Model card.
+- `/ai` (nav label **AI access**), all modes: **AI access**, hidden fields, **Tools exposed**, **AI activity**. Desktop adds **MCP server** and **Add to a client**.
 
 ### Model card
 

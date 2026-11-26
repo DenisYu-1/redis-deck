@@ -43,7 +43,7 @@ Two processes, one repo:
 
 **Frontend** — React 18 + TypeScript + Vite, in `client/`. Design reference: `design/`, spec: `docs/v2-redesign/SPEC.md`, terms: `GLOSSARY.md`.
 
-- `client/App.tsx` — routes inside `AppShell`: `/` redirects to `/keys`; `/keys`, `/stats` and `/stats/:board`, `/connections`, `/ai` (AI clients, access, tools, hidden fields, activity log; replaces the old `/ai-activity` route), `/console`, `/workflows/:actionId`; `/settings` redirects to `/connections`. Pages live in `client/pages/<Name>/` (`Keys`, `Statistics`, `Console`, `Workflows`, `Connections`, `Ai`, `Welcome`).
+- `client/App.tsx` — routes inside `AppShell`: `/` redirects to `/keys`; `/keys`, `/stats` and `/stats/:board`, `/connections`, `/assistant` (assistant model), `/ai` (AI access: access, hidden fields, tools, activity log, and AI clients on Desktop; replaces the old `/ai-activity` route), `/console`, `/workflows/:actionId`; `/settings` redirects to `/connections`. Pages live in `client/pages/<Name>/` (`Keys`, `Statistics`, `Console`, `Workflows`, `Connections`, `Ai`, `Welcome`).
 - Shared UI in `client/components/{layout,ui}/`; pure helpers in `client/utils/`; theme tokens in `client/styles/`.
 - State: Zustand single store `client/store/useAppStore.ts` (connections, current connection, theme). Path alias `@/` → `client/`.
 - API calls go through `client/services/apiService.ts`.

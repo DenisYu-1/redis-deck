@@ -34,8 +34,8 @@ export function ChatPanel() {
                 {aiModel && (
                     <Link
                         className="pill off chat-model"
-                        to="/ai"
-                        title="Change the model in AI assistant settings"
+                        to="/assistant"
+                        title="Change the model on the Assistant page"
                     >
                         <span className="ellip">{modelLabel(aiModel)}</span>
                     </Link>

@@ -13,7 +13,6 @@ import {
     type AiClientSnippet,
     type AiClientStatus
 } from '@/services/apiService';
-import { AiToolsSection } from './AiToolsSection';
 
 const STATUS_LABEL: Record<AiClientStatus, string> = {
     'not-found': 'Not found',
@@ -38,8 +37,8 @@ interface Snippet extends AiClientSnippet {
 }
 
 /**
- * AI clients: MCP server card, Tools exposed and the install rows. Render only
- * in the Desktop app.
+ * AI clients: MCP server card and the install rows. Render only in the Desktop
+ * app.
  */
 export function AiClientsSection() {
     const [clients, setClients] = useState<AiClient[]>([]);
@@ -167,7 +166,6 @@ export function AiClientsSection() {
                     </ul>
                 )}
             </section>
-            <AiToolsSection />
             <section className="card sect" aria-label="Add to a client">
                 <h2>Add to a client</h2>
                 <div className="ctable-wrap">

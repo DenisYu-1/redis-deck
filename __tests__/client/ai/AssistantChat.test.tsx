@@ -64,7 +64,7 @@ test('sends a question, shows the streamed answer and its tool row, and keeps th
     const model = await chat.findByRole('link', {
         name: 'Anthropic · claude-sonnet-5-5'
     });
-    expect(model).toHaveAttribute('href', '/ai');
+    expect(model).toHaveAttribute('href', '/assistant');
     expect(chat.queryByText('No model is set up yet')).not.toBeInTheDocument();
 
     const input = chat.getByRole('textbox', { name: /message/i });

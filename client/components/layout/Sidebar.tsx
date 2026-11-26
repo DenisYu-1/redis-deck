@@ -6,6 +6,7 @@ import {
     ConsoleIcon,
     KeyIcon,
     SlidersIcon,
+    ChatIcon,
     SparkIcon
 } from '@/components/ui/Icons';
 import { ConnectionSwitcher } from './ConnectionSwitcher';
@@ -141,9 +142,13 @@ export function Sidebar() {
                     <SlidersIcon />
                     <span>Settings</span>
                 </NavLink>
+                <NavLink to="/assistant" className={navClass}>
+                    <ChatIcon />
+                    <span>Assistant</span>
+                </NavLink>
                 <NavLink to="/ai" className={navClass}>
                     <SparkIcon />
-                    <span>AI</span>
+                    <span>AI access</span>
                 </NavLink>
                 <ThemeToggle />
                 <div className="status mono xs">
