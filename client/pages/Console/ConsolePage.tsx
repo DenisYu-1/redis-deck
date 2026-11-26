@@ -5,7 +5,9 @@ import { runConsole, type ConsoleResult } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { showToast } from '@/utils/toast';
 import { ConsoleResults } from './ConsoleResults';
+import { ConsoleTabs } from './ConsoleTabs';
 import { selectedStatements } from './statements';
+import { useConsoleTabs } from './useConsoleTabs';
 import './console.css';
 
 export function ConsolePage() {
@@ -14,7 +16,7 @@ export function ConsolePage() {
     const env = currentEnvironment ?? '';
     const editor = useRef<HTMLTextAreaElement>(null);
     const running = useRef(false);
-    const [script, setScript] = useState('');
+    const consoleTabs = useConsoleTabs();
     const [run, setRun] = useState<{ env: string; results: ConsoleResult[] }>({
         env: '',
         results: []
@@ -56,6 +58,7 @@ export function ConsolePage() {
         <div className="console">
             <header className="chead">
                 <h1 className="sr">Console</h1>
+                <ConsoleTabs {...consoleTabs} />
                 {connection && (
                     <>
                         <TierBadge tier={connection.tier ?? 'local'} />
@@ -88,8 +91,8 @@ export function ConsolePage() {
                     wrap="off"
                     autoCapitalize="off"
                     autoComplete="off"
-                    value={script}
-                    onChange={(e) => setScript(e.target.value)}
+                    value={consoleTabs.active.script}
+                    onChange={(e) => consoleTabs.setScript(e.target.value)}
                     onKeyDown={onKeyDown}
                 />
                 <ConsoleResults results={run.env === env ? run.results : []} />

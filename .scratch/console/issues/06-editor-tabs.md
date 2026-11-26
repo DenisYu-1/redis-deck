@@ -4,8 +4,8 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Add (+), close and rename tabs
-- [ ] Tab names and editor text are kept in localStorage
-- [ ] A failure to read or write localStorage never breaks the page
+- [x] Add (+), close and rename tabs
+- [x] Tab names and editor text are kept in localStorage
+- [x] A failure to read or write localStorage never breaks the page
