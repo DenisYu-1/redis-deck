@@ -12,7 +12,10 @@ const editor = () =>
         name: /redis commands/i
     });
 const tab = (name: string) => screen.getByRole('tab', { name });
-const tabNames = () => screen.getAllByRole('tab').map((t) => t.textContent);
+const tabNames = () =>
+    within(screen.getByRole('tablist', { name: 'Consoles' }))
+        .getAllByRole('tab')
+        .map((t) => t.textContent);
 
 function setup() {
     const user = userEvent.setup();

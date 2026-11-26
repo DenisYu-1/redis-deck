@@ -4,11 +4,11 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Lines that start with `#`, `--` or `//` are skipped, and so are empty lines
-- [ ] Run all and Choose statements… run the expected statements in order
-- [ ] Execution stops at the first error; later statements get a Not run result
-- [ ] The Output line reads "stopped at line N"
-- [ ] The Output history is kept in memory only
-- [ ] Route test for stop on error with Not run results
+- [x] Lines that start with `#`, `--` or `//` are skipped, and so are empty lines
+- [x] Run all and Choose statements… run the expected statements in order
+- [x] Execution stops at the first error; later statements get a Not run result
+- [x] The Output line reads "stopped at line N"
+- [x] The Output history is kept in memory only
+- [x] Route test for stop on error with Not run results

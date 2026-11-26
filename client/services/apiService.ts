@@ -815,7 +815,8 @@ export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
 export interface ConsoleResult {
     line: number;
     text: string;
-    kind: 'integer' | 'status' | 'bulk' | 'nil' | 'array' | 'error';
+    /** 'not-run': an earlier statement failed, so this one did not run */
+    kind: 'integer' | 'status' | 'bulk' | 'nil' | 'array' | 'error' | 'not-run';
     /** The plain Redis reply; the error text when `kind` is 'error' */
     reply: unknown;
     ms: number;
