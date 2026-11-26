@@ -1,28 +1,12 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { TierBadge } from '@/components/ui/Badge';
 import { ChatIcon, CloseIcon, PlusIcon } from '@/components/ui/Icons';
 import { getAiModel } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { modelLabel } from '@/utils/aiModelLabel';
 import { ChatComposer } from './ChatComposer';
 import { ChatMessages } from './ChatMessages';
-
-/** What goes with every question: the current Connection. */
-function ContextBar() {
-    const current = useAppStore((s) => s.currentEnvironment);
-    const connection = useAppStore((s) =>
-        s.connections.find((c) => c.id === s.currentEnvironment)
-    );
-    return (
-        <div className="chat-context" aria-label="Context">
-            <span className="chat-chip" title="Current Connection">
-                <TierBadge tier={connection?.tier ?? 'local'} />
-                <span className="mono ellip">{current}</span>
-            </span>
-        </div>
-    );
-}
+import { ContextBar } from './ContextBar';
 
 export function ChatPanel() {
     const aiModel = useAppStore((s) => s.aiModel);

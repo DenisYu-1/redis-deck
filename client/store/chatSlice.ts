@@ -1,7 +1,8 @@
 // The AI assistant's chat: in memory for the browser session, gone on reload.
 import type { StateCreator } from 'zustand';
 import { streamAiChat, type ChatPart } from '@/services/aiChat';
-import type { AiModelSettings } from '@/services/apiService';
+import type { AiAccessRow, AiModelSettings } from '@/services/apiService';
+import type { ChatChip, PendingChips } from '@/utils/chatChips';
 import {
     applyEvent,
     endTurn,
@@ -16,6 +17,8 @@ export interface ChatState {
     /** A turn is running; only one at a time. */
     busy: boolean;
     draft: string;
+    /** Go with each question until removed. */
+    chips: PendingChips;
 }
 
 export interface ChatSlice {
@@ -23,9 +26,14 @@ export interface ChatSlice {
     /** The assistant's model settings, once loaded. */
     aiModel: AiModelSettings | null;
     setAiModel: (aiModel: AiModelSettings) => void;
+    /** AI access per Connection, shared by the AI page and the chat. */
+    aiAccess: AiAccessRow[];
+    setAiAccessRows: (rows: AiAccessRow[]) => void;
     setChatOpen: (open: boolean) => void;
     setChatDraft: (draft: string) => void;
     newChat: () => void;
+    addChatChip: (chip: ChatChip) => void;
+    removeChatChip: (kind: ChatChip['kind']) => void;
     sendChatMessage: (text: string) => Promise<void>;
 }
 
@@ -67,22 +75,43 @@ export const createChatSlice: StateCreator<
             open: false,
             messages: [],
             busy: false,
-            draft: ''
+            draft: '',
+            chips: {}
         },
         aiModel: null,
         setAiModel: (aiModel) => set({ aiModel }),
+        aiAccess: [],
+        setAiAccessRows: (aiAccess) => set({ aiAccess }),
         setChatOpen: (open) => patch({ open }),
         setChatDraft: (draft) => patch({ draft }),
         newChat: () => {
             turn?.abort();
-            patch({ id: newChatId(), messages: [], busy: false, draft: '' });
+            patch({
+                id: newChatId(),
+                messages: [],
+                busy: false,
+                draft: '',
+                chips: {}
+            });
+        },
+        addChatChip: (chip) =>
+            patch({ chips: { ...get().chat.chips, [chip.kind]: chip } }),
+        removeChatChip: (kind) => {
+            const { [kind]: removed, ...chips } = get().chat.chips;
+            if (removed) patch({ chips });
         },
         sendChatMessage: async (input) => {
             const text = input.trim();
             const connectionId = get().currentEnvironment;
             const { id, busy, messages } = get().chat;
+            const chips = Object.values(get().chat.chips);
             if (!text || busy || !connectionId) return;
-            const asked: ChatMessage[] = [...messages, { role: 'user', text }];
+            const question: ChatMessage = {
+                role: 'user',
+                text,
+                ...(chips.length > 0 && { chips })
+            };
+            const asked = [...messages, question];
             patch({
                 messages: [...asked, { role: 'assistant', parts: [] }],
                 busy: true,

@@ -1,4 +1,5 @@
 // One turn of the AI assistant. The server streams one JSON event per line.
+import type { ChatChip } from '@/utils/chatChips';
 
 export type ChatToolStatus = 'running' | 'ok' | 'denied' | 'blocked' | 'error';
 
@@ -25,7 +26,11 @@ export interface ChatTurnRequest {
     chatId: string;
     connectionId: string;
     /** The whole transcript, ending with the new question */
-    messages: { role: 'user' | 'assistant'; text: string }[];
+    messages: {
+        role: 'user' | 'assistant';
+        text: string;
+        chips?: ChatChip[];
+    }[];
 }
 
 /** Resolves once the turn is done; rejects when it cannot run or is cut off. */
