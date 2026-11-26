@@ -224,3 +224,12 @@ it('has no Copy JSON for a scalar', async () => {
 
     expect(panel().queryByRole('button', { name: 'Copy JSON' })).toBeNull();
 });
+
+it('names the cluster Node that answered', async () => {
+    await show({
+        ...result('DBSIZE', 3, 'integer'),
+        node: '10.0.0.7:7001'
+    });
+
+    expect(panel().getByText(/node 10\.0\.0\.7:7001/)).toBeInTheDocument();
+});

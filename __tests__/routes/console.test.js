@@ -19,7 +19,8 @@ const {
     removeConnections
 } = require('../helpers/guardedConnections');
 
-// Clustered Connections are not supported by the Console yet.
+// Standalone only (the helpers here do not follow redirects); clustered
+// Connections are covered by __tests__/cluster/console.cluster.test.js.
 const standalone =
     process.env.REDIS_TEST_CLUSTER === 'true' ? describe.skip : describe;
 
@@ -389,16 +390,6 @@ standalone('Console routes', () => {
                 kind: 'error',
                 reply: 'connect ECONNREFUSED ***:***'
             });
-        });
-
-        test('refuses a clustered Connection', async () => {
-            const id = connection(`test-console01-cluster-${Date.now()}`, {
-                cluster: true
-            });
-
-            const { body } = await run(['PING'], id).expect(400);
-
-            expect(body.error).toMatch(/clustered/i);
         });
     });
 

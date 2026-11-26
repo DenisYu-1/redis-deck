@@ -121,7 +121,9 @@ function looksLikeRedisError(text) {
 }
 
 // Turn a failed redis-cli spawn into the {message, command, code} error shape.
-function cliError(error, command) {
+// `quiet`: log nothing and never use error.message, which is the whole command
+// line (for Console commands, which are never recorded).
+function cliError(error, command, { quiet = false } = {}) {
     if (error.code === 'ENOENT') {
         return {
             message:
@@ -144,6 +146,13 @@ function cliError(error, command) {
             command,
             code: 'REDIS_ERROR'
         };
+    }
+    if (quiet) {
+        // a timed out command may have printed part of its reply
+        const message = error.killed
+            ? 'redis-cli timed out'
+            : text || `redis-cli failed (${error.code})`;
+        return { message, command, code: error.code || 'ERR' };
     }
     console.error(
         `Error executing Redis command (${command}):`,
@@ -278,6 +287,24 @@ async function execArgv(argv, connectionId, nodeOverride = null) {
     return out ? JSON.parse(out) : null;
 }
 
+// One Console command through `redis-cli -c`, which follows MOVED/ASK when the
+// command has a Key. RESP2, so maps stay flat arrays and doubles stay text.
+// -> stdout as redis-cli printed it. Logs nothing.
+async function execArgvRedirected(argv, connectionId, nodeOverride = null) {
+    const config = getConnectionConfig(connectionId);
+    const flags = ['-c', '-2', '--json'];
+    try {
+        return await runRedisCli(
+            [...connArgs(config, nodeOverride), ...flags, ...argv],
+            { connectionId }
+        );
+    } catch (error) {
+        const err = cliError(error, argv[0], { quiet: true });
+        dropTopologyOnError(connectionId, err);
+        throw err;
+    }
+}
+
 // One argument as a redis-cli stdin token: double-quoted, every byte outside
 // printable ASCII (and " / \\) as \\xHH. Exact for any valid UTF-8 string;
 // Keys reach us as JS strings (SCAN via --csv), so a Key holding invalid UTF-8
@@ -381,12 +408,54 @@ async function isClusterMode(connectionId) {
     }
 }
 
-// Get cluster nodes if in cluster mode
-async function getClusterNodes(connectionId) {
+// The master Nodes of a clustered Connection, cached. Throws when the cluster
+// cannot be asked.
+async function fetchClusterNodes(connectionId) {
     const cached = cachedTopology(connectionId);
     if (cached) {
         return cached;
     }
+    const nodesInfo = await execRedisCommand('CLUSTER NODES', connectionId);
+
+    const nodes = nodesInfo
+        .split('\n')
+        .filter((line) => line.trim() !== '')
+        .map((line) => {
+            const parts = line.trim().split(' ');
+            if (parts.length < 2) return null;
+
+            const nodeId = parts[0];
+            const addressParts = parts[1].split('@')[0].split(':');
+            const host = addressParts[0];
+            const port = parseInt(addressParts[1]);
+            const flags = parts[2].split(',');
+            const isMaster =
+                !flags.includes('slave') && !flags.includes('replica');
+
+            return {
+                id: nodeId,
+                host,
+                port,
+                isMaster,
+                flags
+            };
+        })
+        .filter((node) => node !== null);
+
+    const masterNodes = nodes.filter((node) => node.isMaster);
+    // Sorted by id: the Scan cursor set maps cursors to Nodes by position,
+    // so a refresh mid-search must keep the same order.
+    // ponytail: a Node added or removed mid-search still shifts positions
+    // (cursors land on the wrong Node). Rare; the user restarts the search.
+    const resolved = (masterNodes.length > 0 ? masterNodes : nodes).sort(
+        (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+    );
+    cacheTopology(connectionId, resolved);
+    return resolved;
+}
+
+// Get cluster nodes if in cluster mode
+async function getClusterNodes(connectionId) {
     try {
         const config = getConnectionConfig(connectionId);
 
@@ -400,43 +469,7 @@ async function getClusterNodes(connectionId) {
             ];
         }
 
-        const nodesInfo = await execRedisCommand('CLUSTER NODES', connectionId);
-
-        const nodes = nodesInfo
-            .split('\n')
-            .filter((line) => line.trim() !== '')
-            .map((line) => {
-                const parts = line.trim().split(' ');
-                if (parts.length < 2) return null;
-
-                const nodeId = parts[0];
-                const addressParts = parts[1].split('@')[0].split(':');
-                const host = addressParts[0];
-                const port = parseInt(addressParts[1]);
-                const flags = parts[2].split(',');
-                const isMaster =
-                    !flags.includes('slave') && !flags.includes('replica');
-
-                return {
-                    id: nodeId,
-                    host,
-                    port,
-                    isMaster,
-                    flags
-                };
-            })
-            .filter((node) => node !== null);
-
-        const masterNodes = nodes.filter((node) => node.isMaster);
-        // Sorted by id: the Scan cursor set maps cursors to Nodes by position,
-        // so a refresh mid-search must keep the same order.
-        // ponytail: a Node added or removed mid-search still shifts positions
-        // (cursors land on the wrong Node). Rare; the user restarts the search.
-        const resolved = (masterNodes.length > 0 ? masterNodes : nodes).sort(
-            (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
-        );
-        cacheTopology(connectionId, resolved);
-        return resolved;
+        return await fetchClusterNodes(connectionId);
     } catch (error) {
         console.error('Error getting cluster nodes:', error);
         return [
@@ -631,8 +664,10 @@ module.exports = {
     parseRedisInfo,
     isClusterMode,
     getClusterNodes,
+    fetchClusterNodes,
     dropTopology,
     scanClusterNodes,
     execArgv,
-    execArgvBatch
+    execArgvBatch,
+    execArgvRedirected
 };

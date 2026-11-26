@@ -1,16 +1,19 @@
-// The Console's allowed list (ADR 0006): command -> { access, warning? }.
+// The Console's allowed list (ADR 0006): command -> { access, keyless?, warning? }.
 // Anything not listed is refused; a command with subcommands is listed once per
 // allowed subcommand. Never add anything in TURNED_OFF.
 const read = { access: 'read' };
 const write = { access: 'write' };
+// A read without a Key: on a cluster `redis-cli -c` has nothing to redirect, so
+// one Node answers and the result names it.
+const keyless = { access: 'read', keyless: true };
 
 const COMMANDS = {
-    PING: read,
-    ECHO: read,
-    DBSIZE: read,
-    SCAN: read,
+    PING: keyless,
+    ECHO: keyless,
+    DBSIZE: keyless,
+    SCAN: keyless,
     KEYS: {
-        access: 'read',
+        ...keyless,
         warning: 'KEYS blocks Redis while it walks every key. Prefer SCAN.'
     },
     TYPE: read,
@@ -31,11 +34,11 @@ const COMMANDS = {
     'OBJECT ENCODING': read,
     'OBJECT IDLETIME': read,
     'OBJECT FREQ': read,
-    INFO: read,
-    'SLOWLOG GET': read,
-    'CLIENT LIST': read,
-    'CONFIG GET': read,
-    RANDOMKEY: read,
+    INFO: keyless,
+    'SLOWLOG GET': keyless,
+    'CLIENT LIST': keyless,
+    'CONFIG GET': keyless,
+    RANDOMKEY: keyless,
     SET: write,
     HSET: write,
     HDEL: write,

@@ -78,7 +78,9 @@ export function ConsoleResults({ env, results, tab, onTab, onRerun }: Props) {
                         <div className="rhead mono xs">
                             <span className="ellip">{result.text}</span>
                             <span className="mu">
-                                line {result.line} · {env} · {result.ms} ms
+                                line {result.line} · {env}
+                                {result.node && ` · node ${result.node}`} ·{' '}
+                                {result.ms} ms
                             </span>
                         </div>
                         <ConsoleReply
