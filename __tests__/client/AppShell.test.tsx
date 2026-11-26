@@ -105,6 +105,20 @@ describe('sidebar', () => {
         expect(screen.getByTestId('path')).toHaveTextContent('/stats');
     });
 
+    it('opens the Console from the item below Statistics', async () => {
+        const user = userEvent.setup();
+        renderAt('/keys');
+        const link = await screen.findByRole('link', { name: /console/i });
+        expect(
+            screen.getByRole('link', { name: /statistics/i }).nextSibling
+        ).toBe(link);
+        await user.click(link);
+        expect(screen.getByTestId('path')).toHaveTextContent('/console');
+        expect(
+            screen.getByRole('textbox', { name: /redis commands/i })
+        ).toBeInTheDocument();
+    });
+
     it('theme toggle switches data-theme and persists', async () => {
         const user = userEvent.setup();
         renderAt('/keys');

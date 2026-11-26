@@ -5,6 +5,7 @@ import { ConnectionsPage } from './pages/Connections/ConnectionsPage';
 import { StatisticsApp } from './pages/Statistics/StatisticsApp';
 import { WorkflowPage } from './pages/Workflows/WorkflowPage';
 import { AiPage } from './pages/Ai/AiPage';
+import { ConsolePage } from './pages/Console/ConsolePage';
 
 export function AppRoutes() {
     return (
@@ -14,6 +15,7 @@ export function AppRoutes() {
                 <Route path="/keys" element={<KeysPage />} />
                 <Route path="/stats" element={<StatisticsApp />} />
                 <Route path="/stats/:board" element={<StatisticsApp />} />
+                <Route path="/console" element={<ConsolePage />} />
                 <Route path="/connections" element={<ConnectionsPage />} />
                 <Route path="/ai" element={<AiPage />} />
                 <Route path="/workflows/:actionId" element={<WorkflowPage />} />

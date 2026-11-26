@@ -1,0 +1,96 @@
+.console {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.chead {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: var(--tb, 0px) 14px 0;
+    border-bottom: 1px solid var(--bd);
+    background: var(--sf);
+    font-size: 12px;
+    color: var(--tx2);
+    flex: none;
+}
+.ctool {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--bd);
+    flex: none;
+}
+.chint {
+    margin-left: auto;
+}
+.csplit {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(150px, 1fr) minmax(220px, 44%);
+}
+.ced {
+    width: 100%;
+    min-height: 0;
+    resize: none;
+    padding: 10px 14px;
+    border: 0;
+    border-bottom: 1px solid var(--bd);
+    background: var(--code);
+    font-family: var(--f-mono);
+    font-size: 13px;
+    line-height: 22px;
+}
+.results {
+    min-height: 0;
+    overflow: auto;
+    background: var(--sf);
+}
+.rhead {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--bd);
+}
+.scalar {
+    padding: 14px;
+    font-family: var(--f-mono);
+    font-size: 13px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.rerr {
+    margin: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--acs);
+    color: var(--ac);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.rgrid {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--f-mono);
+    font-size: 12px;
+}
+.rgrid td {
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--bd);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.rgrid td.rn {
+    width: 1%;
+    color: var(--mu);
+    text-align: right;
+}

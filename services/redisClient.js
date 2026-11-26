@@ -8,6 +8,9 @@ const { getConnectionConfig } = require('./database');
 const clients = new Map(); // connectionId -> Promise<RedisClient>
 
 function makeClient(cfg) {
+    // Retry only a connection that has worked: a first connect that fails must
+    // reject, or every caller of getClient waits for ever.
+    let wasReady = false;
     const client = createClient({
         username: cfg.username || undefined,
         password: cfg.password || undefined,
@@ -18,8 +21,13 @@ function makeClient(cfg) {
             tls: cfg.tls ? true : undefined,
             rejectUnauthorized: cfg.tls ? cfg.verifyTls !== false : undefined, // mirrors redis-cli --insecure when verify is off
             connectTimeout: 10000,
-            reconnectStrategy: (retries) => Math.min(retries * 200, 2000)
+            // false = give up; connect() then rejects with the socket error
+            reconnectStrategy: (retries) =>
+                wasReady ? Math.min(retries * 200, 2000) : false
         }
+    });
+    client.on('ready', () => {
+        wasReady = true;
     });
     client.on('error', (err) =>
         console.error(`redis client error:`, err.message)

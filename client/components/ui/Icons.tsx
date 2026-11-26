@@ -29,6 +29,11 @@ export const ChartIcon = () => (
         <path d="M4 20V10M10 20V4M16 20v-8M22 20H2" />
     </Svg>
 );
+export const ConsoleIcon = () => (
+    <Svg>
+        <path d="m4 17 6-5-6-5M12 19h8" />
+    </Svg>
+);
 export const SlidersIcon = () => (
     <Svg>
         <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />

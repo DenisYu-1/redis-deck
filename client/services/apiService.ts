@@ -811,3 +811,25 @@ export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields })
     });
+
+export interface ConsoleResult {
+    line: number;
+    text: string;
+    kind: 'integer' | 'status' | 'bulk' | 'nil' | 'array' | 'error';
+    /** The plain Redis reply; the error text when `kind` is 'error' */
+    reply: unknown;
+    ms: number;
+}
+
+/** Runs Console statements in order on a Connection (ADR 0006). */
+export async function runConsole(
+    environment: string,
+    statements: { line: number; text: string }[]
+): Promise<ConsoleResult[]> {
+    const response = await fetch(
+        `${API_BASE}/console/run?env=${encodeURIComponent(environment)}`,
+        jsonPost({ statements })
+    );
+    return (await handleResponse<{ results: ConsoleResult[] }>(response))
+        .results;
+}
