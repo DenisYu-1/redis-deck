@@ -27,7 +27,12 @@ jest.mock('@/services/apiService', () => ({
         provider: 'anthropic',
         model: 'claude-sonnet-5-5',
         models: ['claude-sonnet-5-5'],
-        keyLast4: '9F2c'
+        keyLast4: '9F2c',
+        ready: true,
+        baseUrl: '',
+        localUrl: '',
+        localModel: '',
+        defaultModel: 'claude-sonnet-5-5'
     })
 }));
 

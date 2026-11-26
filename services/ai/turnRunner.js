@@ -14,8 +14,8 @@ function errorText(error, apiKey, connectionId) {
     return safeMessage(keyless, connectionId);
 }
 
-// model: { adapter, apiKey, model }. adapter.start({ apiKey, model, system,
-// tools (MCP tool list), messages }) -> { step({ onText, signal }) ->
+// model: { adapter, apiKey, model, baseUrl }. adapter.start({ apiKey, model,
+// baseUrl, system, tools (MCP tool list), messages }) -> { step({ onText, signal }) ->
 // { toolCalls: [{ id, name, args }], notice? }, addToolResults([{ id, text,
 // isError }]) }. The adapter keeps the provider's own message history.
 //
@@ -35,6 +35,7 @@ async function runTurn({ connectionId, messages, model, emit, signal }) {
         const conversation = model.adapter.start({
             apiKey: model.apiKey,
             model: model.model,
+            baseUrl: model.baseUrl,
             system: systemPrompt({
                 id: connectionId,
                 tier: normalizeTier(tier)

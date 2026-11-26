@@ -814,17 +814,30 @@ export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
 
 // The model behind the AI assistant. The server never sends the API key back,
 // only its last four characters.
+export type AiProvider = 'anthropic' | 'openai' | 'openai-compatible';
+
+/** The API key and the Local model settings are kept side by side. */
 export interface AiModelChoice {
-    mode: 'api';
-    provider: 'anthropic';
+    mode: 'api' | 'local';
+    provider: AiProvider;
     model: string;
+    /** OpenAI-compatible only */
+    baseUrl: string;
+    localUrl: string;
+    localModel: string;
 }
 
 export interface AiModelSettings extends AiModelChoice {
-    /** The models the provider offers */
+    /** The models Anthropic offers; the other providers take any model id */
     models: string[];
-    /** null: no key saved; '': saved, too short to show any of it */
+    defaultModel: string;
+    /**
+     * Of the key saved for `provider` and `baseUrl`. null: no key saved; '':
+     * saved, too short to show any of it
+     */
     keyLast4: string | null;
+    /** The chosen mode has what a chat turn needs */
+    ready: boolean;
 }
 
 export interface AiModelDraft extends AiModelChoice {
@@ -836,6 +849,8 @@ export interface AiModelTestResult {
     ok: boolean;
     title: string;
     detail: string;
+    /** Local model: what the server offers */
+    models?: string[];
 }
 
 export const getAiModel = async (): Promise<AiModelSettings> =>
@@ -858,6 +873,13 @@ export const testAiModel = async (
     handleResponse<AiModelTestResult>(
         await fetch(`${API_BASE}/ai-model/test`, jsonPost(draft))
     );
+
+export const listAiLocalModels = async (localUrl: string): Promise<string[]> =>
+    (
+        await handleResponse<{ models: string[] }>(
+            await fetch(`${API_BASE}/ai-model/models`, jsonPost({ localUrl }))
+        )
+    ).models;
 
 export interface ConsoleCommands {
     /** The allowed list (ADR 0006), by command name */
