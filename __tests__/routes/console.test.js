@@ -14,6 +14,10 @@ const {
     deleteTestKeys,
     keyExists
 } = require('../helpers/testHelpers');
+const {
+    addGuardedConnection,
+    removeConnections
+} = require('../helpers/guardedConnections');
 
 // Clustered Connections are not supported by the Console yet.
 const standalone =
@@ -47,21 +51,30 @@ standalone('Console routes', () => {
         expect(result.ms).toEqual(expect.any(Number));
     });
 
-    test('serves the allowed list: read commands, with a warning on KEYS', async () => {
+    test('serves the allowed list: reads and writes, with a warning on KEYS', async () => {
         const { body } = await request(app)
             .get('/api/console/commands')
             .expect(200);
 
-        const listed = (
+        const reads = (
             'PING,ECHO,DBSIZE,SCAN,KEYS,TYPE,TTL,PTTL,EXISTS,GET,STRLEN,' +
             'HGETALL,HGET,HKEYS,HLEN,LLEN,LRANGE,ZRANGE,ZCARD,MEMORY USAGE,' +
             'OBJECT ENCODING,OBJECT IDLETIME,OBJECT FREQ,INFO,SLOWLOG GET,' +
             'CLIENT LIST,CONFIG GET,RANDOMKEY'
         ).split(',');
-        expect(Object.keys(body.commands).sort()).toEqual(listed.sort());
-        for (const command of Object.values(body.commands)) {
-            expect(command.access).toBe('read');
-        }
+        const writes =
+            'SET,HSET,HDEL,LPUSH,RPUSH,DEL,UNLINK,EXPIRE,PERSIST,RENAME,INCR'.split(
+                ','
+            );
+        const listed = (access) =>
+            Object.keys(body.commands)
+                .filter((name) => body.commands[name].access === access)
+                .sort();
+        expect(listed('read')).toEqual(reads.sort());
+        expect(listed('write')).toEqual(writes.sort());
+        expect(Object.keys(body.commands)).toHaveLength(
+            reads.length + writes.length
+        );
         expect(body.commands.KEYS.warning).toMatch(/Prefer SCAN/);
     });
 
@@ -93,31 +106,53 @@ standalone('Console routes', () => {
         });
     });
 
-    test.each([
-        'SET',
-        'HSET',
-        'HDEL',
-        'LPUSH',
-        'RPUSH',
-        'DEL',
-        'UNLINK',
-        'EXPIRE',
-        'PERSIST',
-        'RENAME',
-        'INCR'
-    ])('refuses the write %s', async (command) => {
-        const key = `${PREFIX}:untouched`;
-        await createTestKey(key, '1');
+    test('runs the listed writes', async () => {
+        const key = `${PREFIX}:w`;
 
-        const [result] = await results(`${command} ${key} 2`);
+        const list = await results(
+            `SET ${key}:s 1`,
+            `INCR ${key}:s`,
+            `EXPIRE ${key}:s 100`,
+            `PERSIST ${key}:s`,
+            `RENAME ${key}:s ${key}:renamed`,
+            `HSET ${key}:h a 1 b 2`,
+            `HDEL ${key}:h a`,
+            `LPUSH ${key}:l x`,
+            `RPUSH ${key}:l y`,
+            `LRANGE ${key}:l 0 -1`,
+            `DEL ${key}:renamed`,
+            `UNLINK ${key}:h ${key}:l`
+        );
 
-        expect(result).toMatchObject({
-            kind: 'error',
-            reply: `${command} is not supported in this console`
-        });
+        expect(list.map((r) => r.reply)).toEqual([
+            'OK',
+            2,
+            1,
+            1,
+            'OK',
+            2,
+            1,
+            1,
+            2,
+            ['x', 'y'],
+            1,
+            2
+        ]);
+        expect(await keyExists(`${key}:renamed`)).toBe(false);
+    });
+
+    test('keeps the writes that ran before a later error', async () => {
+        const key = `${PREFIX}:applied`;
+
+        const list = await results(
+            `SET ${key} v`,
+            `INCR ${key}`,
+            `SET ${key} later`
+        );
+
+        expect(list.map((r) => r.kind)).toEqual(['status', 'error', 'not-run']);
         const [after] = await results(`GET ${key}`);
-        expect(after.reply).toBe('1');
-        expect(await keyExists(key)).toBe(true);
+        expect(after.reply).toBe('v');
     });
 
     test('runs listed subcommands and lower-case commands', async () => {
@@ -332,6 +367,70 @@ standalone('Console routes', () => {
 
             expect(body.error).toMatch(/clustered/i);
         });
+    });
+
+    describe('writes and the write guard', () => {
+        const RO = 'test-console03-ro';
+        const CW = 'test-console03-cw';
+        const key = `${PREFIX}:guarded`;
+        // a read first: it must not run either
+        const BATCH = [`GET ${key}`, `SET ${key} new`, `del ${key}:other`];
+        const WRITES = [
+            { line: 1, text: BATCH[1] },
+            { line: 2, text: BATCH[2] }
+        ];
+
+        beforeAll(() => {
+            addGuardedConnection(RO, { readOnly: true });
+            addGuardedConnection(CW, { confirmWrites: true });
+        });
+        afterAll(() => removeConnections(RO, CW));
+        beforeEach(() => createTestKey(key, 'old'));
+
+        const value = async () => (await results(`GET ${key}`))[0].reply;
+
+        test.each([
+            [403, RO, /read-only/],
+            [428, CW, /need confirmation/]
+        ])('answers %i and runs nothing on %s', async (status, env, error) => {
+            const { body } = await run(BATCH, env).expect(status);
+
+            expect(body).toEqual({
+                error: expect.stringMatching(error),
+                code: status,
+                writes: WRITES
+            });
+            expect(await value()).toBe('old');
+        });
+
+        test('runs the whole batch on a confirmed retry', async () => {
+            const { body } = await run(BATCH, CW)
+                .set('X-Confirm-Connection', CW)
+                .expect(200);
+
+            expect(body.results.map((r) => r.reply)).toEqual(['old', 'OK', 0]);
+            expect(await value()).toBe('new');
+        });
+
+        test('a confirmation does not open a Read-only Connection', async () => {
+            await run(BATCH, RO).set('X-Confirm-Connection', RO).expect(403);
+
+            expect(await value()).toBe('old');
+        });
+
+        test.each([RO, CW])(
+            'needs no confirmation for a read-only batch on %s',
+            async (env) => {
+                const { body } = await run([`GET ${key}`, 'PING'], env).expect(
+                    200
+                );
+
+                expect(body.results.map((r) => r.reply)).toEqual([
+                    'old',
+                    'PONG'
+                ]);
+            }
+        );
     });
 
     test('answers 404 for an unknown Connection', async () => {
