@@ -102,6 +102,19 @@ export const CloudIcon = () => (
         <path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 10 4 4 0 0 1 18 18z" />
     </Svg>
 );
+export const ServerIcon = () => (
+    <Svg>
+        <rect x="3" y="4" width="18" height="7" rx="2" />
+        <rect x="3" y="13" width="18" height="7" rx="2" />
+        <path d="M7 7.5h.01M7 16.5h.01" />
+    </Svg>
+);
+export const InfoIcon = () => (
+    <Svg>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v5M12 8h.01" />
+    </Svg>
+);
 export const CheckIcon = () => (
     <Svg>
         <path d="m5 12 5 5L20 7" />

@@ -193,7 +193,11 @@ describe('AI assistant turn runner', () => {
             answerApproval({ chatId: CHAT, id: card.id, approved });
 
         beforeAll(() => addGuardedConnection(GUARDED, {}));
-        afterAll(() => removeConnections(GUARDED));
+        afterAll(() => {
+            removeConnections(GUARDED);
+            db.prepare('DELETE FROM settings').run();
+            db.prepare('DELETE FROM ai_access').run();
+        });
 
         beforeEach(async () => {
             db.prepare('DELETE FROM settings').run();

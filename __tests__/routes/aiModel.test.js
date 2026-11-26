@@ -32,7 +32,12 @@ describe('AI model routes', () => {
                 'claude-sonnet-5-5',
                 'claude-haiku-5-5'
             ],
-            keyLast4: null
+            defaultModel: 'claude-sonnet-5-5',
+            baseUrl: '',
+            localUrl: '',
+            localModel: '',
+            keyLast4: null,
+            ready: false
         });
     });
 
@@ -67,7 +72,7 @@ describe('AI model routes', () => {
 
     it.each([
         ['an unknown mode', { mode: 'agent' }],
-        ['an unknown provider', { provider: 'openai' }],
+        ['an unknown provider', { provider: 'mistral' }],
         ['a model outside the list', { model: 'claude-2' }],
         ['a key with a line break', { apiKey: 'sk-ant-one\nsk-ant-two' }],
         ['a key that is not text', { apiKey: 42 }]

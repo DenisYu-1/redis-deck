@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import type { ChatPart } from '@/services/aiChat';
 import { useAppStore } from '@/store/useAppStore';
 import { ApprovalCard } from './ApprovalCard';
+import { chipLabel } from '@/utils/chatChips';
 import { Markdown } from './Markdown';
+import { Suggestions } from './Suggestions';
 import { ToolRow } from './ToolRow';
 
 function Part({ part }: { part: ChatPart }) {
@@ -39,6 +41,7 @@ function EmptyChat() {
                 and drafts commands for you. Changes follow your AI access
                 rules.
             </p>
+            <Suggestions />
         </div>
     );
 }
@@ -71,6 +74,11 @@ export function ChatMessages() {
             {messages.map((message, i) =>
                 message.role === 'user' ? (
                     <div key={i} className="chat-msg user">
+                        {message.chips && (
+                            <span className="chat-sent mono ellip">
+                                {message.chips.map(chipLabel).join(' · ')}
+                            </span>
+                        )}
                         {message.text}
                     </div>
                 ) : (

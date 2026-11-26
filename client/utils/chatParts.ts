@@ -1,7 +1,9 @@
 import type { ChatEvent, ChatPart, ChatTurnRequest } from '@/services/aiChat';
+import type { ChatChip } from './chatChips';
 
 export type ChatMessage =
-    { role: 'user'; text: string } | { role: 'assistant'; parts: ChatPart[] };
+    | { role: 'user'; text: string; chips?: ChatChip[] }
+    | { role: 'assistant'; parts: ChatPart[] };
 
 /** An assistant message's parts after one more event of its turn. */
 export function applyEvent(parts: ChatPart[], event: ChatEvent): ChatPart[] {
@@ -55,7 +57,6 @@ const textOf = (parts: ChatPart[]): string =>
 export const transcriptOf = (
     messages: ChatMessage[]
 ): ChatTurnRequest['messages'] =>
-    messages.map((m) => ({
-        role: m.role,
-        text: m.role === 'user' ? m.text : textOf(m.parts)
-    }));
+    messages.map((m) =>
+        m.role === 'user' ? m : { role: m.role, text: textOf(m.parts) }
+    );

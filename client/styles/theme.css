@@ -1394,6 +1394,17 @@ body:has(.titlebar) .toolbar {
     justify-content: flex-end;
     gap: 8px;
 }
+.aim-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    font-size: 12px;
+    color: var(--tx2);
+}
+.aim-note svg {
+    flex: none;
+}
 .pill {
     display: inline-flex;
     align-items: center;

@@ -42,7 +42,12 @@ beforeEach(() => {
         provider: 'anthropic',
         model: 'claude-sonnet-5-5',
         models: ['claude-sonnet-5-5'],
-        keyLast4: null
+        keyLast4: null,
+        ready: false,
+        baseUrl: '',
+        localUrl: '',
+        localModel: '',
+        defaultModel: 'claude-sonnet-5-5'
     });
     mocked.listAiActivityClients.mockResolvedValue([]);
     mocked.listAiTools.mockResolvedValue([]);

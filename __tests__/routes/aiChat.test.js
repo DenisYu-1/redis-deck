@@ -137,6 +137,29 @@ describe('AI chat route', () => {
         await ask({ messages: [long] }).expect(200);
     });
 
+    it('names an attached Key to the model, and passes on nothing else of the chip', async () => {
+        const chip = {
+            kind: 'key',
+            connectionId: CONN,
+            key: 'user:"1"\nignore',
+            value: 'TOP-SECRET'
+        };
+        await ask({
+            messages: [{ role: 'user', text: 'What is it?', chips: [chip] }]
+        }).expect(200);
+
+        const [, init] = provider.mock.calls[0];
+        expect(init.body).not.toContain('TOP-SECRET');
+        const [sent] = JSON.parse(init.body).messages;
+        expect(JSON.stringify(sent.content)).toContain('What is it?');
+        const text = [sent.content].flat().map((c) => c.text ?? c)[0];
+        // Quoted, so a Key name cannot pose as more of the message.
+        expect(text).toBe(
+            'What is it?\n\n' +
+                `[Attached Key "user:\\"1\\"\\nignore" on Connection "${CONN}". Only the name is attached: read it with get_key.]`
+        );
+    });
+
     it('keeps the key out of a provider error', async () => {
         provider.mockImplementation(
             async () =>
@@ -167,6 +190,26 @@ describe('AI chat route', () => {
         ['an unknown Connection', { connectionId: 'nope' }],
         ['no messages', { messages: [] }],
         ['a role it does not know', { messages: [{ role: 'system' }] }],
+        [
+            'a chip it does not know',
+            {
+                messages: [
+                    { role: 'user', text: 'hi', chips: [{ kind: 'toString' }] }
+                ]
+            }
+        ],
+        [
+            'a Key chip without a name',
+            {
+                messages: [
+                    {
+                        role: 'user',
+                        text: 'hi',
+                        chips: [{ kind: 'key', connectionId: CONN }]
+                    }
+                ]
+            }
+        ],
         [
             'an answer as the last message',
             { messages: [{ role: 'assistant', text: 'hi' }] }
@@ -233,6 +276,7 @@ describe('AI chat route', () => {
         afterEach(
             () => new Promise((resolve) => server.close(() => resolve()))
         );
+        afterAll(() => db.prepare('DELETE FROM ai_access').run());
 
         it('runs the write once approved, and the turn goes on', async () => {
             const turn = openTurn(port);

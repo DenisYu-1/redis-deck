@@ -10,7 +10,7 @@ export function ChatComposer() {
     const connection = useAppStore((s) => s.currentEnvironment);
     const draft = useAppStore((s) => s.chat.draft);
     const busy = useAppStore((s) => s.chat.busy);
-    const noModel = useAppStore((s) => s.aiModel?.keyLast4 === null);
+    const noModel = useAppStore((s) => s.aiModel?.ready === false);
     const setDraft = useAppStore((s) => s.setChatDraft);
     const send = useAppStore((s) => s.sendChatMessage);
     const input = useRef<HTMLTextAreaElement>(null);
