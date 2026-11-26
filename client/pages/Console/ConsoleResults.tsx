@@ -49,7 +49,7 @@ export function ConsoleResults({ env, results, tab, onTab }: Props) {
     const result = tab === 'output' ? undefined : results[tab];
     return (
         <section className="results" aria-label="Results">
-            <div className="rtabs" role="tablist">
+            <div className="rtabs" role="tablist" aria-label="Statements run">
                 <Tab selected={!result} onClick={() => onTab('output')}>
                     Output <span className="mono xs mu">{count}</span>
                 </Tab>

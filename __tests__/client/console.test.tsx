@@ -14,6 +14,7 @@ const result = (
 ): ConsoleResult => ({ line: 1, text, kind, reply, ms: 1.5 });
 
 beforeEach(() => {
+    localStorage.clear(); // the editor text is kept there
     run.mockReset().mockResolvedValue([]);
     useAppStore.setState({
         consoleOutput: [],
@@ -198,12 +199,12 @@ it('shows one tab per statement run, with Not run after an error', async () => {
     await user.click(button(/run all/i));
 
     await screen.findByText('PONG');
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
-        'Output 3',
-        '1: PING',
-        '2: GET',
-        '3: TTL'
-    ]);
+    const ran = screen.getByRole('tablist', { name: 'Statements run' });
+    expect(
+        within(ran)
+            .getAllByRole('tab')
+            .map((t) => t.textContent)
+    ).toEqual(['Output 3', '1: PING', '2: GET', '3: TTL']);
     expect(screen.getByRole('tab', { name: '1: PING' })).toHaveAttribute(
         'aria-selected',
         'true'
@@ -225,7 +226,6 @@ it('keeps a history of Output lines, newest first, in memory only', async () => 
     run.mockResolvedValueOnce([
         result('HKEYS h', 'array', ['name', 'email'])
     ]).mockResolvedValueOnce(STOPPED);
-    const write = jest.spyOn(Storage.prototype, 'setItem');
     const user = userEvent.setup();
     const page = render(<ConsolePage />);
     await user.type(editor(), 'PING');
@@ -246,8 +246,8 @@ it('keeps a history of Output lines, newest first, in memory only', async () => 
         'shop> PING → PONG',
         'shop> HKEYS h → 2 rows'
     ]);
-    expect(write).not.toHaveBeenCalled();
-    write.mockRestore();
+    // the editor text is stored, the replies and summaries are not
+    expect(JSON.stringify(localStorage)).not.toContain('stopped at line');
 });
 
 it('does not show results from another Connection', async () => {
