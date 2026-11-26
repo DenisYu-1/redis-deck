@@ -6,7 +6,7 @@ import {
     type ChatPart
 } from '@/services/aiChat';
 import type { AiAccessRow, AiModelSettings } from '@/services/apiService';
-import type { ChatChip, PendingChips } from '@/utils/chatChips';
+import type { ChatChip, PendingChips, ResultChip } from '@/utils/chatChips';
 import {
     applyEvent,
     endTurn,
@@ -14,7 +14,9 @@ import {
     transcriptOf,
     type ChatMessage
 } from '@/utils/chatParts';
+import { cursorLineChip } from '@/utils/consoleChips';
 import { showToast } from '@/utils/toast';
+import type { ConsoleSlice } from './consoleSlice';
 
 export interface ChatState {
     id: string;
@@ -38,8 +40,15 @@ export interface ChatSlice {
     setChatOpen: (open: boolean) => void;
     setChatDraft: (draft: string) => void;
     newChat: () => void;
+    /** A Console line and a result take each other's place. */
     addChatChip: (chip: ChatChip) => void;
+    /** Attaches the Console's line under the cursor; false when it has none. */
+    addCursorLineChip: () => boolean;
     removeChatChip: (kind: ChatChip['kind']) => void;
+    /** A page's "Ask" button: opens the chat, attaches the chip and asks. */
+    askAbout: (chip: ResultChip, prompt: string) => void;
+    /** The same for the Console's line under the cursor, if it has one. */
+    askAboutCursorLine: (prompt: string) => void;
     sendChatMessage: (text: string) => Promise<void>;
     /** Resolves false when the answer did not reach the server. */
     answerChatApproval: (id: string, approved: boolean) => Promise<boolean>;
@@ -50,14 +59,15 @@ const newChatId = () => Math.random().toString(36).slice(2);
 
 let turn: AbortController | null = null;
 
-type WithConnection = ChatSlice & { currentEnvironment: string | null };
+type WithPage = ChatSlice &
+    Pick<ConsoleSlice, 'consoleTabs' | 'consoleCursor'> & {
+        currentEnvironment: string | null;
+    };
 
-export const createChatSlice: StateCreator<
-    WithConnection,
-    [],
-    [],
-    ChatSlice
-> = (set, get) => {
+export const createChatSlice: StateCreator<WithPage, [], [], ChatSlice> = (
+    set,
+    get
+) => {
     const patch = (change: Partial<ChatState>) =>
         set((s) => ({ chat: { ...s.chat, ...change } }));
 
@@ -121,11 +131,42 @@ export const createChatSlice: StateCreator<
                 chips: {}
             });
         },
-        addChatChip: (chip) =>
-            patch({ chips: { ...get().chat.chips, [chip.kind]: chip } }),
+        addChatChip: (chip) => {
+            const { chips } = get().chat;
+            const { key } = chips;
+            patch({
+                chips:
+                    chip.kind === 'key'
+                        ? { ...chips, key: chip }
+                        : // only one thing of the Console at a time
+                          { ...(key && { key }), [chip.kind]: chip }
+            });
+        },
+        addCursorLineChip: () => {
+            const { currentEnvironment, consoleTabs, consoleCursor } = get();
+            const chip =
+                currentEnvironment &&
+                cursorLineChip(currentEnvironment, consoleTabs, consoleCursor);
+            if (!chip) {
+                showToast('No command on this line', 'info');
+                return false;
+            }
+            get().addChatChip(chip);
+            return true;
+        },
         removeChatChip: (kind) => {
             const { [kind]: removed, ...chips } = get().chat.chips;
             if (removed) patch({ chips });
+        },
+        askAbout: (chip, prompt) => {
+            patch({ open: true });
+            get().addChatChip(chip);
+            void get().sendChatMessage(prompt);
+        },
+        askAboutCursorLine: (prompt) => {
+            if (!get().addCursorLineChip()) return;
+            patch({ open: true });
+            void get().sendChatMessage(prompt);
         },
         sendChatMessage: async (input) => {
             const text = input.trim();

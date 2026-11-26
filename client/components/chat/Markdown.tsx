@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import type { LineChip } from '@/utils/chatChips';
 import { parseMarkdown, type MarkdownBlock } from '@/utils/markdown';
 import { CodeBlock } from './CodeBlock';
 
@@ -41,8 +42,15 @@ function inline(text: string): ReactNode[] {
     return nodes;
 }
 
-function Block({ block }: { block: MarkdownBlock }) {
-    if (block.kind === 'code') return <CodeBlock code={block.text} />;
+interface BlockProps {
+    block: MarkdownBlock;
+    line: LineChip | undefined;
+}
+
+function Block({ block, line }: BlockProps) {
+    if (block.kind === 'code') {
+        return <CodeBlock code={block.text} line={line} />;
+    }
     if (block.kind === 'heading') {
         return (
             <p>
@@ -73,11 +81,18 @@ function Block({ block }: { block: MarkdownBlock }) {
 }
 
 /** Renders as React elements only, so no HTML in the text is ever parsed. */
-export function Markdown({ text }: { text: string }) {
+export function Markdown({
+    text,
+    line
+}: {
+    text: string;
+    /** The Console line asked about, which a code block may replace. */
+    line?: LineChip | undefined;
+}) {
     return (
         <>
             {parseMarkdown(text).map((block, i) => (
-                <Block key={i} block={block} />
+                <Block key={i} block={block} line={line} />
             ))}
         </>
     );

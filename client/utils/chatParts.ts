@@ -1,9 +1,17 @@
 import type { ChatEvent, ChatPart, ChatTurnRequest } from '@/services/aiChat';
-import type { ChatChip } from './chatChips';
+import type { ChatChip, LineChip } from './chatChips';
 
 export type ChatMessage =
     | { role: 'user'; text: string; chips?: ChatChip[] }
     | { role: 'assistant'; parts: ChatPart[] };
+
+/** The Console line a question was asked about, if it had that chip. */
+export const lineAskedAbout = (
+    question: ChatMessage | undefined
+): LineChip | undefined =>
+    question?.role === 'user'
+        ? question.chips?.find((c): c is LineChip => c.kind === 'line')
+        : undefined;
 
 /** An assistant message's parts after one more event of its turn. */
 export function applyEvent(parts: ChatPart[], event: ChatEvent): ChatPart[] {

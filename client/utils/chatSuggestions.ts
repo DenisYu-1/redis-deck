@@ -4,6 +4,8 @@ export interface Suggestion {
     text: string;
     /** The Key the prompt is about, attached as it is sent. */
     attachKey?: string;
+    /** Attach the Console's line under the cursor as it is sent. */
+    attachCursorLine?: true;
 }
 
 const NO_TTL = 'Which keys have no TTL?';
@@ -15,13 +17,23 @@ const plain = (...texts: string[]): Suggestion[] =>
 
 /**
  * Only ask for what the assistant's tools can answer: there is none for the
- * slow log, and it cannot see the Console's cursor.
+ * slow log.
  */
 export function suggestionsFor(
     pathname: string,
     chips: PendingChips,
     selectedKey: string | null
 ): Suggestion[] {
+    if (chips.line) {
+        return plain(
+            'Explain this query',
+            'Is this safe to run on production?',
+            'Make it faster'
+        );
+    }
+    if (chips.result) {
+        return plain('Explain this result');
+    }
     if (chips.key) {
         return plain('Explain this key', 'Why does it have this TTL?', NO_TTL);
     }
@@ -33,11 +45,10 @@ export function suggestionsFor(
         );
     }
     if (pathname === '/console') {
-        return plain(
-            NO_TTL,
-            BIGGEST,
-            'How do I scan keys without blocking Redis?'
-        );
+        return [
+            { text: 'Explain the line at my cursor', attachCursorLine: true },
+            ...plain(NO_TTL, BIGGEST)
+        ];
     }
     const explain: Suggestion =
         pathname === '/keys' && selectedKey !== null
