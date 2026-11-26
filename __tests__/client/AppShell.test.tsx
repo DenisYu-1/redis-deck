@@ -15,6 +15,7 @@ jest.mock('@/pages/Statistics/StatisticsApp', () => ({
     StatisticsApp: () => <div>STATS PAGE</div>
 }));
 jest.mock('@/services/apiService', () => ({
+    getConsoleCommands: () => new Promise(() => {}),
     loadEnvironments: jest.fn().mockResolvedValue([
         { id: 'local', host: 'h1', port: 6379, tls: false, cluster: false },
         { id: 'prod', host: 'h2', port: 6380, tls: true, cluster: false }

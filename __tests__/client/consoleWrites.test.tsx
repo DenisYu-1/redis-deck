@@ -29,7 +29,11 @@ const ran = reply(200, {
 beforeEach(() => {
     localStorage.clear();
     fetchMock.mockReset();
-    global.fetch = fetchMock as unknown as typeof fetch;
+    // `fetchMock` sees the runs only; the line check never gets its list here
+    global.fetch = ((url: string, init?: RequestInit) =>
+        url === '/api/console/commands'
+            ? new Promise(() => {})
+            : fetchMock(url, init)) as typeof fetch;
 });
 
 /** Opens the Console on `shop` and presses Run all on one read and two writes. */
