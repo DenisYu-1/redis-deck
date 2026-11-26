@@ -5,6 +5,9 @@
 //   approver, approvalTimeoutMs   see approvals.js (asked for guarded writes)
 //   clock() -> ms since epoch     (budgets, session grants)
 //   tools                         (defaults to every tool)
+//   clientName                    logged instead of the handshake's name
+//   writesRefusal                 refuses every write with this text
+//   maxCalls, onCall, onLimit     see callMeter.js
 // Each tool: { name, description, access: 'read' | 'write', inputSchema
 // (zod raw shape), run(args, ctx) -> JSON-able result }; a write also has
 // target (tools/shared.js), the Key or Workflow it names. Throwing fails the
@@ -19,6 +22,7 @@ const { isToolEnabled } = require('./toolSwitches');
 const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
 const { createApprovals } = require('./approvals');
+const { meterCalls, OUTCOME } = require('./callMeter');
 const { recordActivity, clientLabel, RESULTS } = require('../aiActivity');
 const { getAiAccess } = require('../aiAccess');
 const { checkWrite } = require('../../guards/writeGuard');
@@ -35,7 +39,12 @@ function createMcpServer({
     approver = denyAll,
     clock = Date.now,
     approvalTimeoutMs,
-    tools = allTools
+    tools = allTools,
+    clientName,
+    writesRefusal,
+    maxCalls,
+    onCall,
+    onLimit
 } = {}) {
     const server = new McpServer({ name: 'redis-deck', version });
     const ctx = {
@@ -45,8 +54,12 @@ function createMcpServer({
             timeoutMs: approvalTimeoutMs
         }),
         clock,
-        // AI client name from the initialize handshake (for dialogs and logs).
-        clientName: () => server.server.getClientVersion()?.name ?? 'unknown'
+        writesRefusal,
+        metered: Boolean(maxCalls || onCall),
+        // AI client name (for dialogs and logs): the host's, else the one
+        // from the initialize handshake.
+        clientName: () =>
+            clientName ?? server.server.getClientVersion()?.name ?? 'unknown'
     };
     for (const tool of tools) {
         server.registerTool(
@@ -56,11 +69,32 @@ function createMcpServer({
                 inputSchema: tool.inputSchema,
                 annotations: { readOnlyHint: tool.access === 'read' }
             },
-            (args) => invoke(tool, args ?? {}, ctx)
+            (args) => invokeTagged(tool, args ?? {}, ctx)
         );
     }
     hideTurnedOffTools(server);
+    if (ctx.metered) {
+        meterCalls(server, {
+            maxCalls,
+            onCall,
+            onLimit,
+            clock,
+            refuse: (name, args, why) =>
+                refusePastLimit(tools, name, args, why, ctx)
+        });
+    }
     return server;
+}
+
+// A call past the host's limit: not run, but logged as an attempt.
+function refusePastLimit(tools, name, args, why, ctx) {
+    const tool = tools.find((t) => t.name === name);
+    if (tool) {
+        logActivity(tool, args, ctx, ctx.clock(), RESULTS.blocked, {
+            error: why
+        });
+    }
+    return errorResult(why);
 }
 
 // Turned-off tools drop out of tools/list. The switch is read on every list,
@@ -108,6 +142,9 @@ async function refuseWrite(tool, args, ctx) {
             outcome: RESULTS.blocked,
             text: `${what} are not allowed for AI clients on Connection '${connectionId}'`
         };
+    }
+    if (ctx.writesRefusal) {
+        return { outcome: RESULTS.denied, text: ctx.writesRefusal };
     }
     if (!access.ask) {
         return null;
@@ -168,18 +205,25 @@ function hiddenFrom(args) {
     return access && !access.keys;
 }
 
+// The result of invoke(), tagged with its outcome for the call meter.
+async function invokeTagged(tool, args, ctx) {
+    const [outcome, result] = await invoke(tool, args, ctx);
+    return ctx.metered ? { ...result, [OUTCOME]: outcome } : result;
+}
+
+// -> [outcome (one of RESULTS), MCP tool result]
 async function invoke(tool, args, ctx) {
     const started = ctx.clock();
     if (!isToolEnabled(tool.name)) {
         logActivity(tool, args, ctx, started, RESULTS.blocked, {
             error: TURNED_OFF
         });
-        return errorResult(TURNED_OFF);
+        return [RESULTS.blocked, errorResult(TURNED_OFF)];
     }
     if (hiddenFrom(args)) {
         const text = `Connection '${args.connectionId}' is not available to AI clients`;
         logActivity(tool, args, ctx, started, RESULTS.blocked, { error: text });
-        return errorResult(text);
+        return [RESULTS.blocked, errorResult(text)];
     }
     if (tool.access !== 'read') {
         const refusal = await refuseWrite(tool, args, ctx);
@@ -187,19 +231,20 @@ async function invoke(tool, args, ctx) {
             logActivity(tool, args, ctx, started, refusal.outcome, {
                 error: refusal.text
             });
-            return errorResult(refusal.text);
+            return [refusal.outcome, errorResult(refusal.text)];
         }
     }
     try {
         const data = await tool.run(args, ctx);
         logActivity(tool, args, ctx, started, RESULTS.ok, { response: data });
-        return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+        const content = [{ type: 'text', text: JSON.stringify(data) }];
+        return [RESULTS.ok, { content }];
     } catch (error) {
         const message = safeMessage(error, args.connectionId);
         logActivity(tool, args, ctx, started, RESULTS.error, {
             error: message
         });
-        return errorResult(message);
+        return [RESULTS.error, errorResult(message)];
     }
 }
 

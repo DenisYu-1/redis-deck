@@ -1,0 +1,92 @@
+import { useEffect, useRef } from 'react';
+import type { ChatPart } from '@/services/aiChat';
+import { useAppStore } from '@/store/useAppStore';
+import { Markdown } from './Markdown';
+import { ToolRow } from './ToolRow';
+
+function Part({ part }: { part: ChatPart }) {
+    if (part.type === 'text') return <Markdown text={part.text} />;
+    if (part.type === 'tool') return <ToolRow call={part} />;
+    if (part.type === 'notice') {
+        return <p className="sm mu">{part.text}</p>;
+    }
+    return (
+        <div className="callout err" role="alert">
+            {part.message}
+        </div>
+    );
+}
+
+/** Nothing is streaming right now, but the turn is not over. */
+const isThinking = (parts: ChatPart[]) => {
+    const last = parts.at(-1);
+    return !last || (last.type === 'tool' && last.status !== 'running');
+};
+
+function EmptyChat() {
+    const connection = useAppStore((s) => s.currentEnvironment);
+    return (
+        <div className="chat-empty">
+            <b>Ask about {connection}</b>
+            <p className="sm tx2">
+                The assistant reads keys and INFO through Redis Deck’s MCP tools
+                and drafts commands for you. It does not change data.
+            </p>
+        </div>
+    );
+}
+
+export function ChatMessages() {
+    const messages = useAppStore((s) => s.chat.messages);
+    const busy = useAppStore((s) => s.chat.busy);
+    const log = useRef<HTMLDivElement>(null);
+    // Follow the answer unless the user has scrolled up to read.
+    const follow = useRef(true);
+
+    useEffect(() => {
+        const el = log.current;
+        if (el && follow.current) el.scrollTop = el.scrollHeight;
+    }, [messages]);
+
+    return (
+        <div
+            className="chat-msgs"
+            role="log"
+            aria-live="polite"
+            ref={log}
+            onScroll={(e) => {
+                const el = e.currentTarget;
+                follow.current =
+                    el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+            }}
+        >
+            {messages.length === 0 && <EmptyChat />}
+            {messages.map((message, i) =>
+                message.role === 'user' ? (
+                    <div key={i} className="chat-msg user">
+                        {message.text}
+                    </div>
+                ) : (
+                    <div key={i} className="chat-msg ai">
+                        {message.parts.map((part, p) => (
+                            <Part key={p} part={part} />
+                        ))}
+                        {busy &&
+                            i === messages.length - 1 &&
+                            isThinking(message.parts) && (
+                                <span
+                                    className="chat-typing"
+                                    role="img"
+                                    aria-label="Thinking"
+                                >
+                                    <i />
+                                    <i />
+                                    <i />
+                                </span>
+                            )}
+                    </div>
+                )
+            )}
+        </div>
+    );
+}
