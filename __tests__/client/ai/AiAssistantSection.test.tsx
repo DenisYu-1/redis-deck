@@ -16,6 +16,8 @@ const settings: api.AiModelSettings = {
     baseUrl: '',
     localUrl: '',
     localModel: '',
+    agent: 'claude',
+    agents: [],
     defaultModel: 'claude-sonnet-5-5'
 };
 
@@ -52,6 +54,9 @@ test('picks a model, tests a typed key, saves it and only ever shows its last fo
         baseUrl: '',
         localUrl: '',
         localModel: '',
+        agent: 'claude',
+        agentPath: '',
+        agentArgs: '',
         apiKey: 'sk-ant-typed'
     };
     expect(mocked.testAiModel).toHaveBeenCalledWith(draft);
@@ -94,6 +99,9 @@ test('shows a successful test of the stored key', async () => {
         baseUrl: '',
         localUrl: '',
         localModel: '',
+        agent: 'claude',
+        agentPath: '',
+        agentArgs: '',
         apiKey: ''
     });
     expect(await screen.findByRole('status')).toHaveClass('ok');
@@ -170,4 +178,77 @@ test('switches between the API key providers and the Local model', async () => {
         })
     );
     expect(await screen.findByText('Local model · llama')).toBeVisible();
+});
+
+const claude: api.AiAgent = {
+    id: 'claude',
+    name: 'Claude Code',
+    command: 'claude',
+    defaultArgs: '-p {mcp_config}',
+    path: '',
+    args: '-p {mcp_config}',
+    found: '/home/me/.local/bin/claude'
+};
+
+test('sets up the Local agent: found or missing, path and Arguments', async () => {
+    const user = userEvent.setup();
+    mocked.getAiModel.mockResolvedValue({ ...settings, agents: [claude] });
+    mocked.testAiModel.mockResolvedValue({
+        ok: true,
+        title: 'Claude Code answered in 4.2 s',
+        detail: 'It listed 13 Redis Deck MCP tools.'
+    });
+    mocked.saveAiModel.mockResolvedValue({
+        ...settings,
+        mode: 'agent',
+        agents: [claude],
+        ready: true
+    });
+    render(<AiAssistantSection />);
+
+    await user.click(
+        await screen.findByRole('radio', { name: /Local agent/ })
+    );
+    expect(screen.getByRole('radio', { name: /Claude Code/ })).toBeChecked();
+    expect(screen.getByText('/home/me/.local/bin/claude')).toBeVisible();
+    expect(screen.getByText('found')).toBeVisible();
+    expect(screen.queryByLabelText('API key')).not.toBeInTheDocument();
+    expect(screen.getByText(/access to the host/)).toBeVisible();
+    expect(screen.getByText(/Running in Docker/)).toBeVisible();
+
+    const args = screen.getByLabelText('Arguments');
+    expect(args).toHaveValue('-p {mcp_config}');
+    await user.type(args, ' --model haiku');
+    await user.type(screen.getByLabelText('Path'), '/opt/claude');
+    await user.click(screen.getByRole('button', { name: 'Test' }));
+
+    expect(mocked.testAiModel).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+            mode: 'agent',
+            agent: 'claude',
+            agentPath: '/opt/claude',
+            agentArgs: '-p {mcp_config} --model haiku'
+        })
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+        'Claude Code answered in 4.2 sIt listed 13 Redis Deck MCP tools.'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(
+        await screen.findByText('Claude Code · local agent')
+    ).toBeVisible();
+});
+
+test('shows an agent whose CLI is missing', async () => {
+    mocked.getAiModel.mockResolvedValue({
+        ...settings,
+        mode: 'agent',
+        agents: [{ ...claude, found: null }]
+    });
+    render(<AiAssistantSection />);
+
+    expect(await screen.findByText('missing')).toBeVisible();
+    expect(screen.getByText('claude not found on PATH')).toBeVisible();
+    expect(screen.getByText('claude not found')).toBeVisible();
 });

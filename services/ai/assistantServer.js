@@ -31,4 +31,8 @@ function createAssistantServer({ chatId, signal, onCall, onCard, onLimit }) {
     });
 }
 
-module.exports = { createAssistantServer };
+// For the agent Test: it lists the tools, and runs none.
+const createListingServer = () =>
+    createMcpServer({ clientName: CLIENT_NAME, maxCalls: 0, onCall: () => {} });
+
+module.exports = { createAssistantServer, createListingServer };

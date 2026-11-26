@@ -7,6 +7,14 @@ const adapters = require('./ai/adapters');
 const { listModels } = require('./ai/openai');
 const { causeOf } = require('./ai/providerHttp');
 const { apiRoot, serverUrl } = require('./ai/serverUrl');
+const {
+    agentColumns,
+    agentModelOf,
+    agentReady,
+    listAgents,
+    parseAgent
+} = require('./ai/agentSettings');
+const { testAgent } = require('./ai/agentTest');
 
 const PROVIDERS = ['anthropic', 'openai', 'openai-compatible'];
 const DEFAULTS = Object.freeze({
@@ -16,7 +24,9 @@ const DEFAULTS = Object.freeze({
     api_key: '',
     base_url: '',
     local_url: '',
-    local_model: ''
+    local_model: '',
+    agent: 'claude',
+    agents: '{}'
 });
 // A shorter key would be mostly given away by its last four characters.
 const MIN_HINTED_LENGTH = 12;
@@ -30,8 +40,10 @@ const lastFour = (key) => {
     return key.length < MIN_HINTED_LENGTH ? '' : key.slice(-4);
 };
 
-// What a turn runs on; null while the chosen mode is not set up.
+// What a turn runs on; null while the chosen mode is not set up. A Local agent
+// whose CLI is gone is returned all the same: its turn says so.
 function chatModelOf(row) {
+    if (row.mode === 'agent') return agentModelOf(row);
     if (row.mode === 'local') {
         if (!row.local_url || !row.local_model) return null;
         return {
@@ -62,7 +74,10 @@ function getModelSettings() {
         models: anthropic.MODELS,
         defaultModel: anthropic.DEFAULT_MODEL,
         keyLast4: lastFour(row.api_key),
-        ready: chatModelOf(row) !== null
+        agent: row.agent,
+        agents: listAgents(row),
+        ready:
+            row.mode === 'agent' ? agentReady(row) : chatModelOf(row) !== null
     };
 }
 
@@ -108,6 +123,7 @@ function parseApiKey({ provider, model, baseUrl, apiKey }) {
 // Validates a request body.
 function parse(body = {}) {
     if (body.mode === 'api') return parseApiKey(body);
+    if (body.mode === 'agent') return parseAgent(body);
     if (body.mode !== 'local') throw new Error('Unknown mode');
     return {
         mode: 'local',
@@ -116,8 +132,9 @@ function parse(body = {}) {
     };
 }
 
-// The columns a choice writes; the other mode's settings stay as they are.
+// The columns a choice writes; the other modes' settings stay as they are.
 function columnsOf(choice) {
+    if (choice.mode === 'agent') return agentColumns(readRow(), choice);
     if (choice.mode === 'local') {
         if (!choice.localModel) throw new Error('Pick a model');
         return {
@@ -141,9 +158,9 @@ function saveModelSettings(body) {
         .prepare(
             `INSERT OR REPLACE INTO ai_model
                  (id, mode, provider, model, api_key, base_url, local_url,
-                  local_model)
+                  local_model, agent, agents)
              VALUES (@id, @mode, @provider, @model, @api_key, @base_url,
-                 @local_url, @local_model)`
+                 @local_url, @local_model, @agent, @agents)`
         )
         .run(row);
     return getModelSettings();
@@ -202,6 +219,7 @@ async function testApiKey({ provider, model, baseUrl, apiKey }) {
 // { ok, title, detail, models? }; throws only for invalid input.
 async function testModelSettings(body) {
     const choice = parse(body);
+    if (choice.mode === 'agent') return testAgent(choice);
     return choice.mode === 'local' ? testLocal(choice) : testApiKey(choice);
 }
 

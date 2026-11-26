@@ -33,6 +33,8 @@ jest.mock('@/services/apiService', () => ({
         baseUrl: '',
         localUrl: '',
         localModel: '',
+        agent: 'claude',
+        agents: [],
         defaultModel: 'claude-sonnet-5-5'
     })
 }));

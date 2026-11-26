@@ -8,11 +8,11 @@ For each turn the backend creates a random token and a temp `{mcp_config}` file 
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A chat turn through the agent behaves like API key mode: rows, approval cards, AI access, logging
-- [ ] Endpoint refuses a wrong or expired token and is reachable only on 127.0.0.1
-- [ ] After 20 tool calls the endpoint refuses more and the turn stops with the spec message
-- [ ] Token, temp file and agent process are cleaned up when the turn ends, fails or is cancelled
-- [ ] Missing CLI and agent errors show a readable message
-- [ ] Turn runner tests with a fake agent process; lookup test with a temp home and fake binaries
+- [x] A chat turn through the agent behaves like API key mode: rows, approval cards, AI access, logging
+- [x] Endpoint refuses a wrong or expired token and is reachable only on 127.0.0.1
+- [x] After 20 tool calls the endpoint refuses more and the turn stops with the spec message
+- [x] Token, temp file and agent process are cleaned up when the turn ends, fails or is cancelled
+- [x] Missing CLI and agent errors show a readable message
+- [x] Turn runner tests with a fake agent process; lookup test with a temp home and fake binaries

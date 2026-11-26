@@ -4,6 +4,7 @@ import {
     AlertIcon,
     CheckIcon,
     CloudIcon,
+    CpuIcon,
     ServerIcon
 } from '@/components/ui/Icons';
 import { useToast } from '@/hooks/useToast';
@@ -16,7 +17,9 @@ import {
     type AiModelTestResult
 } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
+import { agentFields } from '@/utils/aiAgentFields';
 import { modelLabel } from '@/utils/aiModelLabel';
+import { AiAgentFields } from './AiAgentFields';
 import { AiApiKeyFields } from './AiApiKeyFields';
 import { AiLocalModelFields } from './AiLocalModelFields';
 import { useLocalModels } from './useLocalModels';
@@ -28,10 +31,26 @@ const draftOf = (s: AiModelSettings): AiModelDraft => ({
     baseUrl: s.baseUrl,
     localUrl: s.localUrl,
     localModel: s.localModel,
+    ...agentFields(s, s.agent),
     apiKey: ''
 });
 
+/** The header pill: the model in use, or what its mode is missing. */
+const pillText = (s: AiModelSettings): string => {
+    if (!s.ready && s.mode === 'api') return 'No key saved';
+    const agent = s.agents.find((a) => a.id === s.agent);
+    if (!s.ready && s.mode === 'agent') return `${agent?.command} not found`;
+    return modelLabel(s);
+};
+
 const MODES = [
+    {
+        mode: 'agent',
+        title: 'Local agent',
+        description:
+            'A CLI agent on the Redis Deck host, wired to its MCP server',
+        Icon: CpuIcon
+    },
     {
         mode: 'api',
         title: 'API key',
@@ -123,9 +142,7 @@ export function AiAssistantSection() {
                     <span
                         className={`pill aim-pill ${saved.ready ? 'ok' : 'off'}`}
                     >
-                        {!saved.ready && saved.mode === 'api'
-                            ? 'No key saved'
-                            : modelLabel(saved)}
+                        {pillText(saved)}
                     </span>
                 )}
             </div>
@@ -159,13 +176,21 @@ export function AiAssistantSection() {
                             </button>
                         ))}
                     </div>
-                    {draft.mode === 'api' ? (
+                    {draft.mode === 'agent' && (
+                        <AiAgentFields
+                            saved={saved}
+                            draft={draft}
+                            onChange={edit}
+                        />
+                    )}
+                    {draft.mode === 'api' && (
                         <AiApiKeyFields
                             saved={saved}
                             draft={draft}
                             onChange={edit}
                         />
-                    ) : (
+                    )}
+                    {draft.mode === 'local' && (
                         <AiLocalModelFields
                             draft={draft}
                             onChange={edit}
