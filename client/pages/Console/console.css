@@ -187,12 +187,21 @@
 .outsum.bad {
     color: var(--ac);
 }
+.cdivider {
+    width: 1px;
+    height: 20px;
+    background: var(--bd);
+}
 .rhead {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
     gap: 8px;
     padding: 8px 14px;
     border-bottom: 1px solid var(--bd);
+}
+.rcmd {
+    flex: 1;
+    min-width: 0;
 }
 .scalar {
     padding: 14px;

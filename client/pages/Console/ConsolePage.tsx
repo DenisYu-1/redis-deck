@@ -1,8 +1,10 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { TierBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ChatIcon } from '@/components/ui/Icons';
 import { runConsole, type ConsoleResult } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
+import { resultChip } from '@/utils/consoleChips';
 import { showToast } from '@/utils/toast';
 import { ConsoleEditor } from './ConsoleEditor';
 import { ConsoleResults, type ResultsTab } from './ConsoleResults';
@@ -20,6 +22,9 @@ import './console.css';
 
 export function ConsolePage() {
     const { connections, currentEnvironment, addConsoleOutput } = useAppStore();
+    const askAbout = useAppStore((s) => s.askAbout);
+    const askAboutCursorLine = useAppStore((s) => s.askAboutCursorLine);
+    const setCursor = useAppStore((s) => s.setConsoleCursor);
     const connection = connections.find((c) => c.id === currentEnvironment);
     const env = currentEnvironment ?? '';
     const editor = useRef<HTMLTextAreaElement>(null);
@@ -38,6 +43,16 @@ export function ConsolePage() {
     } | null>(null);
     const choosing = chooser?.script === script;
     const all = allStatements(script);
+
+    // A changed text or tab moves the cursor without a select event.
+    useLayoutEffect(() => {
+        setCursor(editor.current?.selectionStart ?? 0);
+    }, [script, consoleTabs.active.id, setCursor]);
+
+    const askAboutLine = () => {
+        setCursor(editor.current?.selectionStart ?? 0);
+        askAboutCursorLine('Explain this query');
+    };
 
     // `replace`: the result the (single) statement's result takes the place of
     const execute = async (statements: Statement[], replace?: number) => {
@@ -131,6 +146,11 @@ export function ConsolePage() {
                 <Button size="sm" disabled={!env} onClick={runAll}>
                     Run all {all.length}
                 </Button>
+                <span className="cdivider" />
+                <Button size="sm" disabled={!env} onClick={askAboutLine}>
+                    <ChatIcon />
+                    Ask about this line
+                </Button>
                 <span className="xs mu chint">
                     ⌘/Ctrl+Enter run line or selection · ⌘/Ctrl+Shift+Enter run
                     all
@@ -161,6 +181,7 @@ export function ConsolePage() {
                     onChange={(e) => consoleTabs.setScript(e.target.value)}
                     onKeyDown={onKeyDown}
                     onFocus={() => setChooser(null)}
+                    onSelect={(e) => setCursor(e.currentTarget.selectionStart)}
                 />
                 <ConsoleResults
                     env={run.env}
@@ -169,6 +190,12 @@ export function ConsolePage() {
                     onTab={setTab}
                     onRerun={(index, statement) =>
                         void execute([statement], index)
+                    }
+                    onAsk={(result) =>
+                        askAbout(
+                            resultChip(run.env, result),
+                            'Explain this result'
+                        )
                     }
                 />
             </div>

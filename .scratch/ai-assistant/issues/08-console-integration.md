@@ -4,10 +4,10 @@
 
 **Blocked by:** 07, and the Console page (`.scratch/console/SPEC.md`, not yet ticketed or built)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Both Ask buttons open the chat with the right chip
-- [ ] Result text is masked before it reaches any model, and respects AI access "See values"
-- [ ] Open in console and Replace line change the right tab and line, and never run anything
-- [ ] The assistant gets no command tool
-- [ ] Tests for result masking and the code block actions
+- [x] Both Ask buttons open the chat with the right chip
+- [x] Result text is masked before it reaches any model, and respects AI access "See values"
+- [x] Open in console and Replace line change the right tab and line, and never run anything
+- [x] The assistant gets no command tool
+- [x] Tests for result masking and the code block actions

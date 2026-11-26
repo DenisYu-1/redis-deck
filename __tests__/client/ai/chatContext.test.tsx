@@ -151,9 +151,9 @@ test('suggested prompts follow the page and send on click', async () => {
 
     await user.click(screen.getByRole('link', { name: /^console/i }));
     expect(prompts(chat)).toEqual([
+        'Explain the line at my cursor',
         'Which keys have no TTL?',
-        'What are the biggest keys?',
-        'How do I scan keys without blocking Redis?'
+        'What are the biggest keys?'
     ]);
 
     await user.click(screen.getByRole('link', { name: /^keys/i }));

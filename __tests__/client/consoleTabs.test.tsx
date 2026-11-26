@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConsolePage } from '@/pages/Console/ConsolePage';
+import { useAppStore } from '@/store/useAppStore';
 
 jest.mock('@/services/apiService', () => ({
     runConsole: jest.fn(),
@@ -8,7 +9,13 @@ jest.mock('@/services/apiService', () => ({
     getConsoleCommands: () => new Promise(() => {})
 }));
 
-beforeEach(() => localStorage.clear());
+/** As a page reload does: the tabs are read from storage again. */
+const forgetTabs = () => useAppStore.setState({ consoleTabs: null });
+
+beforeEach(() => {
+    localStorage.clear();
+    forgetTabs();
+});
 afterEach(() => jest.restoreAllMocks());
 
 const editor = () =>
@@ -125,6 +132,7 @@ it('keeps names, text and the open tab after a reload', async () => {
         'size.redis{Enter}'
     );
     unmount();
+    forgetTabs();
     setup();
 
     expect(tabNames()).toEqual(['console-1.redis', 'size.redis']);
