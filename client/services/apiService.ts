@@ -812,6 +812,53 @@ export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
         body: JSON.stringify({ fields })
     });
 
+// The model behind the AI assistant. The server never sends the API key back,
+// only its last four characters.
+export interface AiModelChoice {
+    mode: 'api';
+    provider: 'anthropic';
+    model: string;
+}
+
+export interface AiModelSettings extends AiModelChoice {
+    /** The models the provider offers */
+    models: string[];
+    /** null: no key saved; '': saved, too short to show any of it */
+    keyLast4: string | null;
+}
+
+export interface AiModelDraft extends AiModelChoice {
+    /** A newly typed key; '' keeps the saved one */
+    apiKey: string;
+}
+
+export interface AiModelTestResult {
+    ok: boolean;
+    title: string;
+    detail: string;
+}
+
+export const getAiModel = async (): Promise<AiModelSettings> =>
+    handleResponse<AiModelSettings>(await fetch(`${API_BASE}/ai-model`));
+
+export const saveAiModel = async (
+    draft: AiModelDraft
+): Promise<AiModelSettings> =>
+    handleResponse<AiModelSettings>(
+        await fetch(`${API_BASE}/ai-model`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(draft)
+        })
+    );
+
+export const testAiModel = async (
+    draft: AiModelDraft
+): Promise<AiModelTestResult> =>
+    handleResponse<AiModelTestResult>(
+        await fetch(`${API_BASE}/ai-model/test`, jsonPost(draft))
+    );
+
 export interface ConsoleCommands {
     /** The allowed list (ADR 0006), by command name */
     commands: Record<string, { access: 'read' | 'write'; warning?: string }>;

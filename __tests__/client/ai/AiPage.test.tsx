@@ -37,6 +37,13 @@ beforeEach(() => {
         connections: [{ id: 'prod' }, { id: 'dev' }] as RedisConnection[]
     });
     mocked.getAiActivityLogging.mockResolvedValue(true);
+    mocked.getAiModel.mockResolvedValue({
+        mode: 'api',
+        provider: 'anthropic',
+        model: 'claude-sonnet-5-5',
+        models: ['claude-sonnet-5-5'],
+        keyLast4: null
+    });
     mocked.listAiActivityClients.mockResolvedValue([]);
     mocked.listAiTools.mockResolvedValue([]);
     mocked.getAiHiddenFields.mockResolvedValue(['password']);
@@ -80,6 +87,37 @@ beforeEach(() => {
 });
 
 afterAll(() => setDesktop(false));
+
+const sectionNames = () =>
+    screen
+        .getAllByRole('region')
+        .map((section) => section.getAttribute('aria-label'));
+
+test('sections come in order; AI clients cards are Desktop-only', async () => {
+    renderPage();
+    await screen.findAllByTestId('ai-activity-row');
+    expect(sectionNames()).toEqual([
+        'AI assistant',
+        'AI access',
+        'Hidden fields',
+        'AI activity'
+    ]);
+    expect(mocked.listAiTools).not.toHaveBeenCalled();
+    cleanup();
+
+    setDesktop(true);
+    renderPage();
+    await screen.findAllByTestId('ai-client-row');
+    expect(sectionNames()).toEqual([
+        'AI assistant',
+        'AI access',
+        'Hidden fields',
+        'MCP server',
+        'Tools exposed',
+        'Add to a client',
+        'AI activity'
+    ]);
+});
 
 test('outside Desktop: log and switch show, AI clients section does not', async () => {
     const user = userEvent.setup();

@@ -4,5 +4,6 @@ module.exports = [
     require('./001-initial-schema'),
     require('./002-ai-activity'),
     require('./003-ai-access'),
-    require('./004-ai-activity-calls')
+    require('./004-ai-activity-calls'),
+    require('./005-ai-model')
 ];
