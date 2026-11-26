@@ -4,7 +4,11 @@ import { ConsolePage } from '@/pages/Console/ConsolePage';
 import { runConsole, type ConsoleResult } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 
-jest.mock('@/services/apiService', () => ({ runConsole: jest.fn() }));
+jest.mock('@/services/apiService', () => ({
+    runConsole: jest.fn(),
+    // the line check never gets its list here
+    getConsoleCommands: () => new Promise(() => {})
+}));
 const run = jest.mocked(runConsole);
 
 const result = (

@@ -5,7 +5,7 @@ const { RESP_TYPES } = require('redis');
 const { tokenize, isClusterMode } = require('../redis');
 const { getClient } = require('../redisClient');
 const { safeMessage } = require('../mcp/errors');
-const { lookupCommand } = require('./commands');
+const { lookupCommand, refusalMessage } = require('./commands');
 const { keylessNode, sendToCluster } = require('./cluster');
 
 // Without a mapping node-redis returns status and bulk replies both as strings.
@@ -55,7 +55,7 @@ async function sendToServer(connectionId, argv) {
 async function runStatement(connectionId, clustered, argv) {
     const { name, entry } = lookupCommand(argv);
     if (!entry) {
-        return failure(`${name} is not supported in this console`);
+        return failure(refusalMessage(name));
     }
     let named = {};
     try {

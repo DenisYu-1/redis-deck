@@ -91,7 +91,17 @@ standalone('Console routes', () => {
         ['DEBUG test-console01-no-such-subcommand', 'DEBUG'],
         ['MONITOR not-an-argument', 'MONITOR'],
         ['SUBSCRIBE', 'SUBSCRIBE'],
-        ['PSUBSCRIBE', 'PSUBSCRIBE'],
+        ['PSUBSCRIBE', 'PSUBSCRIBE']
+    ])('refuses %s as turned off', async (text, name) => {
+        const [result] = await results(text);
+
+        expect(result).toMatchObject({
+            kind: 'error',
+            reply: `${name} is disabled in the console`
+        });
+    });
+
+    test.each([
         ['CONFIG', 'CONFIG'],
         ['MEMORY HELP', 'MEMORY HELP'],
         ['SLOWLOG HELP', 'SLOWLOG HELP'],
@@ -105,6 +115,29 @@ standalone('Console routes', () => {
             kind: 'error',
             reply: `${name} is not supported in this console`
         });
+    });
+
+    test('serves the refusal messages for the line check', async () => {
+        const { body } = await request(app)
+            .get('/api/console/commands')
+            .expect(200);
+
+        expect(body.unsupported).toBe(
+            '{command} is not supported in this console'
+        );
+        expect(Object.keys(body.turnedOff).sort()).toEqual([
+            'CONFIG SET',
+            'DEBUG',
+            'FLUSHALL',
+            'FLUSHDB',
+            'MONITOR',
+            'PSUBSCRIBE',
+            'SHUTDOWN',
+            'SUBSCRIBE'
+        ]);
+        expect(body.turnedOff.FLUSHDB).toBe(
+            'FLUSHDB is disabled in the console'
+        );
     });
 
     test('runs the listed writes', async () => {

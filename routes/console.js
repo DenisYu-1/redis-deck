@@ -4,7 +4,12 @@ const express = require('express');
 const { getConnection } = require('../services/database');
 const { tokenize } = require('../services/redis');
 const { checkWrite } = require('../guards/writeGuard');
-const { COMMANDS, lookupCommand } = require('../services/console/commands');
+const {
+    COMMANDS,
+    TURNED_OFF_MESSAGES,
+    UNSUPPORTED,
+    lookupCommand
+} = require('../services/console/commands');
 const { runStatements } = require('../services/console/run');
 
 const router = express.Router();
@@ -18,7 +23,11 @@ const isWrite = ({ text }) =>
     lookupCommand(tokenize(text)).entry?.access === 'write';
 
 router.get('/console/commands', (req, res) => {
-    res.json({ commands: COMMANDS });
+    res.json({
+        commands: COMMANDS,
+        turnedOff: TURNED_OFF_MESSAGES,
+        unsupported: UNSUPPORTED
+    });
 });
 
 router.post('/console/run', async (req, res) => {

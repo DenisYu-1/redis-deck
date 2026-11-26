@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { runConsole, type ConsoleResult } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { showToast } from '@/utils/toast';
+import { ConsoleEditor } from './ConsoleEditor';
 import { ConsoleResults, type ResultsTab } from './ConsoleResults';
 import { ConsoleTabs } from './ConsoleTabs';
 import { outputLines } from './output';
@@ -147,9 +148,8 @@ export function ConsolePage() {
                 )}
             </div>
             <div className="csplit">
-                <textarea
-                    ref={editor}
-                    className="ced"
+                <ConsoleEditor
+                    editorRef={editor}
                     aria-label="Redis commands, one per line"
                     placeholder="PING"
                     spellCheck={false}
@@ -157,6 +157,7 @@ export function ConsolePage() {
                     autoCapitalize="off"
                     autoComplete="off"
                     value={script}
+                    connection={connection}
                     onChange={(e) => consoleTabs.setScript(e.target.value)}
                     onKeyDown={onKeyDown}
                     onFocus={() => setChooser(null)}
