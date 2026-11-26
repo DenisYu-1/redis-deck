@@ -52,6 +52,15 @@ function waitFor(child, { signal, onText }) {
     });
 }
 
+// They can hold the token: for this user only.
+async function writeFiles(dir, files) {
+    for (const [name, text] of Object.entries(files)) {
+        const file = path.join(dir, name);
+        await fs.mkdir(path.dirname(file), { recursive: true });
+        await fs.writeFile(file, text, { mode: 0o600 });
+    }
+}
+
 // agent: an entry of agents.js. path, args: the user's fields ('' = default).
 // server: the McpServer the agent's tool calls run on. onText gets stdout as it
 // comes. -> { code, killedBy, stdout, stderr, token }
@@ -82,7 +91,10 @@ async function runAgent({
             prompt
         });
         const configPath = path.join(dir, 'mcp.json');
-        await fs.writeFile(configPath, turn.mcpConfig ?? '', { mode: 0o600 });
+        await writeFiles(dir, {
+            'mcp.json': turn.mcpConfig ?? '',
+            ...turn.files
+        });
         const argv = splitArgs(args || agent.defaultArgs).map((word) =>
             word.replaceAll('{mcp_config}', configPath)
         );
@@ -100,7 +112,11 @@ async function runAgent({
         // An agent that exits without reading its prompt is not an error here.
         child.stdin.on('error', () => {});
         child.stdin.end(turn.stdin);
-        const result = await waitFor(child, { signal, onText });
+        const restore = agent.restore ?? ((text) => text);
+        const result = await waitFor(child, {
+            signal,
+            onText: (text) => onText(restore(text))
+        });
         return { ...result, token: endpoint.token };
     } finally {
         await endpoint.close();
@@ -109,12 +125,13 @@ async function runAgent({
 }
 
 // Why a run that nothing stopped did not end well, or null.
-function failureOf({ name }, { code, killedBy, stderr }) {
+function failureOf({ name, errorOf }, { code, killedBy, stderr }) {
     if (code === 0) return null;
     const how = killedBy
         ? `was stopped (${killedBy})`
         : `exited with code ${code}`;
-    return `${name} ${how}${stderr ? `: ${stderr.slice(-500)}` : '.'}`;
+    const why = (errorOf?.(stderr) ?? stderr).slice(-500);
+    return `${name} ${how}${why ? `: ${why}` : '.'}`;
 }
 
 module.exports = { runAgent, failureOf };

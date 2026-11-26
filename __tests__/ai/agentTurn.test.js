@@ -71,8 +71,8 @@ const textOf = (events) =>
 
 // The endpoint is gone, and so is the temp config file with its folder.
 async function expectCleanedUp() {
-    const { cwd, config, pid } = record();
-    const { url, headers } = config.mcpServers['redis-deck'];
+    const { cwd, server, pid } = record();
+    const { url, headers } = server;
     expect(fs.existsSync(cwd)).toBe(false);
     expect(alive(pid)).toBe(false);
     await expect(fetch(url, { method: 'POST', headers })).rejects.toThrow();
@@ -135,8 +135,8 @@ it('streams stdout as text, with the transcript on stdin and our config only', a
         '--system-prompt',
         expect.stringContaining(`The current Connection is "${CONN}"`)
     ]);
-    expect(seen.configMode).toBe(0o600);
-    expect(seen.config.mcpServers['redis-deck']).toEqual({
+    expect(seen.config.mode).toBe(0o600);
+    expect(JSON.parse(seen.config.text).mcpServers['redis-deck']).toEqual({
         type: 'http',
         url: expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/),
         headers: { Authorization: expect.stringMatching(/^Bearer \S{32,}$/) },
@@ -208,7 +208,7 @@ it.each(['', 'wrong', 'Bearer wrong'])(
             while (!record().tools) {
                 await new Promise((resolve) => setTimeout(resolve, 20));
             }
-            const { url } = record().config.mcpServers['redis-deck'];
+            const { url } = record().server;
             const refused = await fetch(url, {
                 method: 'POST',
                 headers: { authorization },
@@ -231,14 +231,14 @@ it.each(['', 'wrong', 'Bearer wrong'])(
 
 it('refuses the token of an earlier turn', async () => {
     await turn([]);
-    const old = record().config.mcpServers['redis-deck'].headers;
+    const old = record().server.headers;
     const stop = new AbortController();
     let status;
     await turn([{ say: 'x' }, { hang: true }], {
         signal: stop.signal,
         onEvent: async (event) => {
             if (event.type !== 'text') return;
-            const { url } = record().config.mcpServers['redis-deck'];
+            const { url } = record().server;
             ({ status } = await fetch(url, { method: 'POST', headers: old }));
             stop.abort();
         }

@@ -70,9 +70,15 @@ export function AiAgentFields({ saved, draft, onChange }: Props) {
                     Redis Deck runs{' '}
                     <span className="mono">{chosen?.command}</span> with these
                     per chat turn.{' '}
-                    <span className="mono">{'{mcp_config}'}</span> points the
-                    agent at this server’s MCP endpoint. The agent uses its own
-                    login. Empty restores the default.
+                    {chosen?.defaultArgs.includes('{mcp_config}') ? (
+                        <>
+                            <span className="mono">{'{mcp_config}'}</span>{' '}
+                            points the agent at this server’s MCP endpoint.
+                        </>
+                    ) : (
+                        'It adds its MCP server settings itself.'
+                    )}{' '}
+                    The agent uses its own login. Empty restores the default.
                 </span>
                 <span id="aim-args-warning" className="hint aim-warning">
                     Changing the arguments can give the agent access to the

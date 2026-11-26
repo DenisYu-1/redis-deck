@@ -9,8 +9,19 @@ const { RESULTS } = require('../aiActivity');
 // metered servers. Removed again before the result leaves the server.
 const OUTCOME = 'redisDeckOutcome';
 
+// The tools/call request with its arguments' strings restored.
+function restored(request, restoreText) {
+    if (!restoreText || !request.params.arguments) return request;
+    const args = JSON.parse(
+        JSON.stringify(request.params.arguments),
+        (_, value) => (typeof value === 'string' ? restoreText(value) : value)
+    );
+    return { ...request, params: { ...request.params, arguments: args } };
+}
+
 // meter: { maxCalls, onCall(event), onLimit(message), clock,
-// refuse(name, args, message) -> the result of a call past the limit }.
+// refuse(name, args, message) -> the result of a call past the limit,
+// restoreText?(text) -> applied to every string of the arguments first }.
 // onCall gets
 // { id, tool, args, status: 'running' }, then
 // { id, tool, args, status: one of RESULTS, ms, response: result text }.
@@ -25,7 +36,8 @@ function meterCalls(server, meter) {
     const limitMessage = `Stopped after ${maxCalls} tool calls; ask again to continue`;
     server.server.setRequestHandler(
         CallToolRequestSchema,
-        async (request, extra) => {
+        async (sent, extra) => {
+            const request = restored(sent, meter.restoreText);
             const { name: tool, arguments: args = {} } = request.params;
             calls += 1;
             if (calls > maxCalls) {

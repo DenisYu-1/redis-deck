@@ -53,6 +53,7 @@ async function runAgentTurn({
     let limitReached = null;
     const server = createAssistantServer({
         chatId,
+        restoreText: agent.restore,
         signal: AbortSignal.any([ended.signal, signal].filter(Boolean)),
         onCard: (card) => emit({ type: 'approval', ...card }),
         onCall: (call) => {
