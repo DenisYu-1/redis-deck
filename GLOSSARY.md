@@ -58,6 +58,10 @@ _Avoid_: Agent, assistant, integration
 The chat built into Redis Deck that answers questions about a Connection through the same tools AI clients use.
 _Avoid_: Agent, bot, copilot
 
+**Local agent**:
+One of the AI assistant's three modes: an agent CLI installed where Redis Deck runs (Claude Code, Codex CLI, Gemini CLI) answers the chat, with its own login. The other modes are API key and Local model.
+_Avoid_: AI client, CLI mode
+
 **AI access**:
 Per-Connection rules for what AI clients and the AI assistant may see and do: see Keys, see values, write, run Workflows, ask before writes.
 _Avoid_: Permissions, policy, ACL

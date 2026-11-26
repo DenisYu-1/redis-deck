@@ -8,6 +8,7 @@ import {
     writeTabs,
     type Tabs
 } from '@/pages/Console/tabs';
+import type { LineChip } from '@/utils/chatChips';
 
 export interface ConsoleSlice {
     /** null until first changed: the browser's storage has them */
@@ -18,8 +19,11 @@ export interface ConsoleSlice {
     updateConsoleTabs: (change: (tabs: Tabs) => Tabs) => void;
     /** Adds `code` to the open tab after a blank line; returns the tab's name. */
     appendToConsole: (code: string) => string;
-    /** Opens the tab. False when the tab or the line is gone. */
-    replaceConsoleLine: (tabId: number, line: number, text: string) => boolean;
+    /**
+     * Replaces the line asked about and opens its tab. False when the tab is
+     * gone or the line no longer holds that statement.
+     */
+    replaceConsoleLine: (asked: LineChip, text: string) => boolean;
 }
 
 export const createConsoleSlice: StateCreator<
@@ -47,12 +51,12 @@ export const createConsoleSlice: StateCreator<
             save(patchTab(state, id, { script: next }));
             return name;
         },
-        replaceConsoleLine: (tabId, line, text) => {
+        replaceConsoleLine: ({ tabId, line, text: asked }, text) => {
             const state = tabs();
             const lines = state.tabs
                 .find((t) => t.id === tabId)
                 ?.script.split('\n');
-            if (!lines || line > lines.length) return false;
+            if (lines?.[line - 1]?.trim() !== asked) return false;
             lines[line - 1] = text;
             const script = lines.join('\n');
             save({ ...patchTab(state, tabId, { script }), activeId: tabId });

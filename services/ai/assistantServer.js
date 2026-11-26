@@ -4,10 +4,9 @@
 // rules, rows, cards and logging.
 const { createMcpServer } = require('../mcp/server');
 const { cardOf } = require('../mcp/writeGate');
+const { ASSISTANT_CLIENT: CLIENT_NAME } = require('../aiActivity');
 const { awaitAnswer } = require('./approvalDesk');
 const { MAX_TOOL_CALLS, APPROVAL_TIMEOUT_MS } = require('./limits');
-
-const CLIENT_NAME = 'Redis Deck Assistant';
 
 // chatId: whose answers count (approvalDesk.js). signal: aborting it denies
 // what still waits. onCard gets every approval card, then its new state

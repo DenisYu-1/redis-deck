@@ -17,6 +17,9 @@ const RESULTS = Object.freeze({
 
 const RESPONSE_CAP = 4096;
 
+// The built-in chat logs its calls under this name, but is not an AI client.
+const ASSISTANT_CLIENT = 'Redis Deck Assistant';
+
 // clientInfo.name of the known AI clients -> the label shown. Others stay raw.
 const CLIENT_LABELS = [
     [/^claude-code/i, 'Claude Code'],
@@ -128,7 +131,9 @@ function listActivity({
              ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`
         )
         .all(...params, limit, offset);
-    const counts = Object.fromEntries(Object.values(RESULTS).map((r) => [r, 0]));
+    const counts = Object.fromEntries(
+        Object.values(RESULTS).map((r) => [r, 0])
+    );
     let total = 0;
     for (const row of db
         .prepare(
@@ -142,13 +147,17 @@ function listActivity({
 }
 
 // Each distinct client with the time of its last call, most recent first.
-function listClients() {
-    return getDatabase()
+// aiClientsOnly leaves out the AI assistant.
+function listClients({ aiClientsOnly = false } = {}) {
+    const clients = getDatabase()
         .prepare(
             `SELECT client, MAX(created_at) AS lastCallAt FROM ai_activity
              GROUP BY client ORDER BY lastCallAt DESC`
         )
         .all();
+    return aiClientsOnly
+        ? clients.filter((c) => c.client !== ASSISTANT_CLIENT)
+        : clients;
 }
 
 // Deletes every entry. Returns the number removed.
@@ -165,6 +174,7 @@ function cleanupOldActivity(daysToKeep = 30, now = Date.now()) {
 
 module.exports = {
     RESULTS,
+    ASSISTANT_CLIENT,
     clientLabel,
     isLoggingEnabled,
     setLoggingEnabled,

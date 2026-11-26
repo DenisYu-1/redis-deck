@@ -13,13 +13,18 @@ export interface Tabs {
     activeId: number;
 }
 
-/** A new tab numbered after the highest `console-N.redis` and id in use. */
+// A closed tab's id is never given out again: a line chip of the chat may still
+// point at it. The first tab of an empty store is always 1.
+const newId = (tabs: ConsoleTab[]) =>
+    tabs.length ? Math.max(Date.now(), ...tabs.map((t) => t.id + 1)) : 1;
+
+/** A new tab numbered after the highest `console-N.redis` in use. */
 export function blankTab(tabs: ConsoleTab[]): ConsoleTab {
     const numbers = tabs.map((t) =>
         Number(/^console-(\d+)\.redis$/.exec(t.name)?.[1] ?? 0)
     );
     return {
-        id: Math.max(0, ...tabs.map((t) => t.id)) + 1,
+        id: newId(tabs),
         name: `console-${Math.max(0, ...numbers) + 1}.redis`,
         script: ''
     };

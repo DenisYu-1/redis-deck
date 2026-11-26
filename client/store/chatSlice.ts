@@ -97,6 +97,17 @@ export const createChatSlice: StateCreator<WithPage, [], [], ChatSlice> = (
         }
     };
 
+    /** A page's "Ask" during a turn: says so, so that no chip is left over. */
+    const stillAnswering = () => {
+        if (!get().chat.busy) return false;
+        patch({ open: true });
+        showToast(
+            'The assistant is still answering; ask again when it is done',
+            'info'
+        );
+        return true;
+    };
+
     return {
         answerChatApproval: answerApproval,
         chat: {
@@ -159,12 +170,13 @@ export const createChatSlice: StateCreator<WithPage, [], [], ChatSlice> = (
             if (removed) patch({ chips });
         },
         askAbout: (chip, prompt) => {
+            if (stillAnswering()) return;
             patch({ open: true });
             get().addChatChip(chip);
             void get().sendChatMessage(prompt);
         },
         askAboutCursorLine: (prompt) => {
-            if (!get().addCursorLineChip()) return;
+            if (stillAnswering() || !get().addCursorLineChip()) return;
             patch({ open: true });
             void get().sendChatMessage(prompt);
         },

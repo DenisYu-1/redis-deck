@@ -28,13 +28,17 @@ function isExecutable(file) {
     }
 }
 
+// Whether the path field may be used: a full path of a file named like the
+// command, so that the field (the web UI has no login) cannot start any other
+// program.
+const namesCommand = (file, command) =>
+    path.isAbsolute(file) && path.basename(file) === command;
+
 // -> the binary's path, or null. options.path (the path field) replaces the
-// search; it must be named like the command, so that the field (the web UI has
-// no login) cannot start any other program.
+// search.
 function findAgent(command, { path: own, ...options } = {}) {
     if (own) {
-        const named = path.isAbsolute(own) && path.basename(own) === command;
-        return named && isExecutable(own) ? own : null;
+        return namesCommand(own, command) && isExecutable(own) ? own : null;
     }
     const candidates = searchPath(options).map((dir) =>
         path.join(dir, command)
@@ -42,4 +46,4 @@ function findAgent(command, { path: own, ...options } = {}) {
     return candidates.find(isExecutable) ?? null;
 }
 
-module.exports = { findAgent, searchPath };
+module.exports = { findAgent, namesCommand, searchPath };

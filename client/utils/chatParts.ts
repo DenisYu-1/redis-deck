@@ -54,14 +54,38 @@ export const pendingApprovals = (messages: ChatMessage[]): string[] =>
               )
     );
 
-const textOf = (parts: ChatPart[]): string =>
-    parts
-        .flatMap((p) =>
-            p.type === 'text' || p.type === 'notice' ? [p.text] : []
-        )
-        .join('\n\n');
+const MAX_ARGS_CHARS = 200;
 
-/** The chat as sent with the next turn: what was said, not the tool rows. */
+const cut = (text: string) =>
+    text.length > MAX_ARGS_CHARS ? `${text.slice(0, MAX_ARGS_CHARS)}…` : text;
+
+// What a later turn has to know of a part: what was said, and what each tool
+// call and write came to, without the responses.
+function lineOf(part: ChatPart): string[] {
+    switch (part.type) {
+        case 'text':
+        case 'notice':
+            return [part.text];
+        case 'tool': {
+            const args = cut(JSON.stringify(part.args));
+            return [`[Tool call ${part.tool} ${args}: ${part.status}]`];
+        }
+        case 'approval': {
+            const commands = cut(part.commands.join('; '));
+            const failed = part.error ? ', failed' : '';
+            return [
+                `[Write ${part.tool} on ${part.connectionId} (${commands}): ${part.state}${failed}]`
+            ];
+        }
+        case 'error':
+            return [];
+    }
+}
+
+const textOf = (parts: ChatPart[]): string =>
+    parts.flatMap(lineOf).join('\n\n');
+
+/** The chat as sent with the next turn. */
 export const transcriptOf = (
     messages: ChatMessage[]
 ): ChatTurnRequest['messages'] =>

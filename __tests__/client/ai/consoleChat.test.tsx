@@ -234,7 +234,7 @@ const answerWith = (code: string) =>
 const consoleTab = (name: string) => screen.getByRole('tab', { name });
 
 test('"Replace line N" and "Open in console" edit the tab and run nothing', async () => {
-    answerWith('# cheaper\nHGET user:1 name\nTTL user:1');
+    answerWith('# cheaper\nHGET user:1 name');
     const user = await open();
     await user.type(editor(), 'PING{Enter}HGETALL user:1{Enter}DBSIZE');
     editor().setSelectionRange(8, 8);
@@ -255,7 +255,7 @@ test('"Replace line N" and "Open in console" edit the tab and run nothing', asyn
 
     await user.click(chat().getByRole('button', { name: 'Open in console' }));
     expect(editor().value).toBe(
-        'PING\nHGET user:1 name\nDBSIZE\n\n# cheaper\nHGET user:1 name\nTTL user:1'
+        'PING\nHGET user:1 name\nDBSIZE\n\n# cheaper\nHGET user:1 name'
     );
     expect(run).not.toHaveBeenCalled();
 });
@@ -282,6 +282,95 @@ test('"Open in console" goes to the Console from another page', async () => {
     expect(run).not.toHaveBeenCalled();
 });
 
+test('"Replace line N" is not offered for a block of several commands', async () => {
+    answerWith('HGET user:1 name\nTTL user:1');
+    const user = await open();
+    await user.type(editor(), 'HGETALL user:1');
+    await click(user, 'Ask about this line');
+
+    await chat().findByRole('button', { name: 'Open in console' });
+
+    expect(
+        chat().queryByRole('button', { name: /Replace line/ })
+    ).not.toBeInTheDocument();
+});
+
+test('"Replace line N" leaves a line that has changed since the question', async () => {
+    const toasts: string[] = [];
+    const stop = subscribeToasts((all) =>
+        toasts.push(...all.map((t) => t.message))
+    );
+    answerWith('TTL k');
+    const user = await open();
+    await user.type(editor(), 'PING{Enter}GET k');
+    await click(user, 'Ask about this line');
+
+    await user.clear(editor());
+    await user.type(editor(), 'PING{Enter}DEL other');
+    await user.click(
+        await chat().findByRole('button', {
+            name: 'Replace line 2 in console-1.redis'
+        })
+    );
+
+    expect(toasts).toContain('Line 2 has changed; nothing was replaced');
+    expect(editor().value).toBe('PING\nDEL other');
+    stop();
+});
+
+test('"Replace line N" does not follow into a new tab after its own is closed', async () => {
+    answerWith('TTL k');
+    const user = await open();
+    await click(user, 'New console');
+    await user.type(editor(), 'GET k');
+    await click(user, 'Ask about this line');
+    const replace = { name: 'Replace line 1 in console-2.redis' };
+    await chat().findByRole('button', replace);
+
+    // The next tab gets the closed one's name.
+    await click(user, 'Close console-2.redis');
+    await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+            name: 'Close'
+        })
+    );
+    await click(user, 'New console');
+
+    expect(consoleTab('console-2.redis')).toBeVisible();
+    expect(chat().queryByRole('button', replace)).not.toBeInTheDocument();
+});
+
+test('asking while the assistant is answering says so and attaches nothing', async () => {
+    const toasts: string[] = [];
+    const stop = subscribeToasts((all) =>
+        toasts.push(...all.map((t) => t.message))
+    );
+    stream.mockReturnValue(new Promise(() => {}));
+    run.mockResolvedValue([
+        { line: 2, text: 'DBSIZE', kind: 'integer', reply: 3, ms: 1 }
+    ]);
+    const user = await open();
+    await user.type(editor(), 'PING{Enter}DBSIZE');
+    await click(user, 'Run line');
+    editor().setSelectionRange(0, 0);
+    await click(user, 'Ask about this line');
+
+    await user.click(
+        await screen.findByRole('button', { name: 'Ask about result' })
+    );
+    editor().setSelectionRange(6, 6);
+    await click(user, 'Ask about this line');
+
+    expect(stream).toHaveBeenCalledTimes(1);
+    expect(
+        toasts.filter((t) => t.startsWith('The assistant is still answering'))
+    ).not.toHaveLength(0);
+    // The chip of the running question stays; no unsent one waits.
+    expect(context().getByText('L1 PING')).toBeVisible();
+    expect(context().queryByText(/DBSIZE/)).not.toBeInTheDocument();
+    stop();
+});
+
 test('"Replace line N" says when the line is gone, and goes with its tab', async () => {
     const toasts: string[] = [];
     const stop = subscribeToasts((all) =>
@@ -295,7 +384,7 @@ test('"Replace line N" says when the line is gone, and goes with its tab', async
 
     await user.clear(editor());
     await user.click(await chat().findByRole('button', replace));
-    expect(toasts).toContain('Line 2 is no longer there');
+    expect(toasts).toContain('Line 2 has changed; nothing was replaced');
     expect(editor().value).toBe('');
 
     await click(user, 'New console');

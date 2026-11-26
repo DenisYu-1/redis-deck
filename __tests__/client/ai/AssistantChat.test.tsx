@@ -143,7 +143,7 @@ test('sends a question, shows the streamed answer and its tool row, and keeps th
         { role: 'user', text: 'What is user:1?' },
         {
             role: 'assistant',
-            text: 'Looking it up.\n\nIt is a **hash**. <img src=x>\n\n```\nHGETALL user:1\n```'
+            text: 'Looking it up.\n\n[Tool call get_key {"connectionId":"local","key":"user:1"}: ok]\n\nIt is a **hash**. <img src=x>\n\n```\nHGETALL user:1\n```'
         },
         { role: 'user', text: 'And its TTL?' }
     ]);

@@ -1,8 +1,8 @@
 // The Local agent part of the model settings, as stored in the ai_model row
 // (see migration 007). services/aiModel.js reads and writes the row.
-const path = require('path');
 const { AGENTS, agentById } = require('./agents');
-const { findAgent } = require('./agentLookup');
+const { findAgent, namesCommand } = require('./agentLookup');
+const { trimmed } = require('./text');
 
 const stored = (row) => JSON.parse(row.agents || '{}');
 
@@ -35,18 +35,12 @@ const agentModelOf = (row) => ({
 const agentReady = (row) =>
     found(agentById(row.agent), fieldsOf(row, row.agent).path) !== null;
 
-const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
-
 // Validates a request body of mode 'agent'.
 function parseAgent({ agent: id, agentPath, agentArgs }) {
     const agent = agentById(id);
     if (!agent) throw new Error('Unknown agent');
     const own = trimmed(agentPath);
-    // The web UI has no login: this field must not start any other program.
-    if (
-        own &&
-        !(path.isAbsolute(own) && path.basename(own) === agent.command)
-    ) {
+    if (own && !namesCommand(own, agent.command)) {
         throw new Error(
             `The path must be the full path of a "${agent.command}" binary`
         );
