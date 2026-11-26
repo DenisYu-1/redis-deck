@@ -23,14 +23,8 @@ router.get('/console/commands', (req, res) => {
 
 router.post('/console/run', async (req, res) => {
     const { env } = req.query;
-    const connection = getConnection(env);
-    if (!connection) {
+    if (!getConnection(env)) {
         return res.status(404).json({ error: `Connection '${env}' not found` });
-    }
-    if (connection.cluster) {
-        return res.status(400).json({
-            error: 'The Console does not support clustered Connections yet'
-        });
     }
     const statements = req.body?.statements;
     if (

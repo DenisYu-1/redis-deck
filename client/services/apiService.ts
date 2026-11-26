@@ -820,6 +820,8 @@ export interface ConsoleResult {
     /** The plain Redis reply; the error text when `kind` is 'error' */
     reply: unknown;
     ms: number;
+    /** Clusters: the Node that answered a command without a Key */
+    node?: string;
 }
 
 /** The design's dialog; only production asks for the typed Connection name. */

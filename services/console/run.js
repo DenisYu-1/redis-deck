@@ -1,10 +1,12 @@
-// Runs Console statements (ADR 0006) on a standalone Connection through its
-// persistent client. Nothing here logs: Console commands are never recorded.
+// Runs Console statements (ADR 0006): on a standalone Connection through its
+// persistent client, on a clustered one through redis-cli (./cluster.js).
+// Nothing here logs: Console commands are never recorded.
 const { RESP_TYPES } = require('redis');
-const { tokenize } = require('../redis');
+const { tokenize, isClusterMode } = require('../redis');
 const { getClient } = require('../redisClient');
 const { safeMessage } = require('../mcp/errors');
 const { lookupCommand } = require('./commands');
+const { keylessNode, sendToCluster } = require('./cluster');
 
 // Without a mapping node-redis returns status and bulk replies both as strings.
 // The client speaks RESP3: maps become flat arrays again (an object would lose
@@ -42,24 +44,39 @@ async function readyClient(connectionId) {
 
 const failure = (reply) => ({ kind: 'error', reply });
 
-async function runStatement(connectionId, argv) {
+async function sendToServer(connectionId, argv) {
+    const client = await readyClient(connectionId);
+    const reply = await client.sendCommand(argv, REPLY_OPTIONS);
+    return { kind: kindOf(reply), reply: plain(reply) };
+}
+
+// -> { kind, reply, node? }; node names the cluster Node that answered a
+// command without a Key.
+async function runStatement(connectionId, clustered, argv) {
     const { name, entry } = lookupCommand(argv);
     if (!entry) {
         return failure(`${name} is not supported in this console`);
     }
+    let named = {};
     try {
-        const client = await readyClient(connectionId);
-        const reply = await client.sendCommand(argv, REPLY_OPTIONS);
-        return { kind: kindOf(reply), reply: plain(reply) };
+        if (!clustered) {
+            return await sendToServer(connectionId, argv);
+        }
+        const node = entry.keyless ? await keylessNode(connectionId) : null;
+        named = node ? { node: node.address } : {};
+        const outcome = await sendToCluster(connectionId, name, argv, node);
+        return { ...outcome, ...named };
     } catch (error) {
         // a refused "localhost" is an AggregateError with an empty message
-        return failure(safeMessage(error.message || error.code, connectionId));
+        const message = safeMessage(error.message || error.code, connectionId);
+        return { ...failure(message), ...named };
     }
 }
 
 // -> one result per statement, in order. No transaction: the first error stops
 // the run, and the statements after it are returned as 'not-run'.
 async function runStatements(connectionId, statements) {
+    const clustered = await isClusterMode(connectionId);
     const results = [];
     let stopped = false;
     for (const { line, text } of statements) {
@@ -68,7 +85,11 @@ async function runStatements(connectionId, statements) {
             continue;
         }
         const started = performance.now();
-        const outcome = await runStatement(connectionId, tokenize(text));
+        const outcome = await runStatement(
+            connectionId,
+            clustered,
+            tokenize(text)
+        );
         stopped = outcome.kind === 'error';
         results.push({
             line,

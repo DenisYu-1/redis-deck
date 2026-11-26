@@ -4,12 +4,12 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Reads and writes run on a clustered Connection, with redirects followed
-- [ ] Every spawn counts against the per-Connection cap
-- [ ] Reply shapes match standalone Connections, including pair replies and nil
-- [ ] A result from a command without a Key names the Node that answered
-- [ ] SCAN continuation goes to the same Node as the first SCAN
-- [ ] Error text is scrubbed of Connection config
-- [ ] A cluster run is tested when `REDIS_TEST_CLUSTER` is set
+- [x] Reads and writes run on a clustered Connection, with redirects followed
+- [x] Every spawn counts against the per-Connection cap
+- [x] Reply shapes match standalone Connections, including pair replies and nil
+- [x] A result from a command without a Key names the Node that answered
+- [x] SCAN continuation goes to the same Node as the first SCAN
+- [x] Error text is scrubbed of Connection config
+- [x] A cluster run is tested when `REDIS_TEST_CLUSTER` is set
