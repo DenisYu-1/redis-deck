@@ -74,6 +74,21 @@ describe('agent CLI lookup', () => {
         expect(find({ path: path.join(home, 'gone/claude') })).toBeNull();
     });
 
+    it.each(['codex', 'gemini'])('finds %s the same way', (command) => {
+        const file = path.join(home, '.npm-global/bin', command);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, '#!/bin/sh\n', { mode: 0o755 });
+
+        expect(find()).toBeNull();
+        expect(
+            findAgent(command, {
+                home,
+                env: { PATH: '' },
+                systemDirs: [system]
+            })
+        ).toBe(file);
+    });
+
     it('takes no path field naming another program', () => {
         expect(find({ path: '/bin/sh' })).toBeNull();
     });

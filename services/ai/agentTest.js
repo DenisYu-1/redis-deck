@@ -9,8 +9,10 @@ const { createListingServer } = require('./assistantServer');
 
 const TIMEOUT_MS = 2 * 60 * 1000;
 const SYSTEM = 'You are checking the setup of the Redis Deck AI assistant.';
+// Codex shows MCP tools only once it has looked them up, so the prompt must not
+// forbid every tool.
 const PROMPT =
-    'List the names of your redis-deck tools, one per line, and nothing else. Do not call any tool.';
+    'List the names of your redis-deck tools, one per line, and nothing else. If your tool list does not show them, look them up. Do not call any redis-deck tool.';
 
 const toolsNamedIn = (answer) =>
     listToolSwitches().filter(

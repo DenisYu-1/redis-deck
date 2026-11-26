@@ -38,7 +38,9 @@ describe('AI model routes', () => {
             localModel: '',
             keyLast4: null,
             agent: 'claude',
-            agents: [expect.objectContaining({ id: 'claude' })],
+            agents: ['claude', 'codex', 'gemini'].map((id) =>
+                expect.objectContaining({ id })
+            ),
             ready: false
         });
     });

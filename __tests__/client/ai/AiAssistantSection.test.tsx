@@ -236,6 +236,34 @@ test('sets up the Local agent: found or missing, path and Arguments', async () =
     expect(await screen.findByText('Claude Code · local agent')).toBeVisible();
 });
 
+test('selects another agent, with its own Arguments and hint', async () => {
+    const user = userEvent.setup();
+    const codex: api.AiAgent = {
+        id: 'codex',
+        name: 'Codex CLI',
+        command: 'codex',
+        defaultArgs: 'exec --sandbox read-only',
+        path: '',
+        args: 'exec --sandbox read-only',
+        found: null
+    };
+    mocked.getAiModel.mockResolvedValue({
+        ...settings,
+        mode: 'agent',
+        agents: [claude, codex]
+    });
+    render(<AiAssistantSection />);
+
+    expect(await screen.findByText(/points the agent/)).toBeVisible();
+    await user.click(screen.getByRole('radio', { name: /Codex CLI/ }));
+
+    expect(screen.getByLabelText('Arguments')).toHaveValue(
+        'exec --sandbox read-only'
+    );
+    expect(screen.queryByText(/points the agent/)).not.toBeInTheDocument();
+    expect(screen.getByText(/adds its MCP server/)).toBeVisible();
+});
+
 test('shows an agent whose CLI is missing', async () => {
     mocked.getAiModel.mockResolvedValue({
         ...settings,

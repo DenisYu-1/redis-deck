@@ -11,8 +11,16 @@ const CLIENT_NAME = 'Redis Deck Assistant';
 
 // chatId: whose answers count (approvalDesk.js). signal: aborting it denies
 // what still waits. onCard gets every approval card, then its new state
-// (mcp/writeGate.js, plus state 'pending'). onCall, onLimit: mcp/callMeter.js.
-function createAssistantServer({ chatId, signal, onCall, onCard, onLimit }) {
+// (mcp/writeGate.js, plus state 'pending'). onCall, onLimit, restoreText:
+// mcp/callMeter.js.
+function createAssistantServer({
+    chatId,
+    signal,
+    onCall,
+    onCard,
+    onLimit,
+    restoreText
+}) {
     // Never 'session': the next write asks again.
     const approver = (request, { signal: timedOut }) => {
         const signals = [timedOut, signal];
@@ -27,7 +35,8 @@ function createAssistantServer({ chatId, signal, onCall, onCard, onLimit }) {
         onWrite: onCard,
         maxCalls: MAX_TOOL_CALLS,
         onCall,
-        onLimit
+        onLimit,
+        restoreText
     });
 }
 

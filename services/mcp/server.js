@@ -36,7 +36,8 @@ function createMcpServer({
     maxCalls,
     onCall,
     onLimit,
-    onWrite
+    onWrite,
+    restoreText
 } = {}) {
     const server = new McpServer({ name: 'redis-deck', version });
     const ctx = {
@@ -70,6 +71,7 @@ function createMcpServer({
             maxCalls,
             onCall,
             onLimit,
+            restoreText,
             clock,
             refuse: (name, args, why) =>
                 refusePastLimit(tools, name, args, why, ctx)

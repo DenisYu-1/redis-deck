@@ -44,20 +44,68 @@ describe('AI model routes: Local agent', () => {
                 .expect(200)
         ).body;
 
-    it('offers Claude Code with its default arguments', async () => {
+    it('offers the three agents with their default arguments', async () => {
         const { agent, agents } = await get();
 
         expect(agent).toBe('claude');
-        expect(agents).toEqual([
-            expect.objectContaining({
-                id: 'claude',
-                name: 'Claude Code',
-                command: 'claude',
-                path: '',
-                args: AGENTS[0].defaultArgs,
-                defaultArgs: AGENTS[0].defaultArgs
-            })
+        expect(agents.map((a) => [a.id, a.name, a.command, a.path])).toEqual([
+            ['claude', 'Claude Code', 'claude', ''],
+            ['codex', 'Codex CLI', 'codex', ''],
+            ['gemini', 'Gemini CLI', 'gemini', '']
         ]);
+        for (const { args, defaultArgs } of agents) {
+            expect(args).toBe(defaultArgs);
+        }
+        expect(agents[1].args).toMatch(/^exec --sandbox read-only /);
+        expect(agents[2].args).toMatch(/^-p /);
+    });
+
+    describe.each([
+        ['codex', 'Codex CLI', '- mcp__redis_deck__get_key\n- get_info\n'],
+        ['gemini', 'Gemini CLI', 'mcp_redis-deck_get_key\nget_info\n']
+    ])('%s', (id, name, listing) => {
+        const choice = {
+            agent: id,
+            agentPath: path.join(path.dirname(FAKE), id)
+        };
+
+        it('is saved beside the other agents, found and chatted with', async () => {
+            await save().expect(200);
+            const { body } = await save({
+                ...choice,
+                agentArgs: `${AGENTS.find((a) => a.id === id).defaultArgs} -m x`
+            }).expect(200);
+
+            expect(body).toMatchObject({ agent: id, ready: true });
+            const byId = Object.fromEntries(body.agents.map((a) => [a.id, a]));
+            expect(byId[id].found).toBe(choice.agentPath);
+            expect(byId[id].args).toMatch(/ -m x$/);
+            expect(byId.claude.path).toBe(FAKE);
+
+            script([{ say: 'It is a hash.' }]);
+            const res = await request(app)
+                .post('/api/ai-chat')
+                .send({
+                    chatId: `chat-${id}-route`,
+                    connectionId: global.TEST_CONNECTION_ID,
+                    messages: [{ role: 'user', text: 'What is this?' }]
+                })
+                .expect(200);
+            expect(res.text.trim().split('\n').map(JSON.parse)).toEqual([
+                { type: 'text', text: 'It is a hash.' },
+                { type: 'done' }
+            ]);
+        });
+
+        it('is tested with one turn', async () => {
+            script([{ say: listing }]);
+
+            expect(await test(choice)).toEqual({
+                ok: true,
+                title: expect.stringContaining(`${name} answered in`),
+                detail: 'It listed 2 Redis Deck MCP tools.'
+            });
+        });
     });
 
     it('saves the path and arguments, and shows the agent as found', async () => {
