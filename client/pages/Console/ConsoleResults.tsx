@@ -3,6 +3,7 @@ import type { ConsoleResult } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { ConsoleOutput } from './ConsoleOutput';
 import { ConsoleReply } from './ConsoleReply';
+import type { Statement } from './statements';
 
 /** The Output history, or the index of a statement of the last run. */
 export type ResultsTab = 'output' | number;
@@ -12,6 +13,8 @@ interface Props {
     results: ConsoleResult[];
     tab: ResultsTab;
     onTab: (tab: ResultsTab) => void;
+    /** Runs a statement whose result takes the place of result `index`. */
+    onRerun: (index: number, statement: Statement) => void;
 }
 
 const commandOf = (text: string) => text.split(/\s+/, 1).join('').toUpperCase();
@@ -43,7 +46,7 @@ function Tab({
     );
 }
 
-export function ConsoleResults({ env, results, tab, onTab }: Props) {
+export function ConsoleResults({ env, results, tab, onTab, onRerun }: Props) {
     const count = useAppStore((s) => s.consoleOutput.length);
     // no result: the Output tab, also once the results are gone
     const result = tab === 'output' ? undefined : results[tab];
@@ -70,7 +73,7 @@ export function ConsoleResults({ env, results, tab, onTab }: Props) {
                 ))}
             </div>
             <div className="rbody" role="tabpanel">
-                {result ? (
+                {result && typeof tab === 'number' ? (
                     <>
                         <div className="rhead mono xs">
                             <span className="ellip">{result.text}</span>
@@ -78,7 +81,13 @@ export function ConsoleResults({ env, results, tab, onTab }: Props) {
                                 line {result.line} · {env} · {result.ms} ms
                             </span>
                         </div>
-                        <ConsoleReply result={result} />
+                        <ConsoleReply
+                            key={`${tab} ${result.text}`}
+                            result={result}
+                            onRerun={(text) =>
+                                onRerun(tab, { line: result.line, text })
+                            }
+                        />
                     </>
                 ) : (
                     <ConsoleOutput />

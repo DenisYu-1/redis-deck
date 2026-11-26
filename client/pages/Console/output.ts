@@ -1,4 +1,5 @@
 import type { ConsoleResult } from '@/services/apiService';
+import { tableOf } from './shape';
 
 /** One line of the Output history: `[time] conn> command → summary`. */
 export interface OutputLine {
@@ -12,10 +13,11 @@ export interface OutputLine {
 
 let lastId = 0;
 
-function summarize({ kind, reply }: ConsoleResult): string {
-    if (Array.isArray(reply)) {
-        return `${reply.length} row${reply.length === 1 ? '' : 's'}`;
-    }
+function summarize(result: ConsoleResult): string {
+    const { kind, reply } = result;
+    // an error's reply is text, so it is never a table
+    const rows = tableOf(result)?.rows.length;
+    if (rows !== undefined) return `${rows} row${rows === 1 ? '' : 's'}`;
     if (kind === 'integer') return `(integer) ${String(reply)}`;
     if (kind === 'nil') return '(nil)';
     if (kind === 'bulk') return `${String(reply).length} chars`;

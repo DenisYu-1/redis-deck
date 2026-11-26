@@ -218,3 +218,57 @@
     color: var(--mu);
     text-align: right;
 }
+.rgrid th {
+    position: sticky;
+    top: 0;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--bd);
+    background: var(--sf);
+    color: var(--mu);
+    font-family: var(--f-ui);
+    font-size: 11px;
+    font-weight: 500;
+    text-align: left;
+}
+.rgrid th.rn {
+    text-align: right;
+}
+.rfoot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+}
+.klink {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--info);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+.klink:hover {
+    text-decoration: underline;
+}
+.fmt {
+    margin-right: 6px;
+    padding: 0 4px;
+    border-radius: 4px;
+    background: var(--infoS);
+    color: var(--info);
+    font-size: 10px;
+}
+.rdec {
+    max-height: 160px;
+    margin: 2px 0 0;
+    overflow: auto;
+    font: inherit;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.rcopy {
+    margin-left: auto;
+}
