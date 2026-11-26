@@ -1,4 +1,5 @@
 import type { ConsoleResult } from '@/services/apiService';
+import { commandWords } from './lineCheck';
 
 export interface TableShape {
     columns: string[];
@@ -9,9 +10,9 @@ export interface TableShape {
     cursor?: string;
 }
 
-/** The words of a statement, upper-cased and without quotes. */
+/** The words of a statement, upper-cased. */
 const words = (text: string) =>
-    text.replace(/["']/g, '').trim().toUpperCase().split(/\s+/);
+    commandWords(text).map((word) => word.toUpperCase());
 
 const scalarColumn = (name: string, values: unknown[]) => ({
     columns: [name],
@@ -20,7 +21,9 @@ const scalarColumn = (name: string, values: unknown[]) => ({
 
 /** The same SCAN, from another cursor. */
 export const scanFrom = (text: string, cursor: string) =>
-    text.replace(/^(\s*\S+\s+)\S+/, `$1${cursor}`);
+    text
+        .replace(/^(\s*\S+\s+)(?:"\d+"|'\d+'|\d+)\s*/, `$1${cursor} `)
+        .trimEnd();
 
 /** Whether the command's reply is Key names. */
 export const returnsKeys = (text: string) =>

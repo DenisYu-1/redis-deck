@@ -7,7 +7,7 @@ const UNUSABLE = ['fail', 'noaddr', 'handshake'];
 // The Node for a command without a Key: always the same master (first by id),
 // so a SCAN cursor goes back to the Node that issued it.
 async function keylessNode(connectionId) {
-    const nodes = await fetchClusterNodes(connectionId);
+    const nodes = await fetchClusterNodes(connectionId, { quiet: true });
     const node =
         nodes.find((n) => !n.flags.some((f) => UNUSABLE.includes(f))) ??
         nodes[0];

@@ -8,27 +8,23 @@ export interface LineMark {
     message: string;
 }
 
-/**
- * The first two words of a statement, quoted as the server's `tokenize` reads
- * them (`services/redis.js`): enough to name the command.
- */
-function commandWords(text: string): string[] {
-    const words = text.match(/(?:"(?:\\.|[^"\\])*"?|'[^']*'?|[^\s"'])+/g) ?? [];
-    return words
-        .slice(0, 2)
-        .map((word) =>
-            word.replace(
-                /"((?:\\.|[^"\\])*)"?|'([^']*)'?/g,
-                (_, double?: string, single?: string) =>
-                    double?.replace(/\\(.)/g, '$1') ?? single ?? ''
-            )
-        );
-}
+/** The server's `services/console/tokenize.js`: the same rules. */
+const WORD = /"((?:\\.|[^"\\])*)"|'([^']*)'|(\S+)/g;
+
+/** The words of a statement, without the quotes around them. */
+export const commandWords = (text: string): string[] =>
+    Array.from(
+        text.matchAll(WORD),
+        ([, double, single, bare]) =>
+            double?.replace(/\\(.)/g, '$1') ?? single ?? bare ?? ''
+    );
 
 /** The command's name on the list, as `lookupCommand` on the server finds it. */
 function commandName(text: string, list: ConsoleCommands): string {
     const [command = '', subcommand = ''] = commandWords(text);
     const base = command.toUpperCase();
+    // one quoted word is not two: "CONFIG GET" is not CONFIG GET
+    if (/\s/.test(base)) return `"${base}"`;
     const hasSubcommands = Object.keys(list.commands).some((name) =>
         name.startsWith(`${base} `)
     );

@@ -233,3 +233,28 @@ it('names the cluster Node that answered', async () => {
 
     expect(panel().getByText(/node 10\.0\.0\.7:7001/)).toBeInTheDocument();
 });
+
+it('does not read words inside a quoted Key as arguments', async () => {
+    await show(result('ZRANGE "z a b withscores" 0 -1', ['a', 'b']));
+
+    expect(headers()).toEqual(['#', 'value']);
+});
+
+it('names the tab by the command without its quotes', async () => {
+    await show(result('"hkeys" h', ['a']));
+
+    expect(screen.getByRole('tab', { name: '1: HKEYS' })).toBeInTheDocument();
+});
+
+it('replaces a quoted cursor, also with no space after it', async () => {
+    const user = await show(result('SCAN "0"MATCH "user *"', ['17', []]));
+    run.mockResolvedValueOnce([result('SCAN 17 MATCH "user *"', ['0', []])]);
+
+    await user.click(
+        panel().getByRole('button', { name: 'Continue from cursor 17' })
+    );
+
+    expect(run).toHaveBeenLastCalledWith('shop', [
+        { line: 1, text: 'SCAN 17 MATCH "user *"' }
+    ]);
+});

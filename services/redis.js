@@ -165,7 +165,15 @@ function cliError(error, command, { quiet = false } = {}) {
     };
 }
 
-async function runCommand(command, config, nodeOverride, label, connectionId) {
+// `quiet`: log nothing, also on failure (see cliError).
+async function runCommand(
+    command,
+    config,
+    nodeOverride,
+    label,
+    connectionId,
+    { quiet = false } = {}
+) {
     let raw = false;
     if (command.startsWith('--raw ')) {
         raw = true;
@@ -190,13 +198,15 @@ async function runCommand(command, config, nodeOverride, label, connectionId) {
     const args = [...connArgs(config, nodeOverride), ...flags, ...argv];
 
     // P0.5: log only the redis command, never connection flags / credentials.
-    console.log(`redis-cli [${label}]: ${argv.join(' ')}`);
+    if (!quiet) {
+        console.log(`redis-cli [${label}]: ${argv.join(' ')}`);
+    }
 
     let out;
     try {
         out = await runRedisCli(args, { timeout: 10000, connectionId });
     } catch (error) {
-        throw cliError(error, command);
+        throw cliError(error, command, { quiet });
     }
 
     let processedResult = out.trim();
@@ -223,9 +233,11 @@ async function runCommand(command, config, nodeOverride, label, connectionId) {
         processedResult = '1';
     }
 
-    console.log(
-        `Command ${cmd} result (${processedResult.length} chars): ${processedResult.substring(0, 100)}${processedResult.length > 100 ? '...' : ''}`
-    );
+    if (!quiet) {
+        console.log(
+            `Command ${cmd} result (${processedResult.length} chars): ${processedResult.substring(0, 100)}${processedResult.length > 100 ? '...' : ''}`
+        );
+    }
 
     // Some redis-cli versions print errors to stdout and exit 0.
     if (looksLikeRedisError(processedResult)) {
@@ -240,7 +252,12 @@ async function runCommand(command, config, nodeOverride, label, connectionId) {
 }
 
 // Execute a Redis command against a saved connection.
-async function execRedisCommand(command, connectionId, nodeOverride = null) {
+async function execRedisCommand(
+    command,
+    connectionId,
+    nodeOverride = null,
+    options = {}
+) {
     const config = getConnectionConfig(connectionId);
     try {
         return await runCommand(
@@ -248,7 +265,8 @@ async function execRedisCommand(command, connectionId, nodeOverride = null) {
             config,
             nodeOverride,
             connectionId,
-            connectionId
+            connectionId,
+            options
         );
     } catch (error) {
         dropTopologyOnError(connectionId, error);
@@ -410,12 +428,17 @@ async function isClusterMode(connectionId) {
 
 // The master Nodes of a clustered Connection, cached. Throws when the cluster
 // cannot be asked.
-async function fetchClusterNodes(connectionId) {
+async function fetchClusterNodes(connectionId, options) {
     const cached = cachedTopology(connectionId);
     if (cached) {
         return cached;
     }
-    const nodesInfo = await execRedisCommand('CLUSTER NODES', connectionId);
+    const nodesInfo = await execRedisCommand(
+        'CLUSTER NODES',
+        connectionId,
+        null,
+        options
+    );
 
     const nodes = nodesInfo
         .split('\n')
