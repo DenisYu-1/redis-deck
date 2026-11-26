@@ -173,7 +173,6 @@ export function ConsolePage() {
                     aria-label="Redis commands, one per line"
                     placeholder="PING"
                     spellCheck={false}
-                    wrap="off"
                     autoCapitalize="off"
                     autoComplete="off"
                     value={script}

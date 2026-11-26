@@ -1,4 +1,6 @@
 .cedwrap {
+    position: relative;
+    overflow: hidden;
     display: flex;
     min-height: 0;
     border-bottom: 1px solid var(--bd);
@@ -6,29 +8,49 @@
 }
 .cgut {
     flex: none;
-    min-width: 54px;
-    overflow: hidden;
+    width: 54px;
     border-right: 1px solid var(--bd);
     background: var(--sf);
 }
+/* spans the whole editor: each row also lays out its line, unseen, so a
+   wrapped line's number and the next one stay level with the textarea */
 .cgutin {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+    scrollbar-gutter: stable;
     padding: 10px 0;
     will-change: transform;
 }
 .cgl {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    height: 22px;
-    padding: 0 22px 0 8px;
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr);
     position: relative;
+    line-height: 22px;
     font-family: var(--f-mono);
-    font-size: 11px;
     color: var(--mu);
+}
+.cgl > span:first-child {
+    padding-right: 22px;
+    font-size: 11px;
+    text-align: right;
+}
+.cgl::after {
+    grid-column: 2;
+    grid-row: 1;
+    content: attr(data-text);
+    visibility: hidden;
+    padding: 0 14px;
+    font-size: 13px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
 }
 .cmark {
     position: absolute;
-    right: 8px;
+    top: 8px;
+    left: 40px;
     width: 6px;
     height: 6px;
     border-radius: 50%;
@@ -41,11 +63,16 @@
 }
 /* a pencil: "writes data", told apart from the dots by shape too */
 .cmark.write {
-    right: 5px;
+    top: 5px;
+    left: 37px;
     width: 12px;
     height: 12px;
     border-radius: 0;
     background: var(--c2);
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 21v-4L16 4l4 4L7 21z'/%3E%3C/svg%3E")
         center / contain no-repeat;
+}
+/* above the gutter's unseen text layer, which would else take the clicks */
+.cedwrap > textarea {
+    position: relative;
 }

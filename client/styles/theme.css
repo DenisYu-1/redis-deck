@@ -1414,10 +1414,14 @@ body:has(.titlebar) .toolbar {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin: 0;
     padding: 9px 12px;
     border: 1px solid var(--bd);
     border-radius: 9px;
     background: var(--bg);
+}
+.agent input {
+    margin: 0;
 }
 .agent.on {
     border-color: var(--ac);
@@ -1473,6 +1477,7 @@ body:has(.titlebar) .toolbar {
     border-radius: 9px;
     background: var(--bg);
     text-align: left;
+    white-space: normal;
     color: var(--tx2);
     font-size: 12px;
 }

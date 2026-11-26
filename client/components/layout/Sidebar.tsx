@@ -91,7 +91,7 @@ export function Sidebar() {
                 </NavLink>
                 <NavLink to="/console" className={navClass}>
                     <ConsoleIcon />
-                    <span>Console</span>
+                    <span>Console (beta-version)</span>
                 </NavLink>
             </nav>
             {pathname.startsWith('/stats') && (
