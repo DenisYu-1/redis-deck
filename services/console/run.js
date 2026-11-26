@@ -7,8 +7,14 @@ const { safeMessage } = require('../mcp/errors');
 const { lookupCommand } = require('./commands');
 
 // Without a mapping node-redis returns status and bulk replies both as strings.
+// The client speaks RESP3: maps become flat arrays again (an object would lose
+// fields such as __proto__), and doubles stay text (JSON has no "inf").
 const REPLY_OPTIONS = {
-    typeMapping: { [RESP_TYPES.SIMPLE_STRING]: Buffer }
+    typeMapping: {
+        [RESP_TYPES.SIMPLE_STRING]: Buffer,
+        [RESP_TYPES.MAP]: Array,
+        [RESP_TYPES.DOUBLE]: String
+    }
 };
 
 function kindOf(reply) {

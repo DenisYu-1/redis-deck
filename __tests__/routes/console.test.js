@@ -10,6 +10,7 @@ const { dropClient } = require('../../services/redisClient');
 const {
     createTestKey,
     createTestHash,
+    createTestZSet,
     deleteTestKeys,
     keyExists
 } = require('../helpers/testHelpers');
@@ -168,6 +169,54 @@ standalone('Console routes', () => {
         expect(array).toMatchObject({ kind: 'array', reply: ['f'] });
         expect(integer).toMatchObject({ kind: 'integer', reply: 1 });
         expect(echo).toMatchObject({ kind: 'bulk', reply: 'PONG' });
+    });
+
+    test('returns pairs as the plain reply, not as an object', async () => {
+        const hash = `${PREFIX}:pairs-hash`;
+        const zset = `${PREFIX}:pairs-zset`;
+        // a field name that an object would swallow
+        await createTestHash(hash, { name: 'Ada', __proto__x: '1' });
+        await execArgv(
+            ['HSET', hash, '__proto__', 'kept'],
+            global.TEST_CONNECTION_ID
+        );
+        await createTestZSet(zset, [
+            { score: 1.5, value: 'a' },
+            { score: 'inf', value: 'b' }
+        ]);
+
+        const [all, scores, config, missing] = await results(
+            `HGETALL ${hash}`,
+            `ZRANGE ${zset} 0 -1 WITHSCORES`,
+            'CONFIG GET maxmemory',
+            `HGETALL ${PREFIX}:missing`
+        );
+
+        expect(all).toMatchObject({
+            kind: 'array',
+            reply: ['name', 'Ada', '__proto__x', '1', '__proto__', 'kept']
+        });
+        expect(scores).toMatchObject({
+            kind: 'array',
+            reply: [
+                ['a', '1.5'],
+                ['b', 'inf']
+            ]
+        });
+        expect(config).toMatchObject({
+            kind: 'array',
+            reply: ['maxmemory', expect.any(String)]
+        });
+        expect(missing).toMatchObject({ kind: 'array', reply: [] });
+    });
+
+    test('returns SCAN as the cursor and the Key list', async () => {
+        const key = `${PREFIX}:scan-me`;
+        await createTestKey(key, 'v');
+
+        const [scan] = await results(`SCAN 0 MATCH ${key} COUNT 100000`);
+
+        expect(scan).toMatchObject({ kind: 'array', reply: ['0', [key]] });
     });
 
     test('returns the Redis error text', async () => {
