@@ -182,6 +182,32 @@ standalone('Console routes', () => {
         });
     });
 
+    test('stops at the first error; later statements are Not run', async () => {
+        const key = `${PREFIX}:stop`;
+        await createTestKey(key, 'v');
+
+        const list = await results(
+            `GET ${key}`,
+            `HGETALL ${key}`,
+            'PING',
+            'NOPE'
+        );
+
+        expect(list.map((r) => [r.line, r.text, r.kind])).toEqual([
+            [0, `GET ${key}`, 'bulk'],
+            [1, `HGETALL ${key}`, 'error'],
+            [2, 'PING', 'not-run'],
+            [3, 'NOPE', 'not-run']
+        ]);
+        expect(list[2]).toMatchObject({ reply: null, ms: 0 });
+    });
+
+    test('a refused command also stops the run', async () => {
+        const list = await results('NOPE', 'PING');
+
+        expect(list.map((r) => r.kind)).toEqual(['error', 'not-run']);
+    });
+
     test('does not log Console commands, also when they fail', async () => {
         const secret = `${PREFIX}:never-logged`;
         await createTestKey(secret, 'v');

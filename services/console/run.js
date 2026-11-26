@@ -51,12 +51,19 @@ async function runStatement(connectionId, argv) {
     }
 }
 
-// -> one result per statement, in order.
+// -> one result per statement, in order. No transaction: the first error stops
+// the run, and the statements after it are returned as 'not-run'.
 async function runStatements(connectionId, statements) {
     const results = [];
+    let stopped = false;
     for (const { line, text } of statements) {
+        if (stopped) {
+            results.push({ line, text, kind: 'not-run', reply: null, ms: 0 });
+            continue;
+        }
         const started = performance.now();
         const outcome = await runStatement(connectionId, tokenize(text));
+        stopped = outcome.kind === 'error';
         results.push({
             line,
             text,

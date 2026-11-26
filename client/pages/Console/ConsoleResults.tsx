@@ -1,56 +1,89 @@
+import type { ReactNode } from 'react';
 import type { ConsoleResult } from '@/services/apiService';
+import { useAppStore } from '@/store/useAppStore';
+import { ConsoleOutput } from './ConsoleOutput';
+import { ConsoleReply } from './ConsoleReply';
 
-/** A table cell: nested replies (SCAN, SLOWLOG GET) are shown as JSON. */
-function cell(value: unknown): string {
-    if (value === null) return '(nil)';
-    return typeof value === 'object' ? JSON.stringify(value) : String(value);
+/** The Output history, or the index of a statement of the last run. */
+export type ResultsTab = 'output' | number;
+
+interface Props {
+    env: string;
+    results: ConsoleResult[];
+    tab: ResultsTab;
+    onTab: (tab: ResultsTab) => void;
 }
 
-function Reply({ result }: { result: ConsoleResult }) {
-    const { kind, reply } = result;
-    if (kind === 'error') {
-        return (
-            <div className="rerr" role="alert">
-                {String(reply)}
-            </div>
-        );
-    }
-    if (Array.isArray(reply)) {
-        if (reply.length === 0) {
-            return <div className="scalar mu">(empty array)</div>;
-        }
-        return (
-            <table className="rgrid">
-                <tbody>
-                    {reply.map((value, i) => (
-                        <tr key={i}>
-                            <td className="rn">{i + 1}</td>
-                            <td>{cell(value)}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        );
-    }
-    const text = kind === 'integer' ? `(integer) ${cell(reply)}` : cell(reply);
-    return <div className="scalar">{text}</div>;
+const commandOf = (text: string) => text.split(/\s+/, 1).join('').toUpperCase();
+
+const dotColor = (kind: ConsoleResult['kind']) => {
+    if (kind === 'error') return 'var(--ac)';
+    return kind === 'not-run' ? 'var(--mu)' : 'var(--ok)';
+};
+
+function Tab({
+    selected,
+    onClick,
+    children
+}: {
+    selected: boolean;
+    onClick: () => void;
+    children: ReactNode;
+}) {
+    return (
+        <button
+            type="button"
+            className="rtab"
+            role="tab"
+            aria-selected={selected}
+            onClick={onClick}
+        >
+            {children}
+        </button>
+    );
 }
 
-export function ConsoleResults({ results }: { results: ConsoleResult[] }) {
+export function ConsoleResults({ env, results, tab, onTab }: Props) {
+    const count = useAppStore((s) => s.consoleOutput.length);
+    // no result: the Output tab, also once the results are gone
+    const result = tab === 'output' ? undefined : results[tab];
     return (
         <section className="results" aria-label="Results">
-            {results.length === 0 && (
-                <div className="scalar mu">Run a line to see its reply.</div>
-            )}
-            {results.map((result) => (
-                <div key={result.line}>
-                    <div className="rhead mono xs">
-                        <span>{result.text}</span>
-                        <span className="mu">{result.ms} ms</span>
-                    </div>
-                    <Reply result={result} />
-                </div>
-            ))}
+            <div className="rtabs" role="tablist">
+                <Tab selected={!result} onClick={() => onTab('output')}>
+                    Output <span className="mono xs mu">{count}</span>
+                </Tab>
+                {results.map((r, i) => (
+                    <Tab
+                        key={i}
+                        selected={r === result}
+                        onClick={() => onTab(i)}
+                    >
+                        <span
+                            className="rdot"
+                            style={{ background: dotColor(r.kind) }}
+                        />
+                        <span className="mono">
+                            {i + 1}: {commandOf(r.text)}
+                        </span>
+                    </Tab>
+                ))}
+            </div>
+            <div className="rbody" role="tabpanel">
+                {result ? (
+                    <>
+                        <div className="rhead mono xs">
+                            <span className="ellip">{result.text}</span>
+                            <span className="mu">
+                                line {result.line} · {env} · {result.ms} ms
+                            </span>
+                        </div>
+                        <ConsoleReply result={result} />
+                    </>
+                ) : (
+                    <ConsoleOutput />
+                )}
+            </div>
         </section>
     );
 }

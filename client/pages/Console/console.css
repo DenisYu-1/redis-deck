@@ -24,7 +24,66 @@
     gap: 8px;
     padding: 8px 14px;
     border-bottom: 1px solid var(--bd);
+    position: relative;
     flex: none;
+}
+.cpop {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 14px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: min(480px, calc(100vw - 48px));
+    max-height: 360px;
+    overflow: auto;
+    padding: 8px;
+    border: 1px solid var(--bd2);
+    border-radius: 10px;
+    background: var(--sf);
+    box-shadow: 0 12px 32px var(--shadow);
+}
+.cpop label {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    cursor: pointer;
+}
+.cpop label:hover {
+    background: var(--hv);
+}
+.cpop input {
+    margin: 0;
+    accent-color: var(--ac);
+}
+.cpopline {
+    flex: none;
+    width: 26px;
+    text-align: right;
+}
+.cpophead,
+.cpopfoot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px 6px;
+}
+.cpophead b {
+    flex: 1;
+    font-weight: 600;
+}
+.cpopfoot {
+    justify-content: flex-end;
+    margin-top: 4px;
+    padding: 8px 8px 2px;
+    border-top: 1px solid var(--bd);
 }
 .chint {
     margin-left: auto;
@@ -48,9 +107,74 @@
     line-height: 22px;
 }
 .results {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--sf);
+}
+.rtabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+    min-height: 36px;
+    padding: 0 10px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--bd);
+}
+.rtab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 35px;
+    padding: 0 10px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--tx2);
+    font-size: 12px;
+    white-space: nowrap;
+}
+.rtab[aria-selected='true'] {
+    border-bottom-color: var(--ac);
+    color: var(--tx);
+}
+.rdot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+.rbody {
+    flex: 1;
     min-height: 0;
     overflow: auto;
-    background: var(--sf);
+}
+.outlist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.outln {
+    display: flex;
+    gap: 4px;
+    min-width: 0;
+    padding: 5px 14px;
+    border-bottom: 1px solid var(--bd);
+    font-family: var(--f-mono);
+    font-size: 12px;
+    white-space: pre;
+}
+.outcmd {
+    flex: 1;
+    min-width: 0;
+}
+.outsum {
+    max-width: 50%;
+    color: var(--tx2);
+}
+.outsum.bad {
+    color: var(--ac);
 }
 .rhead {
     display: flex;

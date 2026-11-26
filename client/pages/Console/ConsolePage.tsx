@@ -4,12 +4,19 @@ import { Button } from '@/components/ui/Button';
 import { runConsole, type ConsoleResult } from '@/services/apiService';
 import { useAppStore } from '@/store/useAppStore';
 import { showToast } from '@/utils/toast';
-import { ConsoleResults } from './ConsoleResults';
-import { selectedStatements } from './statements';
+import { ConsoleResults, type ResultsTab } from './ConsoleResults';
+import { outputLines } from './output';
+import { StatementChooser } from './StatementChooser';
+import {
+    allStatements,
+    lineAtCursor,
+    selectedStatements,
+    type Statement
+} from './statements';
 import './console.css';
 
 export function ConsolePage() {
-    const { connections, currentEnvironment } = useAppStore();
+    const { connections, currentEnvironment, addConsoleOutput } = useAppStore();
     const connection = connections.find((c) => c.id === currentEnvironment);
     const env = currentEnvironment ?? '';
     const editor = useRef<HTMLTextAreaElement>(null);
@@ -19,22 +26,27 @@ export function ConsolePage() {
         env: '',
         results: []
     });
+    const [tab, setTab] = useState<ResultsTab>('output');
+    // opened for one script: any change to the script closes the popup
+    const [chooser, setChooser] = useState<{
+        script: string;
+        line: number | undefined;
+    } | null>(null);
+    const choosing = chooser?.script === script;
+    const all = allStatements(script);
 
-    const runLine = async () => {
-        const el = editor.current;
-        if (!el || !env || running.current) return;
-        const statements = selectedStatements(
-            el.value,
-            el.selectionStart,
-            el.selectionEnd
-        );
+    const execute = async (statements: Statement[]) => {
+        if (!env || running.current) return;
         if (statements.length === 0) {
             showToast('Nothing to run there', 'info');
             return;
         }
         running.current = true;
         try {
-            setRun({ env, results: await runConsole(env, statements) });
+            const results = await runConsole(env, statements);
+            setRun({ env, results });
+            setTab(0);
+            addConsoleOutput(outputLines(env, results));
         } catch (error) {
             showToast(
                 error instanceof Error ? error.message : 'Run failed',
@@ -45,10 +57,28 @@ export function ConsolePage() {
         }
     };
 
+    const runLine = () => {
+        const el = editor.current;
+        if (!el) return;
+        void execute(
+            selectedStatements(el.value, el.selectionStart, el.selectionEnd)
+        );
+    };
+
+    const runAll = () => void execute(all);
+
+    const toggleChooser = () => {
+        const cursor = editor.current?.selectionStart ?? 0;
+        setChooser(
+            choosing ? null : { script, line: lineAtCursor(script, cursor) }
+        );
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
-        if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'Enter') {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
             e.preventDefault();
-            void runLine();
+            if (e.shiftKey) runAll();
+            else runLine();
         }
     };
 
@@ -70,13 +100,36 @@ export function ConsolePage() {
                     variant="primary"
                     size="sm"
                     disabled={!env}
-                    onClick={() => void runLine()}
+                    onClick={runLine}
                 >
                     Run line
                 </Button>
+                <Button
+                    size="sm"
+                    disabled={!env || all.length === 0}
+                    aria-expanded={choosing}
+                    onClick={toggleChooser}
+                >
+                    Choose statements…
+                </Button>
+                <Button size="sm" disabled={!env} onClick={runAll}>
+                    Run all {all.length}
+                </Button>
                 <span className="xs mu chint">
-                    ⌘/Ctrl+Enter runs the line or selection
+                    ⌘/Ctrl+Enter run line or selection · ⌘/Ctrl+Shift+Enter run
+                    all
                 </span>
+                {choosing && (
+                    <StatementChooser
+                        statements={all}
+                        initialLine={chooser.line}
+                        onRun={(picked) => {
+                            setChooser(null);
+                            void execute(picked);
+                        }}
+                        onClose={() => setChooser(null)}
+                    />
+                )}
             </div>
             <div className="csplit">
                 <textarea
@@ -91,8 +144,14 @@ export function ConsolePage() {
                     value={script}
                     onChange={(e) => setScript(e.target.value)}
                     onKeyDown={onKeyDown}
+                    onFocus={() => setChooser(null)}
                 />
-                <ConsoleResults results={run.env === env ? run.results : []} />
+                <ConsoleResults
+                    env={run.env}
+                    results={run.env === env ? run.results : []}
+                    tab={tab}
+                    onTab={setTab}
+                />
             </div>
         </div>
     );
