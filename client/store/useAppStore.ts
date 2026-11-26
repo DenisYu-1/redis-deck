@@ -42,7 +42,8 @@ export const useAppStore = create<AppState>((set, get, api) => ({
         })),
     setKeyPattern: (pattern) => set({ keyPattern: pattern }),
     setConnections: (connections) => set({ connections }),
-    // A key belongs to one connection: switching drops the open key and its details.
+    // A key belongs to one connection: switching drops the open key, its details
+    // and the chat's chips.
     setCurrentEnvironment: (environment) =>
         set((s) =>
             s.currentEnvironment === environment
@@ -50,7 +51,8 @@ export const useAppStore = create<AppState>((set, get, api) => ({
                 : {
                       currentEnvironment: environment,
                       selectedKey: null,
-                      keyDetails: null
+                      keyDetails: null,
+                      chat: { ...s.chat, chips: {} }
                   }
         ),
     setSelectedKey: (key) => set({ selectedKey: key }),

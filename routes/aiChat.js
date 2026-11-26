@@ -5,6 +5,7 @@ const express = require('express');
 const { getConnection } = require('../services/database');
 const { getChatModel } = require('../services/aiModel');
 const { runTurn } = require('../services/ai/turnRunner');
+const { isChips, withChips } = require('../services/ai/chips');
 
 const router = express.Router();
 
@@ -13,7 +14,8 @@ const running = new Set();
 
 const isMessage = (m) =>
     (m?.role === 'user' || m?.role === 'assistant') &&
-    typeof m.text === 'string';
+    typeof m.text === 'string' &&
+    isChips(m.chips);
 
 // Returns why the request cannot be run, or null.
 function invalid({ chatId, connectionId, messages } = {}) {
@@ -22,7 +24,7 @@ function invalid({ chatId, connectionId, messages } = {}) {
         return 'Unknown Connection';
     }
     if (!Array.isArray(messages) || !messages.every(isMessage)) {
-        return 'messages must be a list of { role, text }';
+        return 'messages must be a list of { role, text, chips? }';
     }
     if (messages.at(-1)?.role !== 'user') {
         return 'The last message must be the user’s';
@@ -57,7 +59,10 @@ router.post('/ai-chat', async (req, res) => {
     try {
         await runTurn({
             connectionId,
-            messages: messages.map(({ role, text }) => ({ role, text })),
+            messages: messages.map(({ role, text, chips }) => ({
+                role,
+                text: withChips(text, chips)
+            })),
             model,
             signal: left.signal,
             emit: (event) => {

@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import type { ChatPart } from '@/services/aiChat';
 import { useAppStore } from '@/store/useAppStore';
+import { chipLabel } from '@/utils/chatChips';
 import { Markdown } from './Markdown';
+import { Suggestions } from './Suggestions';
 import { ToolRow } from './ToolRow';
 
 function Part({ part }: { part: ChatPart }) {
@@ -32,6 +34,7 @@ function EmptyChat() {
                 The assistant reads keys and INFO through Redis Deck’s MCP tools
                 and drafts commands for you. It does not change data.
             </p>
+            <Suggestions />
         </div>
     );
 }
@@ -64,6 +67,11 @@ export function ChatMessages() {
             {messages.map((message, i) =>
                 message.role === 'user' ? (
                     <div key={i} className="chat-msg user">
+                        {message.chips && (
+                            <span className="chat-sent mono ellip">
+                                {message.chips.map(chipLabel).join(' · ')}
+                            </span>
+                        )}
                         {message.text}
                     </div>
                 ) : (
