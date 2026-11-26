@@ -38,7 +38,8 @@ export function ConsolePage() {
     const choosing = chooser?.script === script;
     const all = allStatements(script);
 
-    const execute = async (statements: Statement[]) => {
+    // `replace`: the result the (single) statement's result takes the place of
+    const execute = async (statements: Statement[], replace?: number) => {
         if (!env || running.current) return;
         if (statements.length === 0) {
             showToast('Nothing to run there', 'info');
@@ -48,8 +49,17 @@ export function ConsolePage() {
         try {
             const results = await runConsole(env, statements);
             if (!results) return; // the writes were not confirmed
-            setRun({ env, results });
-            setTab(0);
+            if (replace === undefined) {
+                setRun({ env, results });
+                setTab(0);
+            } else {
+                setRun((last) => ({
+                    env,
+                    results: last.results.map((old, i) =>
+                        i === replace ? (results[0] ?? old) : old
+                    )
+                }));
+            }
             addConsoleOutput(outputLines(env, results));
         } catch (error) {
             showToast(
@@ -156,6 +166,9 @@ export function ConsolePage() {
                     results={run.env === env ? run.results : []}
                     tab={tab}
                     onTab={setTab}
+                    onRerun={(index, statement) =>
+                        void execute([statement], index)
+                    }
                 />
             </div>
         </div>
