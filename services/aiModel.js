@@ -3,6 +3,7 @@
 // scrubbed of it.
 const { getDatabase } = require('./database');
 const anthropic = require('./ai/anthropic');
+const adapters = require('./ai/adapters');
 
 const DEFAULTS = Object.freeze({
     mode: 'api',
@@ -31,6 +32,14 @@ function getModelSettings() {
         models: anthropic.MODELS,
         keyLast4: lastFour(api_key)
     };
+}
+
+// The model the chat runs on, with its adapter and the stored key; null while
+// none is set up. Server-side only: it carries the key.
+function getChatModel() {
+    const { provider, model, api_key } = readRow();
+    const adapter = adapters[provider];
+    return adapter && api_key ? { adapter, model, apiKey: api_key } : null;
 }
 
 // Validates a request body; a blank apiKey means "the stored one". Error
@@ -95,4 +104,9 @@ async function testModelSettings(body) {
     }
 }
 
-module.exports = { getModelSettings, saveModelSettings, testModelSettings };
+module.exports = {
+    getChatModel,
+    getModelSettings,
+    saveModelSettings,
+    testModelSettings
+};

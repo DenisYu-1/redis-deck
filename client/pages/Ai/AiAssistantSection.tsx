@@ -10,6 +10,8 @@ import {
     type AiModelSettings,
     type AiModelTestResult
 } from '@/services/apiService';
+import { useAppStore } from '@/store/useAppStore';
+import { modelLabel } from '@/utils/aiModelLabel';
 
 const draftOf = ({ mode, provider, model }: AiModelSettings): AiModelDraft => ({
     mode,
@@ -20,7 +22,9 @@ const draftOf = ({ mode, provider, model }: AiModelSettings): AiModelDraft => ({
 
 /** "AI assistant": the model behind the built-in chat. */
 export function AiAssistantSection() {
-    const [saved, setSaved] = useState<AiModelSettings | null>(null);
+    // Shared with the chat panel, which names the model in its header.
+    const saved = useAppStore((s) => s.aiModel);
+    const setSaved = useAppStore((s) => s.setAiModel);
     const [draft, setDraft] = useState<AiModelDraft | null>(null);
     const [result, setResult] = useState<AiModelTestResult | null>(null);
     const [busy, setBusy] = useState<'test' | 'save' | null>(null);
@@ -39,7 +43,7 @@ export function AiAssistantSection() {
         return () => {
             cancelled = true;
         };
-    }, [showToast]);
+    }, [showToast, setSaved]);
 
     const edit = (change: Partial<AiModelDraft>) => {
         setDraft((d) => d && { ...d, ...change });
@@ -75,7 +79,7 @@ export function AiAssistantSection() {
                 <h2>AI assistant</h2>
                 {saved && (
                     <span className={`pill aim-pill ${hasKey ? 'ok' : 'off'}`}>
-                        {hasKey ? `Anthropic · ${saved.model}` : 'No key saved'}
+                        {hasKey ? modelLabel(saved) : 'No key saved'}
                     </span>
                 )}
             </div>

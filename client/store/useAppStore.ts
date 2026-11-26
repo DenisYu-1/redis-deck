@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import type { RedisConnection, KeyDetails } from '@/types';
 import type { OutputLine } from '@/pages/Console/output';
+import { createChatSlice, type ChatSlice } from './chatSlice';
 
 const MAX_OUTPUT_LINES = 200;
 
-interface AppState {
+interface AppState extends ChatSlice {
     connections: RedisConnection[];
     currentEnvironment: string | null;
     selectedKey: string | null;
@@ -23,7 +24,8 @@ interface AppState {
     setIsLoading: (loading: boolean) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get, api) => ({
+    ...createChatSlice(set, get, api),
     connections: [],
     currentEnvironment: null,
     selectedKey: null,

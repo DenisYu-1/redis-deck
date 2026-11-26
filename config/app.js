@@ -17,6 +17,7 @@ const aiHiddenFieldsRoutes = require('../routes/aiHiddenFields');
 const aiAccessRoutes = require('../routes/aiAccess');
 const consoleRoutes = require('../routes/console');
 const aiModelRoutes = require('../routes/aiModel');
+const aiChatRoutes = require('../routes/aiChat');
 
 // aiClients: client config installer; given only when embedded in the
 // Desktop app, which is the only place the installer routes exist.
@@ -30,6 +31,9 @@ function createApp({ middleware = [], searchBudgetMs, aiClients } = {}) {
     middleware.forEach((m) => app.use(m));
 
     // Middleware
+    // The AI chat sends its whole transcript, so it gets a larger body limit;
+    // this parser must come first.
+    app.use('/api/ai-chat', express.json({ limit: '4mb' }));
     app.use(express.json());
 
     // Serve static files from public directory (CSS, etc.)
@@ -53,6 +57,7 @@ function createApp({ middleware = [], searchBudgetMs, aiClients } = {}) {
     app.use('/api', aiAccessRoutes);
     app.use('/api', consoleRoutes);
     app.use('/api', aiModelRoutes);
+    app.use('/api', aiChatRoutes);
     app.use('/api/stats', statsRoutes);
     if (aiClients) app.use('/api', createAiClientsRouter(aiClients));
 

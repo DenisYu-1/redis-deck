@@ -268,3 +268,18 @@ test('Desktop: absent clients are listed only in Supported AI clients', async ()
     await user.click(screen.getByRole('button', { name: '1 more supported' }));
     expect(screen.getByText('Codex')).toBeVisible();
 });
+
+test('the AI assistant is not listed as a connected AI client', async () => {
+    setDesktop(true);
+    mocked.listAiActivityClients.mockResolvedValue([
+        { client: 'Redis Deck Assistant', lastCallAt: Date.now() },
+        { client: 'Codex', lastCallAt: Date.now() }
+    ]);
+    renderPage();
+
+    const server = await screen.findByRole('region', { name: 'MCP server' });
+    expect(await within(server).findByText('Codex')).toBeVisible();
+    expect(
+        within(server).queryByText('Redis Deck Assistant')
+    ).not.toBeInTheDocument();
+});

@@ -8,11 +8,11 @@ Assistant messages render as markdown with a small hand-written renderer (no new
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Panel opens on every page except Welcome and keeps history across page changes
-- [ ] Answer text streams; only one turn runs at a time per chat
-- [ ] Tool calls go through the registry: AI access, masking, tool switches and logging under "Redis Deck Assistant"
-- [ ] At most 20 tool calls per turn; then "Stopped after 20 tool calls; ask again to continue"
-- [ ] Provider errors show in the chat without leaking the key or Connection config
-- [ ] Turn runner tests with a fake model adapter (streaming, tool calls, limit); adapter mapping tests from recorded fixtures; one client test (send, tool row)
+- [x] Panel opens on every page except Welcome and keeps history across page changes
+- [x] Answer text streams; only one turn runs at a time per chat
+- [x] Tool calls go through the registry: AI access, masking, tool switches and logging under "Redis Deck Assistant"
+- [x] At most 20 tool calls per turn; then "Stopped after 20 tool calls; ask again to continue"
+- [x] Provider errors show in the chat without leaking the key or Connection config
+- [x] Turn runner tests with a fake model adapter (streaming, tool calls, limit); adapter mapping tests from recorded fixtures; one client test (send, tool row)

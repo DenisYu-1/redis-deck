@@ -18,6 +18,17 @@ function Svg({ children }: { children: ReactNode }) {
     );
 }
 
+export const ChatIcon = () => (
+    <Svg>
+        <path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z" />
+        <path d="M9 11h8M9 14h5" />
+    </Svg>
+);
+export const SendIcon = () => (
+    <Svg>
+        <path d="M12 19V5M5 12l7-7 7 7" />
+    </Svg>
+);
 export const KeyIcon = () => (
     <Svg>
         <circle cx="8" cy="15" r="4" />
