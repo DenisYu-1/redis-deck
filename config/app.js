@@ -15,6 +15,7 @@ const aiActivityRoutes = require('../routes/aiActivity');
 const aiToolsRoutes = require('../routes/aiTools');
 const aiHiddenFieldsRoutes = require('../routes/aiHiddenFields');
 const aiAccessRoutes = require('../routes/aiAccess');
+const consoleRoutes = require('../routes/console');
 
 // aiClients: client config installer; given only when embedded in the
 // Desktop app, which is the only place the installer routes exist.
@@ -49,6 +50,7 @@ function createApp({ middleware = [], searchBudgetMs, aiClients } = {}) {
     app.use('/api', aiToolsRoutes);
     app.use('/api', aiHiddenFieldsRoutes);
     app.use('/api', aiAccessRoutes);
+    app.use('/api', consoleRoutes);
     app.use('/api/stats', statsRoutes);
     if (aiClients) app.use('/api', createAiClientsRouter(aiClients));
 

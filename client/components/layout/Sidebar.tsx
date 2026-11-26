@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Logo } from '@/components/common/Logo';
 import {
     ChartIcon,
+    ConsoleIcon,
     KeyIcon,
     SlidersIcon,
     SparkIcon
@@ -87,6 +88,10 @@ export function Sidebar() {
                 <NavLink to="/stats" className={navClass}>
                     <ChartIcon />
                     <span>Statistics</span>
+                </NavLink>
+                <NavLink to="/console" className={navClass}>
+                    <ConsoleIcon />
+                    <span>Console</span>
                 </NavLink>
             </nav>
             {pathname.startsWith('/stats') && (
