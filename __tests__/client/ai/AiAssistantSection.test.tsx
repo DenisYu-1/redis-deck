@@ -206,9 +206,7 @@ test('sets up the Local agent: found or missing, path and Arguments', async () =
     });
     render(<AiAssistantSection />);
 
-    await user.click(
-        await screen.findByRole('radio', { name: /Local agent/ })
-    );
+    await user.click(await screen.findByRole('radio', { name: /Local agent/ }));
     expect(screen.getByRole('radio', { name: /Claude Code/ })).toBeChecked();
     expect(screen.getByText('/home/me/.local/bin/claude')).toBeVisible();
     expect(screen.getByText('found')).toBeVisible();
@@ -235,9 +233,7 @@ test('sets up the Local agent: found or missing, path and Arguments', async () =
     );
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(
-        await screen.findByText('Claude Code · local agent')
-    ).toBeVisible();
+    expect(await screen.findByText('Claude Code · local agent')).toBeVisible();
 });
 
 test('shows an agent whose CLI is missing', async () => {

@@ -4,9 +4,6 @@
 // never get it: they use stdio --mcp.
 const http = require('http');
 const { randomBytes, randomUUID, timingSafeEqual } = require('crypto');
-const {
-    StreamableHTTPServerTransport
-} = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 
 const HOST = '127.0.0.1';
 const PATH = '/mcp';
@@ -20,6 +17,11 @@ function carries(request, token) {
 // server: the McpServer the endpoint serves, for one MCP session.
 // -> { url, token, close() }
 async function openAgentEndpoint(server) {
+    // Loaded on first use: it needs web globals when loaded, and every start
+    // of the app would pay for it.
+    const {
+        StreamableHTTPServerTransport
+    } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
     const token = randomBytes(32).toString('base64url');
     const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: randomUUID
