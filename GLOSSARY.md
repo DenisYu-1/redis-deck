@@ -51,7 +51,7 @@ The app installed and run as a regular program on the user's computer, without a
 _Avoid_: Native app, standalone, client
 
 **AI client**:
-An external AI program (Claude Desktop, Claude Code, Codex, Cursor) that uses Redis Deck's Connections through MCP.
+An external AI program (Claude Desktop, Claude Code, Codex, Cursor, Pi) that uses Redis Deck's Connections through MCP.
 _Avoid_: Agent, assistant, integration
 
 **AI assistant**:

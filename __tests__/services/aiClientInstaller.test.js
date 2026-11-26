@@ -15,6 +15,7 @@ describe('AI client installer: Claude Code', () => {
     beforeEach(() => {
         home = fs.mkdtempSync(path.join(os.tmpdir(), 'rd-home-'));
         file = path.join(home, '.claude.json');
+        fs.mkdirSync(path.join(home, '.claude'));
     });
     afterEach(() => fs.rmSync(home, { recursive: true, force: true }));
 
@@ -148,6 +149,18 @@ describe('AI client installer: Claude Code', () => {
         });
     });
 
+    it('reports Not found and refuses to add an absent AI client', () => {
+        expect(installer().status('cursor')).toBe('not-found');
+        expect(() => installer().install('cursor')).toThrow(/not found/);
+        expect(fs.existsSync(path.join(home, '.cursor'))).toBe(false);
+    });
+
+    it('adds Pi when its agent folder does not exist yet', () => {
+        fs.mkdirSync(path.join(home, '.pi'));
+        installer().install('pi');
+        expect(installer().status('pi')).toBe('installed');
+    });
+
     it('rejects an unknown AI client', () => {
         expect(() => installer().install('nope')).toThrow(/Unknown AI client/);
     });
@@ -164,7 +177,8 @@ describe.each([
             'claude_desktop_config.json'
         ]
     },
-    { id: 'cursor', name: 'Cursor', rel: ['.cursor', 'mcp.json'] }
+    { id: 'cursor', name: 'Cursor', rel: ['.cursor', 'mcp.json'] },
+    { id: 'pi', name: 'Pi', rel: ['.pi', 'agent', 'mcp.json'] }
 ])('AI client installer: $name', ({ id, name, rel }) => {
     let home;
     let file;
@@ -174,10 +188,11 @@ describe.each([
     beforeEach(() => {
         home = fs.mkdtempSync(path.join(os.tmpdir(), 'rd-home-'));
         file = path.join(home, ...rel);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
     });
     afterEach(() => fs.rmSync(home, { recursive: true, force: true }));
 
-    it('creates the config file and its folders when missing', () => {
+    it('creates the config file when missing', () => {
         installer().install(id);
 
         expect(readJson()).toEqual({
@@ -191,7 +206,6 @@ describe.each([
     });
 
     it('keeps unrelated content and other MCP servers on install', () => {
-        fs.mkdirSync(path.dirname(file), { recursive: true });
         const existing = {
             globalShortcut: 'Cmd+K',
             mcpServers: { other: { command: 'other-bin', args: ['-x'] } }
@@ -223,7 +237,6 @@ describe.each([
     });
 
     it('Remove deletes only the redis-deck entry', () => {
-        fs.mkdirSync(path.dirname(file), { recursive: true });
         fs.writeFileSync(
             file,
             JSON.stringify({ mcpServers: { other: { command: 'o' } } })
@@ -250,6 +263,7 @@ describe('AI client installer: Codex', () => {
     beforeEach(() => {
         home = fs.mkdtempSync(path.join(os.tmpdir(), 'rd-home-'));
         file = path.join(home, '.codex', 'config.toml');
+        fs.mkdirSync(path.dirname(file));
     });
     afterEach(() => fs.rmSync(home, { recursive: true, force: true }));
 
@@ -268,7 +282,6 @@ describe('AI client installer: Codex', () => {
         'args = [ "-x",\n' +
         '  "-y" ]\n';
     const writeExisting = (text) => {
-        fs.mkdirSync(path.dirname(file), { recursive: true });
         fs.writeFileSync(file, text);
     };
 

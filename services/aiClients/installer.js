@@ -49,7 +49,10 @@ function createInstaller({
     function status(id) {
         const c = client(id);
         const entry = c.format.read(readText(c.file), SERVER_NAME, c.file);
-        if (!entry) return 'not-installed';
+        if (!entry) {
+            const found = c.detect(home).some((p) => fs.existsSync(p));
+            return found ? 'not-installed' : 'not-found';
+        }
         return entry.command === command && sameArgs(entry.args, args)
             ? 'installed'
             : 'stale';
@@ -57,6 +60,12 @@ function createInstaller({
 
     function install(id) {
         const c = client(id);
+        if (status(id) === 'not-found') {
+            throw new InstallerError(
+                `${c.name} not found on this computer`,
+                409
+            );
+        }
         const text = readText(c.file);
         writeText(
             c.file,

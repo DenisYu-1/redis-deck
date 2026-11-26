@@ -604,7 +604,8 @@ export async function getServerStatus(
 }
 
 // AI clients (MCP) installer: Desktop app only (routes exist only there).
-export type AiClientStatus = 'not-installed' | 'installed' | 'stale' | 'error';
+export type AiClientStatus =
+    'not-found' | 'not-installed' | 'installed' | 'stale' | 'error';
 
 export interface AiClient {
     id: string;
