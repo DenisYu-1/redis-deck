@@ -21,7 +21,7 @@ const hasOption = (words, option) =>
 function isStatus(name, argv) {
     if (name === 'PING') return argv.length === 1;
     if (name === 'SET') return !hasOption(argv.slice(3), 'GET');
-    return name === 'TYPE' || name === 'RENAME';
+    return ['TYPE', 'RENAME', 'MSET', 'SETEX', 'LSET'].includes(name);
 }
 
 // redis-cli prints INFO and CLIENT LIST replies, errors too, as plain text even

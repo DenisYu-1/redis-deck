@@ -30,12 +30,52 @@ const NO_VALUES = new Set([
     'EXPIRE',
     'PERSIST',
     'RENAME',
-    'INCR'
+    'INCR',
+    'INCRBY',
+    'DECR',
+    'MSET',
+    'SETEX',
+    'PEXPIRE',
+    'EXPIREAT',
+    'HEXISTS',
+    'SCARD',
+    'SISMEMBER',
+    'SADD',
+    'SREM',
+    'ZADD',
+    'ZREM',
+    'ZSCORE',
+    'ZRANK',
+    'LREM',
+    'LSET',
+    'XLEN',
+    'XADD',
+    'XDEL'
 ]);
 // Names, and the server figures get_info already gives.
-const NAMES_ONLY = new Set(['KEYS', 'SCAN', 'RANDOMKEY', 'HKEYS', 'INFO']);
+const NAMES_ONLY = new Set([
+    'KEYS',
+    'SCAN',
+    'RANDOMKEY',
+    'HKEYS',
+    'INFO',
+    'TIME'
+]);
 // Replies made of values.
-const VALUES = new Set(['GET', 'ECHO', 'PING', 'LRANGE', 'ZRANGE']);
+const VALUES = new Set([
+    'GET',
+    'MGET',
+    'ECHO',
+    'PING',
+    'LINDEX',
+    'LRANGE',
+    'LPOP',
+    'RPOP',
+    'SMEMBERS',
+    'SSCAN',
+    'ZRANGE',
+    'ZSCAN'
+]);
 // CONFIG GET parameters that hold or name credentials.
 const SECRET_CONFIG = /pass|auth|secret|token|user|acl/i;
 const PHP_SERIALIZED = /(?:^|\|)\s*[aOCs]:\d+:/;
@@ -116,10 +156,35 @@ function maskReply(argv, reply, hidden) {
     }
     if (NAMES_ONLY.has(name)) return reply;
     if (VALUES.has(name)) return mask(reply);
-    if (name === 'HGET') {
+    // HINCRBY answers with the field's new value.
+    if (name === 'HGET' || name === 'HINCRBY') {
         return isHidden(argv[2] ?? '') && reply !== null ? MASK : mask(reply);
     }
+    if (name === 'HMGET') {
+        if (!Array.isArray(reply)) return WITHHELD;
+        return reply.map((value, i) =>
+            isHidden(argv[i + 2] ?? '') && value !== null ? MASK : mask(value)
+        );
+    }
+    // A slice can hold a secret without the field name that gives it away.
+    if (name === 'GETRANGE') return hidden.size === 0 ? reply : WITHHELD;
     if (name === 'HGETALL') return maskPairs(reply, isHidden, mask);
+    if (name === 'HSCAN') {
+        if (!Array.isArray(reply)) return WITHHELD;
+        const [cursor, items] = reply;
+        // NOVALUES: field names only
+        if (argv.slice(3).some((w) => /^novalues$/i.test(w))) return reply;
+        const fields = maskPairs(items, isHidden, mask);
+        return fields === WITHHELD ? WITHHELD : [cursor, fields];
+    }
+    if (name === 'XRANGE') {
+        if (!Array.isArray(reply)) return WITHHELD;
+        const entries = reply.map((entry) => {
+            const fields = maskPairs(entry?.[1], isHidden, mask);
+            return fields === WITHHELD ? WITHHELD : [entry[0], fields];
+        });
+        return entries.includes(WITHHELD) ? WITHHELD : entries;
+    }
     if (name === 'CONFIG GET') {
         const isSecret = (p) => SECRET_CONFIG.test(p) || isHidden(p);
         return maskPairs(reply, isSecret, (value) => value);
