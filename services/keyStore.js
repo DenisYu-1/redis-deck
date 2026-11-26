@@ -131,49 +131,56 @@ async function keyExists(connectionId, key) {
     return (await run(connectionId, ['EXISTS', key])).result === 1;
 }
 
-// Replace the whole key. ttl in seconds, > 0 to set an expiry.
-async function writeKey(connectionId, key, type, value, ttl = 0) {
-    let add;
+// The commands (argv) that replace the whole key, in the order they run.
+// ttl in seconds, > 0 to set an expiry. Throws on a value that does not fit.
+function writeCommands(key, type, value, ttl = 0) {
     if (type === 'string') {
         const str =
             typeof value === 'object' ? JSON.stringify(value) : String(value);
-        add = ['SET', key, str, ...(ttl > 0 ? ['EX', ttl] : [])];
-    } else {
-        const items = {
-            hash: () => Object.entries(value || {}).flat(),
-            list: () => (value || []).map(String),
-            set: () => (value || []).map(String),
-            zset: () =>
-                (value || []).flatMap(({ member, score }) => {
-                    if (typeof score !== 'number' || member === undefined) {
-                        throw fail(
-                            'Each zset entry needs member and numeric score',
-                            'BAD_VALUE',
-                            400
-                        );
-                    }
-                    return [score, String(member)];
-                })
-        }[type];
-        if (!items) {
-            throw fail(`Unsupported type: ${type}`, 'BAD_TYPE', 400);
-        }
-        const args = items();
-        if (args.length === 0) {
-            throw fail('Value must not be empty', 'BAD_VALUE', 400);
-        }
-        const cmd = { hash: 'HSET', list: 'RPUSH', set: 'SADD', zset: 'ZADD' }[
-            type
-        ];
-        // DEL first so members removed in the editor really go away.
-        const { node } = await run(connectionId, ['DEL', key]);
-        await execArgv([cmd, key, ...args], connectionId, node);
-        if (ttl > 0) {
-            await execArgv(['EXPIRE', key, ttl], connectionId, node);
-        }
-        return { node };
+        return [['SET', key, str, ...(ttl > 0 ? ['EX', ttl] : [])]];
     }
-    return run(connectionId, add).then(({ node }) => ({ node }));
+    const items = {
+        hash: () => Object.entries(value || {}).flat(),
+        list: () => (value || []).map(String),
+        set: () => (value || []).map(String),
+        zset: () =>
+            (value || []).flatMap(({ member, score }) => {
+                if (typeof score !== 'number' || member === undefined) {
+                    throw fail(
+                        'Each zset entry needs member and numeric score',
+                        'BAD_VALUE',
+                        400
+                    );
+                }
+                return [score, String(member)];
+            })
+    }[type];
+    if (!items) {
+        throw fail(`Unsupported type: ${type}`, 'BAD_TYPE', 400);
+    }
+    const args = items();
+    if (args.length === 0) {
+        throw fail('Value must not be empty', 'BAD_VALUE', 400);
+    }
+    const cmd = { hash: 'HSET', list: 'RPUSH', set: 'SADD', zset: 'ZADD' }[
+        type
+    ];
+    // DEL first so members removed in the editor really go away.
+    return [
+        ['DEL', key],
+        [cmd, key, ...args],
+        ...(ttl > 0 ? [['EXPIRE', key, ttl]] : [])
+    ];
+}
+
+// Replace the whole key (see writeCommands).
+async function writeKey(connectionId, key, type, value, ttl = 0) {
+    const [first, ...rest] = writeCommands(key, type, value, ttl);
+    const { node } = await run(connectionId, first);
+    for (const argv of rest) {
+        await execArgv(argv, connectionId, node);
+    }
+    return { node };
 }
 
 // Add one hash field or zset member in place (keeps the TTL and the rest of
@@ -246,6 +253,7 @@ module.exports = {
     readKey,
     readMeta,
     keyExists,
+    writeCommands,
     writeKey,
     addMember,
     deleteKey,

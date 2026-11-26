@@ -207,6 +207,43 @@
     color: var(--ac);
     background: var(--acs);
 }
+.chat-appr {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--bd));
+    border-radius: 9px;
+    background: var(--warnS);
+}
+.chat-appr.done {
+    border-color: var(--bd);
+    background: var(--bg);
+}
+.chat-appr-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 600;
+}
+.chat-appr-title > svg {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    color: var(--warn);
+}
+.chat-appr .codeline {
+    max-height: 120px;
+}
+.chat-appr-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.chat-appr-foot .pill {
+    white-space: normal;
+}
 .chat-code {
     overflow: hidden;
     border: 1px solid var(--bd2);

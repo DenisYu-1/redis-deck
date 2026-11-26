@@ -14,9 +14,31 @@ export interface ChatToolCall {
     response?: string;
 }
 
+/** `auto`: ran without asking, as AI access allows. */
+export type ChatApprovalState =
+    'pending' | 'approved' | 'auto' | 'denied' | 'blocked';
+
+/** A write of the assistant: its approval card. */
+export interface ChatApproval {
+    type: 'approval';
+    id: string;
+    tool: string;
+    connectionId: string;
+    title: string;
+    /** The commands the write runs, one per line */
+    commands: string[];
+    state: ChatApprovalState;
+    reason?: string;
+    /** What the write did */
+    done?: string;
+    /** Why it failed after all */
+    error?: string;
+}
+
 export type ChatPart =
     | { type: 'text'; text: string }
     | ChatToolCall
+    | ChatApproval
     | { type: 'notice'; text: string }
     | { type: 'error'; message: string };
 
@@ -31,6 +53,29 @@ export interface ChatTurnRequest {
         text: string;
         chips?: ChatChip[];
     }[];
+}
+
+/** Approve or Deny a waiting write; rejects when it no longer waits. */
+export async function answerAiApproval(reply: {
+    chatId: string;
+    id: string;
+    approved: boolean;
+}): Promise<void> {
+    const response = await fetch('/api/ai-chat/approvals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reply),
+        // Also sent while the page goes away.
+        keepalive: true
+    });
+    if (!response.ok) throw new Error(await errorOf(response));
+}
+
+async function errorOf(response: Response): Promise<string> {
+    const body = (await response.json().catch(() => null)) as {
+        error?: string;
+    } | null;
+    return body?.error ?? response.statusText;
 }
 
 /** Resolves once the turn is done; rejects when it cannot run or is cut off. */
@@ -48,10 +93,7 @@ export async function streamAiChat(
         signal
     });
     if (!response.ok || !response.body) {
-        const body = (await response.json().catch(() => null)) as {
-            error?: string;
-        } | null;
-        throw new Error(body?.error ?? response.statusText);
+        throw new Error(await errorOf(response));
     }
 
     const reader = response.body.getReader();

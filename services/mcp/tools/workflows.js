@@ -82,6 +82,18 @@ const runWorkflow = {
     description:
         'Run a Workflow on a Connection. It may change Redis; use plan_workflow first to preview.',
     inputSchema: { connectionId, fullId, inputs },
+    // A Workflow's commands are code: the card shows the run and its inputs.
+    card: {
+        title: (args) => `Run Workflow ${args.fullId}`,
+        commands: (args) => [
+            [
+                'run_workflow',
+                args.fullId,
+                ...Object.entries(args.inputs).map(([k, v]) => `${k}=${v}`)
+            ]
+        ],
+        done: (result) => result.text
+    },
     run: async (args) => {
         const { workflow, connection } = resolve(args);
         const result = await workflows.run(

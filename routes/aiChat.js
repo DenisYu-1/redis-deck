@@ -5,6 +5,7 @@ const express = require('express');
 const { getConnection } = require('../services/database');
 const { getChatModel } = require('../services/aiModel');
 const { runTurn } = require('../services/ai/turnRunner');
+const { answerApproval } = require('../services/ai/approvalDesk');
 const { isChips, withChips } = require('../services/ai/chips');
 
 const router = express.Router();
@@ -58,6 +59,7 @@ router.post('/ai-chat', async (req, res) => {
     res.flushHeaders();
     try {
         await runTurn({
+            chatId,
             connectionId,
             messages: messages.map(({ role, text, chips }) => ({
                 role,
@@ -75,6 +77,27 @@ router.post('/ai-chat', async (req, res) => {
         running.delete(chatId);
         res.end();
     }
+});
+
+// The user's Approve or Deny on an approval card. The turn waiting for it
+// continues on its own stream.
+router.post('/ai-chat/approvals', (req, res) => {
+    const { chatId, id, approved } = req.body ?? {};
+    if (
+        typeof chatId !== 'string' ||
+        typeof id !== 'string' ||
+        typeof approved !== 'boolean'
+    ) {
+        return res
+            .status(400)
+            .json({ error: 'chatId, id and approved are required' });
+    }
+    if (!answerApproval({ chatId, id, approved })) {
+        return res
+            .status(404)
+            .json({ error: 'This write no longer waits for an answer' });
+    }
+    res.json({ ok: true });
 });
 
 module.exports = router;

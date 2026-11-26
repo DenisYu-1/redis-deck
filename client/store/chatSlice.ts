@@ -1,14 +1,20 @@
 // The AI assistant's chat: in memory for the browser session, gone on reload.
 import type { StateCreator } from 'zustand';
-import { streamAiChat, type ChatPart } from '@/services/aiChat';
+import {
+    answerAiApproval,
+    streamAiChat,
+    type ChatPart
+} from '@/services/aiChat';
 import type { AiAccessRow, AiModelSettings } from '@/services/apiService';
 import type { ChatChip, PendingChips } from '@/utils/chatChips';
 import {
     applyEvent,
     endTurn,
+    pendingApprovals,
     transcriptOf,
     type ChatMessage
 } from '@/utils/chatParts';
+import { showToast } from '@/utils/toast';
 
 export interface ChatState {
     id: string;
@@ -35,6 +41,8 @@ export interface ChatSlice {
     addChatChip: (chip: ChatChip) => void;
     removeChatChip: (kind: ChatChip['kind']) => void;
     sendChatMessage: (text: string) => Promise<void>;
+    /** Resolves false when the answer did not reach the server. */
+    answerChatApproval: (id: string, approved: boolean) => Promise<boolean>;
 }
 
 // Not crypto.randomUUID: plain-HTTP hosts have no secure context.
@@ -69,7 +77,18 @@ export const createChatSlice: StateCreator<
         });
     };
 
+    const answerApproval = async (id: string, approved: boolean) => {
+        try {
+            await answerAiApproval({ chatId: get().chat.id, id, approved });
+            return true;
+        } catch (error) {
+            showToast((error as Error).message, 'error');
+            return false;
+        }
+    };
+
     return {
+        answerChatApproval: answerApproval,
         chat: {
             id: newChatId(),
             open: false,
@@ -82,7 +101,15 @@ export const createChatSlice: StateCreator<
         setAiModel: (aiModel) => set({ aiModel }),
         aiAccess: [],
         setAiAccessRows: (aiAccess) => set({ aiAccess }),
-        setChatOpen: (open) => patch({ open }),
+        setChatOpen: (open) => {
+            // A closed chat cannot be asked: what waits counts as Deny.
+            if (!open) {
+                for (const id of pendingApprovals(get().chat.messages)) {
+                    void answerApproval(id, false);
+                }
+            }
+            patch({ open });
+        },
         setChatDraft: (draft) => patch({ draft }),
         newChat: () => {
             turn?.abort();
@@ -128,8 +155,18 @@ export const createChatSlice: StateCreator<
                     },
                     {
                         signal: controller.signal,
-                        onEvent: (event) =>
-                            answer(id, (parts) => applyEvent(parts, event))
+                        onEvent: (event) => {
+                            answer(id, (parts) => applyEvent(parts, event));
+                            const { chat } = get();
+                            if (
+                                event.type === 'approval' &&
+                                event.state === 'pending' &&
+                                chat.id === id &&
+                                !chat.open
+                            ) {
+                                void answerApproval(event.id, false);
+                            }
+                        }
                     }
                 );
             } catch (error) {
