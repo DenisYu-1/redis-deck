@@ -1,0 +1,15 @@
+# 03: Writes through the write guard
+
+**What to build:** The write commands from the spec (SET, HSET, HDEL, LPUSH, RPUSH, DEL, UNLINK, EXPIRE, PERSIST, RENAME, INCR) join the allowed list. If a batch has any write, the server runs the write guard once for the whole batch. On Read-only nothing runs. On Confirm writes the UI shows the design's modal that lists the writes ("Run N writes on <conn>?") and retries with the confirmation.
+
+**Blocked by:** 02
+
+**Status:** ready-for-agent
+
+- [ ] A batch with a write on a Read-only Connection answers 403 and no statement runs, reads included
+- [ ] A batch with a write on a Confirm writes Connection answers 428 and no statement runs
+- [ ] The modal lists the writes; on production the user must type the Connection name
+- [ ] The client retries with the confirmation and the batch runs; cancel runs nothing
+- [ ] A read-only batch needs no confirmation on any Connection
+- [ ] Writes that ran before a later error stay applied
+- [ ] Route tests: 403, 428, confirmed retry
