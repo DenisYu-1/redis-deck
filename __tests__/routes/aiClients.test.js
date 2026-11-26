@@ -12,6 +12,7 @@ describe('AI client installer routes', () => {
 
     beforeEach(() => {
         home = fs.mkdtempSync(path.join(os.tmpdir(), 'rd-home-'));
+        fs.mkdirSync(path.join(home, '.claude'));
         app = createApp({
             aiClients: createInstaller({
                 home,

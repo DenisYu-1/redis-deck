@@ -15,9 +15,10 @@ import {
 } from '@/services/apiService';
 
 const STATUS_LABEL: Record<AiClientStatus, string> = {
-    'not-installed': 'Not installed',
-    installed: 'Installed',
-    stale: 'Stale',
+    'not-found': 'Not found',
+    'not-installed': 'Not added',
+    installed: 'Added',
+    stale: 'Outdated',
     error: 'Error'
 };
 
@@ -44,6 +45,7 @@ export function AiClientsSection() {
     const [busy, setBusy] = useState<string | null>(null);
     const [restartHint, setRestartHint] = useState<string | null>(null);
     const [snippet, setSnippet] = useState<Snippet | null>(null);
+    const [showSupported, setShowSupported] = useState(false);
     const { showToast } = useToast();
 
     const refresh = useCallback(async () => {
@@ -123,6 +125,9 @@ export function AiClientsSection() {
         );
     };
 
+    const found = clients.filter((c) => c.status !== 'not-found');
+    const absent = clients.filter((c) => c.status === 'not-found');
+
     return (
         <>
             <section className="card sect" aria-label="MCP server">
@@ -163,7 +168,7 @@ export function AiClientsSection() {
                 <div className="ctable-wrap">
                     <table className="ctable aic-table">
                         <tbody>
-                            {clients.map((c) => (
+                            {found.map((c) => (
                                 <tr key={c.id} data-testid="ai-client-row">
                                     <td className="aic-name">{c.name}</td>
                                     <td>
@@ -184,7 +189,7 @@ export function AiClientsSection() {
                                                     void act(c, 'install')
                                                 }
                                             >
-                                                Install
+                                                Add
                                             </Button>
                                         )}
                                         {(c.status === 'installed' ||
@@ -202,7 +207,7 @@ export function AiClientsSection() {
                                                         void act(c, 'install')
                                                     }
                                                 >
-                                                    Reinstall
+                                                    Re-add
                                                 </Button>
                                                 <Button
                                                     size="sm"
@@ -227,6 +232,49 @@ export function AiClientsSection() {
                         </tbody>
                     </table>
                 </div>
+                {clients.length > 0 && found.length === 0 && (
+                    <p className="sm mu">
+                        No supported AI clients found on this computer.
+                    </p>
+                )}
+                {absent.length > 0 && (
+                    <Button size="sm" onClick={() => setShowSupported(true)}>
+                        {absent.length} more supported
+                    </Button>
+                )}
+                {showSupported && (
+                    <Modal
+                        title="Supported AI clients"
+                        onClose={() => setShowSupported(false)}
+                        footer={
+                            <Button onClick={() => setShowSupported(false)}>
+                                Close
+                            </Button>
+                        }
+                    >
+                        <p className="sm tx2">Not found on this computer.</p>
+                        <table className="ctable aic-table">
+                            <tbody>
+                                {absent.map((c) => (
+                                    <tr key={c.id}>
+                                        <td className="aic-name">{c.name}</td>
+                                        <td className="aic-actions">
+                                            <Button
+                                                size="sm"
+                                                onClick={() => {
+                                                    setShowSupported(false);
+                                                    void openSnippet(c);
+                                                }}
+                                            >
+                                                Manual setup
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </Modal>
+                )}
                 {restartHint && (
                     <p className="sm tx2" role="status">
                         Restart {restartHint} to load Redis Deck.

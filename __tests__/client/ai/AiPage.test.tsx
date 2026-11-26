@@ -194,12 +194,39 @@ test('Desktop: client rows install and open Manual setup', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(await screen.findAllByTestId('ai-client-row')).toHaveLength(2);
-    await user.click(screen.getByRole('button', { name: 'Install' }));
+    const rows = await screen.findAllByTestId('ai-client-row');
+    expect(rows).toHaveLength(2);
+    await user.click(within(rows[0]).getByRole('button', { name: 'Add' }));
     expect(mocked.installAiClient).toHaveBeenCalledWith('claude-code');
 
     await user.click(
         screen.getAllByRole('button', { name: 'Manual setup' })[0]
     );
     expect(await screen.findByText('{"redis-deck":{}}')).toBeInTheDocument();
+});
+
+test('Desktop: absent clients are listed only in Supported AI clients', async () => {
+    setDesktop(true);
+    mocked.listAiClients.mockResolvedValue({
+        command: '/bin/redis-deck --mcp',
+        clients: [
+            {
+                id: 'codex',
+                name: 'Codex',
+                configPath: '/h/.codex/config.toml',
+                status: 'not-found'
+            }
+        ]
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(
+        await screen.findByText(
+            'No supported AI clients found on this computer.'
+        )
+    ).toBeVisible();
+    expect(screen.queryByText('Codex')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '1 more supported' }));
+    expect(screen.getByText('Codex')).toBeVisible();
 });
