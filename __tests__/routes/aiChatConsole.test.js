@@ -127,7 +127,7 @@ describe('AI chat Console chips', () => {
         // not understood, so withheld
         ['SLOWLOG GET', [[1, 2, 3, ['AUTH', 'hunter2']]]],
         ['CLIENT LIST', 'id=1 user=hunter2'],
-        ['SMEMBERS s', ['hunter2']],
+        ['SPOP s', 'hunter2'],
         ['HGETALL user:1', ['password', 'x', 'hunter2']],
         ['TTL user:1', ['hunter2']]
     ])('never shows a hidden value: %s %j', async (command, reply) => {
