@@ -33,7 +33,7 @@ describe('MCP AI access: see keys / see values', () => {
             const r = await mcp.call(name, { connectionId: CONN, ...args });
             expect(r).toEqual({
                 ok: false,
-                error: expect.stringContaining('not available to AI clients')
+                error: expect.stringContaining('"See keys" is off')
             });
         }
     });

@@ -22,7 +22,7 @@ Commands come from a fixed, server-side allowed list (ADR 0006). The server chec
 ### Allowed list (ADR 0006)
 
 - The server owns the list: command → `read` | `write`, plus optional warnings (KEYS). One GET route serves it, and the client fetches it once for the line check.
-- The starting list follows the design's set: PING, ECHO, DBSIZE, SCAN, KEYS, TYPE, TTL, PTTL, EXISTS, GET, STRLEN, HGETALL, HGET, HKEYS, HLEN, LLEN, LRANGE, ZRANGE, ZCARD, MEMORY USAGE, OBJECT ENCODING/IDLETIME/FREQ, INFO, SLOWLOG GET, CLIENT LIST, CONFIG GET, RANDOMKEY as reads; SET, HSET, HDEL, LPUSH, RPUSH, DEL, UNLINK, EXPIRE, PERSIST, RENAME, INCR as writes. A command with subcommands is allowed only with the listed subcommands.
+- The starting list follows the design's set: PING, ECHO, DBSIZE, SCAN, KEYS, TYPE, TTL, PTTL, EXISTS, GET, STRLEN, HGETALL, HGET, HKEYS, HLEN, LLEN, LRANGE, ZRANGE, ZCARD, TIME, MGET, GETRANGE, HMGET, HEXISTS, HSCAN, SMEMBERS, SCARD, SISMEMBER, SSCAN, ZSCAN, ZSCORE, ZRANK, LINDEX, XLEN, XRANGE, MEMORY USAGE, OBJECT ENCODING/IDLETIME/FREQ, INFO, SLOWLOG GET, CLIENT LIST, CONFIG GET, RANDOMKEY as reads; SET, HSET, HDEL, LPUSH, RPUSH, DEL, UNLINK, EXPIRE, PERSIST, RENAME, INCR, INCRBY, DECR, MSET, SETEX, PEXPIRE, EXPIREAT, HINCRBY, SADD, SREM, ZADD, ZREM, LPOP, RPOP, LREM, LSET, XADD, XDEL as writes. A command with subcommands is allowed only with the listed subcommands.
 - These are never on the list: FLUSHDB, FLUSHALL, CONFIG SET, SHUTDOWN, DEBUG, MONITOR, SUBSCRIBE (and PSUBSCRIBE).
 - A command that isn't on the list fails on the server with "`<CMD>` is not supported in this console". The line check shows the same message before the command is run.
 

@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Model settings are stored through a versioned migration (ADR 0004)
-- [ ] No route response contains the full key; saving without typing a new key keeps the stored one
-- [ ] Test reports success or the provider's error in the callout, and the error never contains the key
-- [ ] The AI assistant section shows in web, Docker and Desktop; AI clients stays Desktop-only
-- [ ] Route tests for get/set and Test against a faked provider (no network); one client test for the card
+- [x] Model settings are stored through a versioned migration (ADR 0004)
+- [x] No route response contains the full key; saving without typing a new key keeps the stored one
+- [x] Test reports success or the provider's error in the callout, and the error never contains the key
+- [x] The AI assistant section shows in web, Docker and Desktop; AI clients stays Desktop-only
+- [x] Route tests for get/set and Test against a faked provider (no network); one client test for the card

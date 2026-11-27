@@ -5,6 +5,7 @@ import { ConnectionsPage } from './pages/Connections/ConnectionsPage';
 import { StatisticsApp } from './pages/Statistics/StatisticsApp';
 import { WorkflowPage } from './pages/Workflows/WorkflowPage';
 import { AiPage } from './pages/Ai/AiPage';
+import { AssistantPage } from './pages/Ai/AssistantPage';
 import { ConsolePage } from './pages/Console/ConsolePage';
 
 export function AppRoutes() {
@@ -18,6 +19,7 @@ export function AppRoutes() {
                 <Route path="/console" element={<ConsolePage />} />
                 <Route path="/connections" element={<ConnectionsPage />} />
                 <Route path="/ai" element={<AiPage />} />
+                <Route path="/assistant" element={<AssistantPage />} />
                 <Route path="/workflows/:actionId" element={<WorkflowPage />} />
                 <Route
                     path="/settings"

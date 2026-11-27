@@ -4,11 +4,11 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Approve runs the write; Deny does not, and it is logged as denied
-- [ ] Counts as Deny after 5 minutes, and when the chat is closed, New chat is pressed or the page reloads
-- [ ] No session grant: the next write asks again
-- [ ] Ran without asking and Blocked cards show their reason
-- [ ] The native approval dialog for external AI clients behaves as before
-- [ ] Turn runner tests for approve, deny, timeout and cancel; one client test for the card buttons
+- [x] Approve runs the write; Deny does not, and it is logged as denied
+- [x] Counts as Deny after 5 minutes, and when the chat is closed, New chat is pressed or the page reloads
+- [x] No session grant: the next write asks again
+- [x] Ran without asking and Blocked cards show their reason
+- [x] The native approval dialog for external AI clients behaves as before
+- [x] Turn runner tests for approve, deny, timeout and cancel; one client test for the card buttons

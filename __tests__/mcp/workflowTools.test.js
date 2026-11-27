@@ -171,7 +171,10 @@ describe('MCP Workflow tools', () => {
                     tier: 'production',
                     operation: 'run_workflow',
                     target: SET,
-                    targetLabel: 'Workflow'
+                    targetLabel: 'Workflow',
+                    id: expect.any(String),
+                    title: `Run Workflow ${SET}`,
+                    commands: [expect.stringContaining(`run_workflow ${SET} `)]
                 },
                 { signal: expect.any(AbortSignal) }
             );

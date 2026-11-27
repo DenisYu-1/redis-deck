@@ -446,6 +446,13 @@ textarea {
     color: var(--text-primary);
 }
 
+/* :where keeps the specificity of `input`, so class rules still win */
+input:where([type='checkbox'], [type='radio']) {
+    flex: none;
+    width: auto;
+    padding: 0;
+}
+
 select {
     width: 100%;
     padding: 8px 12px;

@@ -31,7 +31,7 @@ Two processes, one repo:
 
 - `server.js` — entry: creates app, starts two `setInterval` loops (stats snapshot every 5 min, cleanup every 24 h), listens on `PORT` (default 3000).
 - `config/app.js` — builds the Express app: JSON middleware, static `dist/` + `/public`, mounts routers under `/api` (+ `/api/stats`), SPA fallback serves `dist/index.html` for all other routes.
-- `routes/` — one router per concern: `connections`, `keys`, `environment`, `info`, `stats`, `searches` (saved searches), `workflows`, `jobs` (bulk delete/export jobs), `console` (`/api/console`), and the AI page's `aiAccess`, `aiTools`, `aiHiddenFields`, `aiActivity` (AI activity log, `/api/ai-activity`) and `aiClients`.
+- `routes/` — one router per concern: `connections`, `keys`, `environment`, `info`, `stats`, `searches` (saved searches), `workflows`, `jobs` (bulk delete/export jobs), `console` (`/api/console`), `aiChat` (AI assistant turns and approval answers, `/api/ai-chat`), and the AI page's `aiModel` (assistant model settings, `/api/ai-model`), `aiAccess`, `aiTools`, `aiHiddenFields`, `aiActivity` (AI activity log, `/api/ai-activity`) and `aiClients`.
 - `guards/writeGuard.js` — enforces Read-only / Confirm-writes connections on every write route (403 / 428). Any new write route or Workflow must go through it.
 - `services/redis.js` — **on clustered Connections every Redis call shells out to `redis-cli`** (async `execFile`, no shell; ADR 0002). Non-clustered Connections use the persistent client in `services/redisClient.js` for scans and Page meta. Builds CLI args from stored connection config, handles `--csv`/`--raw`/`--json` modes, parallel cluster Node scans, INFO parsing, batched stdin sessions. `redis-cli` must be on PATH.
 - `services/connectionState.js` — per-Connection in-memory state: the 4-process `redis-cli` cap (applied at the single spawn point) and the 30 s topology cache.
@@ -43,7 +43,7 @@ Two processes, one repo:
 
 **Frontend** — React 18 + TypeScript + Vite, in `client/`. Design reference: `design/`, spec: `docs/v2-redesign/SPEC.md`, terms: `GLOSSARY.md`.
 
-- `client/App.tsx` — routes inside `AppShell`: `/` redirects to `/keys`; `/keys`, `/stats` and `/stats/:board`, `/connections`, `/ai` (AI clients, access, tools, hidden fields, activity log; replaces the old `/ai-activity` route), `/console`, `/workflows/:actionId`; `/settings` redirects to `/connections`. Pages live in `client/pages/<Name>/` (`Keys`, `Statistics`, `Console`, `Workflows`, `Connections`, `Ai`, `Welcome`).
+- `client/App.tsx` — routes inside `AppShell`: `/` redirects to `/keys`; `/keys`, `/stats` and `/stats/:board`, `/connections`, `/assistant` (assistant model), `/ai` (AI access: access, hidden fields, tools, activity log, and AI clients on Desktop; replaces the old `/ai-activity` route), `/console`, `/workflows/:actionId`; `/settings` redirects to `/connections`. Pages live in `client/pages/<Name>/` (`Keys`, `Statistics`, `Console`, `Workflows`, `Connections`, `Ai`, `Welcome`).
 - Shared UI in `client/components/{layout,ui}/`; pure helpers in `client/utils/`; theme tokens in `client/styles/`.
 - State: Zustand single store `client/store/useAppStore.ts` (connections, current connection, theme). Path alias `@/` → `client/`.
 - API calls go through `client/services/apiService.ts`.

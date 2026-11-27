@@ -739,8 +739,12 @@ export interface AiActivityClient {
     lastCallAt: number;
 }
 
-export async function listAiActivityClients(): Promise<AiActivityClient[]> {
-    const response = await fetch(`${API_BASE}/ai-activity/clients`);
+/** aiClientsOnly leaves out the AI assistant, which also logs its calls. */
+export async function listAiActivityClients({
+    aiClientsOnly = false
+} = {}): Promise<AiActivityClient[]> {
+    const query = aiClientsOnly ? '?aiClientsOnly=true' : '';
+    const response = await fetch(`${API_BASE}/ai-activity/clients${query}`);
     return (await handleResponse<{ clients: AiActivityClient[] }>(response))
         .clients;
 }
@@ -811,6 +815,95 @@ export const setAiHiddenFields = (fields: string[]): Promise<string[]> =>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields })
     });
+
+// The model behind the AI assistant. The server never sends the API key back,
+// only its last four characters.
+export type AiProvider = 'anthropic' | 'openai' | 'openai-compatible';
+
+/** A Local agent: a CLI on the Redis Deck host. */
+export interface AiAgent {
+    id: string;
+    name: string;
+    command: string;
+    defaultArgs: string;
+    /** The saved path field; '' searches for the CLI */
+    path: string;
+    /** The saved Arguments, or the default ones */
+    args: string;
+    /** Where the CLI is; null: missing */
+    found: string | null;
+}
+
+/** The settings of every mode are kept side by side. */
+export interface AiModelChoice {
+    mode: 'agent' | 'api' | 'local';
+    /** The chosen agent's id */
+    agent: string;
+    provider: AiProvider;
+    model: string;
+    /** OpenAI-compatible only */
+    baseUrl: string;
+    localUrl: string;
+    localModel: string;
+}
+
+export interface AiModelSettings extends AiModelChoice {
+    agents: AiAgent[];
+    /** The models Anthropic offers; the other providers take any model id */
+    models: string[];
+    defaultModel: string;
+    /**
+     * Of the key saved for `provider` and `baseUrl`. null: no key saved; '':
+     * saved, too short to show any of it
+     */
+    keyLast4: string | null;
+    /** The chosen mode has what a chat turn needs */
+    ready: boolean;
+}
+
+export interface AiModelDraft extends AiModelChoice {
+    /** The chosen agent's path and Arguments fields */
+    agentPath: string;
+    agentArgs: string;
+    /** A newly typed key; '' keeps the saved one */
+    apiKey: string;
+}
+
+export interface AiModelTestResult {
+    ok: boolean;
+    title: string;
+    detail: string;
+    /** Local model: what the server offers */
+    models?: string[];
+}
+
+export const getAiModel = async (): Promise<AiModelSettings> =>
+    handleResponse<AiModelSettings>(await fetch(`${API_BASE}/ai-model`));
+
+export const saveAiModel = async (
+    draft: AiModelDraft
+): Promise<AiModelSettings> =>
+    handleResponse<AiModelSettings>(
+        await fetch(`${API_BASE}/ai-model`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(draft)
+        })
+    );
+
+export const testAiModel = async (
+    draft: AiModelDraft
+): Promise<AiModelTestResult> =>
+    handleResponse<AiModelTestResult>(
+        await fetch(`${API_BASE}/ai-model/test`, jsonPost(draft))
+    );
+
+export const listAiLocalModels = async (localUrl: string): Promise<string[]> =>
+    (
+        await handleResponse<{ models: string[] }>(
+            await fetch(`${API_BASE}/ai-model/models`, jsonPost({ localUrl }))
+        )
+    ).models;
 
 export interface ConsoleCommands {
     /** The allowed list (ADR 0006), by command name */

@@ -21,6 +21,7 @@ beforeEach(() => {
     localStorage.clear(); // the editor text is kept there
     run.mockReset().mockResolvedValue([]);
     useAppStore.setState({
+        consoleTabs: null,
         consoleOutput: [],
         connections: [
             {

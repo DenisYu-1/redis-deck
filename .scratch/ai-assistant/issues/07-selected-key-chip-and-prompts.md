@@ -4,10 +4,10 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] "+ Selected key" adds the Key name to the next turn's context and can be removed
-- [ ] No value is ever sent from the client for a Key chip
-- [ ] "values hidden" follows AI access
-- [ ] Suggested prompts change with the page and send on click (Console prompts show once that page exists)
-- [ ] Client test for chips
+- [x] "+ Selected key" adds the Key name to the next turn's context and can be removed
+- [x] No value is ever sent from the client for a Key chip
+- [x] "values hidden" follows AI access
+- [x] Suggested prompts change with the page and send on click (Console prompts show once that page exists)
+- [x] Client test for chips

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
 import { getAiHiddenFields, setAiHiddenFields } from '@/services/apiService';
 
-/** "What AI clients may do": the fields whose values AI clients never see. */
+/** Part of "What AI may do": the fields whose values AI never sees. */
 export function AiMayDoSection() {
     const [fields, setFields] = useState<string[] | null>(null);
     const [draft, setDraft] = useState('');
@@ -47,8 +47,8 @@ export function AiMayDoSection() {
             <div className="cmain-title">
                 <h2>Hidden fields</h2>
                 <span className="sm mu">
-                    AI clients see ●●● instead of these values (hash fields and
-                    JSON keys, any case)
+                    AI sees ●●● instead of these values (hash fields and JSON
+                    keys, any case)
                 </span>
             </div>
             <div className="hfchips">

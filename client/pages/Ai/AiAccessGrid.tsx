@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { TierBadge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import {
@@ -7,6 +7,7 @@ import {
     type AiAccessField,
     type AiAccessRow
 } from '@/services/apiService';
+import { useAppStore } from '@/store/useAppStore';
 
 const COLUMNS: { field: AiAccessField; label: string }[] = [
     { field: 'keys', label: 'See keys' },
@@ -33,7 +34,8 @@ function lockReason(row: AiAccessRow, field: AiAccessField): string | null {
 
 /** AI access grid: per Connection, what AI clients may see and do. */
 export function AiAccessGrid() {
-    const [rows, setRows] = useState<AiAccessRow[]>([]);
+    const rows = useAppStore((s) => s.aiAccess);
+    const setRows = useAppStore((s) => s.setAiAccessRows);
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -47,14 +49,13 @@ export function AiAccessGrid() {
         return () => {
             cancelled = true;
         };
-    }, [showToast]);
+    }, [setRows, showToast]);
 
     const toggle = async (row: AiAccessRow, field: AiAccessField) => {
         try {
             const saved = await setAiAccess(row.id, { [field]: !row[field] });
-            setRows((all) =>
-                all.map((r) => (r.id === row.id ? { ...r, ...saved } : r))
-            );
+            const all = useAppStore.getState().aiAccess;
+            setRows(all.map((r) => (r.id === row.id ? { ...r, ...saved } : r)));
         } catch (error) {
             showToast((error as Error).message, 'error');
         }
@@ -62,7 +63,7 @@ export function AiAccessGrid() {
 
     return (
         <section className="card sect" aria-label="AI access">
-            <h2>What AI clients may do</h2>
+            <h2>What AI may do</h2>
             <p className="sm tx2">
                 Set per Connection. Values, write and Workflows need See keys.
             </p>

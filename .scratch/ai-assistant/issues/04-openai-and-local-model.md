@@ -4,10 +4,10 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Each provider and the Local model can be saved, tested and chatted with
-- [ ] Test: one minimal call for API key providers; `GET /models` for Local model
-- [ ] The key is handled as in 01 and is never sent to a provider or URL it was not entered for
-- [ ] The chat header shows the active mode and model
-- [ ] Adapter mapping tests from recorded fixtures (no network); one client test for the card modes
+- [x] Each provider and the Local model can be saved, tested and chatted with
+- [x] Test: one minimal call for API key providers; `GET /models` for Local model
+- [x] The key is handled as in 01 and is never sent to a provider or URL it was not entered for
+- [x] The chat header shows the active mode and model
+- [x] Adapter mapping tests from recorded fixtures (no network); one client test for the card modes

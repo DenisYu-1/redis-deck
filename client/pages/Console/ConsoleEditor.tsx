@@ -51,10 +51,14 @@ export function ConsoleEditor({
         <div className="cedwrap">
             <div className="cgut">
                 <div className="cgutin" ref={lines}>
-                    {value.split('\n').map((_, i) => {
+                    {value.split('\n').map((line, i) => {
                         const mark = marks?.get(i + 1);
                         return (
-                            <div className="cgl" key={i}>
+                            <div
+                                className="cgl"
+                                key={i}
+                                data-text={line || ' '}
+                            >
                                 <span aria-hidden="true">{i + 1}</span>
                                 {mark && (
                                     <span

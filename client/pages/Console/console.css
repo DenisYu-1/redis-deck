@@ -99,6 +99,8 @@
     flex: 1;
     min-width: 0;
     min-height: 0;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
     resize: none;
     padding: 10px 14px;
     border: 0;
@@ -174,7 +176,8 @@
     border-bottom: 1px solid var(--bd);
     font-family: var(--f-mono);
     font-size: 12px;
-    white-space: pre;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 .outcmd {
     flex: 1;
@@ -187,12 +190,21 @@
 .outsum.bad {
     color: var(--ac);
 }
+.cdivider {
+    width: 1px;
+    height: 20px;
+    background: var(--bd);
+}
 .rhead {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
     gap: 8px;
     padding: 8px 14px;
     border-bottom: 1px solid var(--bd);
+}
+.rcmd {
+    flex: 1;
+    min-width: 0;
 }
 .scalar {
     padding: 14px;

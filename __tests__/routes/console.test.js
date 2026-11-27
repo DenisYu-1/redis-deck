@@ -52,6 +52,26 @@ standalone('Console routes', () => {
         expect(result.ms).toEqual(expect.any(Number));
     });
 
+    test('runs the set, sorted set and stream commands', async () => {
+        const out = await results(
+            `SADD ${PREFIX}:s a`,
+            `SMEMBERS ${PREFIX}:s`,
+            `ZADD ${PREFIX}:z 1 m`,
+            `ZSCAN ${PREFIX}:z 0`,
+            `XADD ${PREFIX}:x 1-1 f v`,
+            `XRANGE ${PREFIX}:x - +`
+        );
+
+        expect(out.map(({ reply }) => reply)).toEqual([
+            1,
+            ['a'],
+            1,
+            ['0', ['m', '1']],
+            '1-1',
+            [['1-1', ['f', 'v']]]
+        ]);
+    });
+
     test('serves the allowed list: reads and writes, with a warning on KEYS', async () => {
         const { body } = await request(app)
             .get('/api/console/commands')
@@ -61,12 +81,15 @@ standalone('Console routes', () => {
             'PING,ECHO,DBSIZE,SCAN,KEYS,TYPE,TTL,PTTL,EXISTS,GET,STRLEN,' +
             'HGETALL,HGET,HKEYS,HLEN,LLEN,LRANGE,ZRANGE,ZCARD,MEMORY USAGE,' +
             'OBJECT ENCODING,OBJECT IDLETIME,OBJECT FREQ,INFO,SLOWLOG GET,' +
-            'CLIENT LIST,CONFIG GET,RANDOMKEY'
+            'CLIENT LIST,CONFIG GET,RANDOMKEY,TIME,MGET,GETRANGE,HMGET,' +
+            'HEXISTS,HSCAN,SMEMBERS,SCARD,SISMEMBER,SSCAN,ZSCAN,ZSCORE,' +
+            'ZRANK,LINDEX,XLEN,XRANGE'
         ).split(',');
-        const writes =
-            'SET,HSET,HDEL,LPUSH,RPUSH,DEL,UNLINK,EXPIRE,PERSIST,RENAME,INCR'.split(
-                ','
-            );
+        const writes = (
+            'SET,HSET,HDEL,LPUSH,RPUSH,DEL,UNLINK,EXPIRE,PERSIST,RENAME,INCR,' +
+            'INCRBY,DECR,MSET,SETEX,PEXPIRE,EXPIREAT,HINCRBY,SADD,SREM,ZADD,' +
+            'ZREM,LPOP,RPOP,LREM,LSET,XADD,XDEL'
+        ).split(',');
         const listed = (access) =>
             Object.keys(body.commands)
                 .filter((name) => body.commands[name].access === access)

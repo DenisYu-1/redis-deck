@@ -5,6 +5,9 @@
 //   approver, approvalTimeoutMs   see approvals.js (asked for guarded writes)
 //   clock() -> ms since epoch     (budgets, session grants)
 //   tools                         (defaults to every tool)
+//   clientName                    logged instead of the handshake's name
+//   maxCalls, onCall, onLimit     see callMeter.js
+//   onWrite(card)                 what became of a write (see writeGate.js)
 // Each tool: { name, description, access: 'read' | 'write', inputSchema
 // (zod raw shape), run(args, ctx) -> JSON-able result }; a write also has
 // target (tools/shared.js), the Key or Workflow it names. Throwing fails the
@@ -16,18 +19,11 @@ const {
 } = require('@modelcontextprotocol/sdk/types.js');
 const allTools = require('./tools');
 const { isToolEnabled } = require('./toolSwitches');
-const { getConnection } = require('../database');
 const { safeMessage } = require('./errors');
 const { createApprovals } = require('./approvals');
+const { meterCalls, OUTCOME } = require('./callMeter');
 const { recordActivity, clientLabel, RESULTS } = require('../aiActivity');
-const { getAiAccess } = require('../aiAccess');
-const { checkWrite } = require('../../guards/writeGuard');
-
-// checkWrite's status when the write needs the user's confirmation. That is
-// for people in the app only (ADR 0005); for AI clients AI access decides.
-const CONFIRM_REQUIRED = 428;
-
-const TURNED_OFF = 'tool is turned off';
+const { blockedReason, writeGate } = require('./writeGate');
 
 const denyAll = async () => 'deny';
 
@@ -35,7 +31,13 @@ function createMcpServer({
     approver = denyAll,
     clock = Date.now,
     approvalTimeoutMs,
-    tools = allTools
+    tools = allTools,
+    clientName,
+    maxCalls,
+    onCall,
+    onLimit,
+    onWrite,
+    restoreText
 } = {}) {
     const server = new McpServer({ name: 'redis-deck', version });
     const ctx = {
@@ -45,8 +47,12 @@ function createMcpServer({
             timeoutMs: approvalTimeoutMs
         }),
         clock,
-        // AI client name from the initialize handshake (for dialogs and logs).
-        clientName: () => server.server.getClientVersion()?.name ?? 'unknown'
+        onWrite,
+        metered: Boolean(maxCalls || onCall),
+        // AI client name (for dialogs and logs): the host's, else the one
+        // from the initialize handshake.
+        clientName: () =>
+            clientName ?? server.server.getClientVersion()?.name ?? 'unknown'
     };
     for (const tool of tools) {
         server.registerTool(
@@ -56,11 +62,33 @@ function createMcpServer({
                 inputSchema: tool.inputSchema,
                 annotations: { readOnlyHint: tool.access === 'read' }
             },
-            (args) => invoke(tool, args ?? {}, ctx)
+            (args) => invokeTagged(tool, args ?? {}, ctx)
         );
     }
     hideTurnedOffTools(server);
+    if (ctx.metered) {
+        meterCalls(server, {
+            maxCalls,
+            onCall,
+            onLimit,
+            restoreText,
+            clock,
+            refuse: (name, args, why) =>
+                refusePastLimit(tools, name, args, why, ctx)
+        });
+    }
     return server;
+}
+
+// A call past the host's limit: not run, but logged as an attempt.
+function refusePastLimit(tools, name, args, why, ctx) {
+    const tool = tools.find((t) => t.name === name);
+    if (tool) {
+        logActivity(tool, args, ctx, ctx.clock(), RESULTS.blocked, {
+            error: why
+        });
+    }
+    return errorResult(why);
 }
 
 // Turned-off tools drop out of tools/list. The switch is read on every list,
@@ -77,56 +105,6 @@ function hideTurnedOffTools(server) {
             tools: result.tools.filter((t) => isToolEnabled(t.name))
         };
     });
-}
-
-// MCP write guard: guards/writeGuard.js decides, called without a confirm
-// header because the AI client can never confirm a write itself (tool schemas
-// have no such field and unknown arguments are dropped). Its 428 is ignored;
-// AI access (write / workflows / ask) decides, and the user is asked through
-// ctx.approvals when ask is on.
-// Returns null when the write may run, else { outcome, text } with outcome
-// RESULTS.blocked (not allowed at all) or RESULTS.denied (the user said no).
-async function refuseWrite(tool, args, ctx) {
-    const { connectionId } = args;
-    const conn = getConnection(connectionId);
-    if (!conn) {
-        return {
-            outcome: RESULTS.blocked,
-            text: `Connection '${connectionId}' not found`
-        };
-    }
-    const refusal = checkWrite(connectionId);
-    if (refusal && refusal.status !== CONFIRM_REQUIRED) {
-        return { outcome: RESULTS.blocked, text: refusal.error };
-    }
-    const access = getAiAccess(connectionId);
-    const allowed =
-        tool.name === 'run_workflow' ? access.workflows : access.write;
-    if (!allowed) {
-        const what = tool.name === 'run_workflow' ? 'Workflows' : 'Writes';
-        return {
-            outcome: RESULTS.blocked,
-            text: `${what} are not allowed for AI clients on Connection '${connectionId}'`
-        };
-    }
-    if (!access.ask) {
-        return null;
-    }
-    const approved = await ctx.approvals.approve({
-        clientName: ctx.clientName(),
-        connectionId,
-        tier: conn.tier,
-        operation: tool.name,
-        target: tool.target?.of(args),
-        targetLabel: tool.target?.label
-    });
-    if (approved) {
-        return null;
-    }
-    return {
-        outcome: RESULTS.denied,
-        text: `The user denied ${tool.name} on Connection '${connectionId}'`
-    };
 }
 
 const errorResult = (text) => ({
@@ -162,44 +140,41 @@ function logActivity(
     }
 }
 
-// AI access "See keys" off: the Connection does not exist for AI clients.
-function hiddenFrom(args) {
-    const access = args.connectionId && getAiAccess(args.connectionId);
-    return access && !access.keys;
+// The result of invoke(), tagged with its outcome for the call meter.
+async function invokeTagged(tool, args, ctx) {
+    const [outcome, result] = await invoke(tool, args, ctx);
+    return ctx.metered ? { ...result, [OUTCOME]: outcome } : result;
 }
 
+// -> [outcome (one of RESULTS), MCP tool result]
 async function invoke(tool, args, ctx) {
     const started = ctx.clock();
-    if (!isToolEnabled(tool.name)) {
-        logActivity(tool, args, ctx, started, RESULTS.blocked, {
-            error: TURNED_OFF
-        });
-        return errorResult(TURNED_OFF);
-    }
-    if (hiddenFrom(args)) {
-        const text = `Connection '${args.connectionId}' is not available to AI clients`;
-        logActivity(tool, args, ctx, started, RESULTS.blocked, { error: text });
-        return errorResult(text);
-    }
-    if (tool.access !== 'read') {
-        const refusal = await refuseWrite(tool, args, ctx);
-        if (refusal) {
-            logActivity(tool, args, ctx, started, refusal.outcome, {
-                error: refusal.text
-            });
-            return errorResult(refusal.text);
-        }
-    }
+    const gate = tool.access === 'read' ? null : writeGate(tool, args, ctx);
+    const refuse = (outcome, text) => {
+        logActivity(tool, args, ctx, started, outcome, { error: text });
+        // A denied write needs no reason on its card: the user knows.
+        const reason = outcome === RESULTS.blocked ? { reason: text } : {};
+        gate?.report(outcome, reason);
+        return [outcome, errorResult(text)];
+    };
+
+    const blocked = blockedReason(tool, args);
+    if (blocked) return refuse(RESULTS.blocked, blocked);
+    const refusal = await gate?.ask();
+    if (refusal) return refuse(refusal.outcome, refusal.text);
     try {
         const data = await tool.run(args, ctx);
         logActivity(tool, args, ctx, started, RESULTS.ok, { response: data });
-        return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+        gate?.ran({ data });
+        const content = [{ type: 'text', text: JSON.stringify(data) }];
+        return [RESULTS.ok, { content }];
     } catch (error) {
         const message = safeMessage(error, args.connectionId);
         logActivity(tool, args, ctx, started, RESULTS.error, {
             error: message
         });
-        return errorResult(message);
+        gate?.ran({ error: message });
+        return [RESULTS.error, errorResult(message)];
     }
 }
 

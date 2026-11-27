@@ -4,6 +4,7 @@
 const { z } = require('zod');
 const {
     run,
+    writeCommands,
     writeKey,
     addMember,
     deleteKey,
@@ -13,6 +14,9 @@ const {
 
 const { connectionId, keyTarget } = require('./shared');
 const key = z.string().min(1).describe('Exact Key name');
+
+// card: what a call would do, shown where the user is asked (writeCard.js):
+// title(args), commands(args) -> argv lists, done(result).
 
 const setKey = {
     name: 'set_key',
@@ -34,6 +38,12 @@ const setKey = {
         ]),
         ttl: z.number().int().nonnegative().default(0)
     },
+    card: {
+        title: (args) => `Set Key ${args.key}`,
+        commands: ({ key: k, type, value, ttl }) =>
+            writeCommands(k, type, value, ttl),
+        done: () => 'Key written'
+    },
     run: async ({ connectionId: id, key: k, type, value, ttl }) => {
         await writeKey(id, k, type, value, ttl);
         return { key: k, type, written: true };
@@ -46,6 +56,12 @@ const deleteKeyTool = {
     target: keyTarget,
     description: 'Delete one Key. deleted: false means it did not exist.',
     inputSchema: { connectionId, key },
+    card: {
+        title: (args) => `Delete Key ${args.key}`,
+        commands: (args) => [['DEL', args.key]],
+        done: (result) =>
+            result.deleted ? 'Key deleted' : 'The Key did not exist'
+    },
     run: async ({ connectionId: id, key: k }) => ({
         key: k,
         deleted: (await deleteKey(id, k)) > 0
@@ -63,6 +79,11 @@ const renameKeyTool = {
         key,
         newKey: z.string().min(1).describe('New Key name')
     },
+    card: {
+        title: (args) => `Rename Key ${args.key} to ${args.newKey}`,
+        commands: (args) => [['RENAME', args.key, args.newKey]],
+        done: () => 'Key renamed'
+    },
     run: async ({ connectionId: id, key: k, newKey }) => {
         await renameKey(id, k, newKey);
         return { key: k, newKey, renamed: true };
@@ -79,6 +100,11 @@ const setTtl = {
         key,
         seconds: z.number().int().positive()
     },
+    card: {
+        title: (args) => `Set a TTL of ${args.seconds} s on ${args.key}`,
+        commands: (args) => [['EXPIRE', args.key, args.seconds]],
+        done: (result) => (result.applied ? 'TTL set' : 'The Key did not exist')
+    },
     run: async ({ connectionId: id, key: k, seconds }) => ({
         key: k,
         ttl: seconds,
@@ -92,12 +118,20 @@ const removeTtl = {
     target: keyTarget,
     description: 'Remove the expiry of a Key so it never expires.',
     inputSchema: { connectionId, key },
+    card: {
+        title: (args) => `Remove the TTL of ${args.key}`,
+        commands: (args) => [['PERSIST', args.key]],
+        done: (result) =>
+            result.removed ? 'TTL removed' : 'There was no TTL to remove'
+    },
     run: async ({ connectionId: id, key: k }) => ({
         key: k,
         // PERSIST is 0 for a missing Key or one without an expiry.
         removed: (await expireKey(id, k, -1)) === 1
     })
 };
+
+const scorePairs = (members) => members.flatMap((m) => [m.score, m.member]);
 
 const zadd = {
     name: 'zadd',
@@ -112,9 +146,14 @@ const zadd = {
             .array(z.object({ member: z.string(), score: z.number() }))
             .min(1)
     },
+    card: {
+        title: (args) => `Add to the sorted set ${args.key}`,
+        commands: (args) => [['ZADD', args.key, ...scorePairs(args.members)]],
+        done: (result) => `${result.added} new members added`
+    },
     run: async ({ connectionId: id, key: k, members }) => {
-        const pairs = members.flatMap((m) => [m.score, m.member]);
-        const { result } = await run(id, ['ZADD', k, ...pairs]);
+        const argv = ['ZADD', k, ...scorePairs(members)];
+        const { result } = await run(id, argv);
         return { key: k, added: Number(result) };
     }
 };
@@ -130,6 +169,11 @@ const setHashField = {
         key,
         field: z.string().min(1),
         value: z.string()
+    },
+    card: {
+        title: (args) => `Set the field ${args.field} of ${args.key}`,
+        commands: (args) => [['HSET', args.key, args.field, args.value]],
+        done: () => 'Field set'
     },
     run: async ({ connectionId: id, key: k, field, value }) => {
         await addMember(id, k, { field, value });

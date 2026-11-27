@@ -36,7 +36,10 @@ interface Snippet extends AiClientSnippet {
     name: string;
 }
 
-/** MCP server card and AI client install rows. Render only in the Desktop app. */
+/**
+ * AI clients: MCP server card and the install rows. Render only in the Desktop
+ * app.
+ */
 export function AiClientsSection() {
     const [clients, setClients] = useState<AiClient[]>([]);
     const [command, setCommand] = useState('');
@@ -76,7 +79,7 @@ export function AiClientsSection() {
     useEffect(() => {
         let cancelled = false;
         const load = () =>
-            listAiActivityClients().then(
+            listAiActivityClients({ aiClientsOnly: true }).then(
                 (list) => {
                     if (cancelled) return;
                     setActive(list);

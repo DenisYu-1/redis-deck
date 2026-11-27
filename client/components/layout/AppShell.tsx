@@ -3,6 +3,7 @@ import { Welcome } from '@/pages/Welcome/Welcome';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ProdBanner } from './ProdBanner';
+import { AssistantDock } from '@/components/chat/AssistantDock';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmWriteHost } from '@/components/ui/ConfirmWriteHost';
 import { loadEnvironments } from '@/services/apiService';
@@ -43,9 +44,14 @@ export function AppShell() {
     }, [setConnections, setCurrentEnvironment, setIsLoading]);
 
     const welcome = loaded && connections.length === 0;
+    // The AI assistant is on every page except Welcome.
+    const assistant = !welcome && connections.length > 0;
+    const chatOpen = useAppStore((s) => s.chat.open);
 
     return (
-        <div className={`app ${welcome ? 'bare' : ''}`}>
+        <div
+            className={`app ${welcome ? 'bare' : ''} ${assistant && chatOpen ? 'chat-open' : ''}`}
+        >
             {isDesktop() && <div className="titlebar" />}
             {!welcome && <Sidebar />}
             <div className="main scroll">
@@ -58,6 +64,7 @@ export function AppShell() {
                     </>
                 )}
             </div>
+            {assistant && <AssistantDock />}
             <Toast />
             <ConfirmWriteHost />
         </div>

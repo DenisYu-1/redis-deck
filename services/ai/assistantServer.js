@@ -1,0 +1,46 @@
+// The MCP server of one assistant turn: the same registry AI clients use, under
+// the assistant's name, with its tool-call limit and the chat's approval cards
+// as the approver. Transport-free, so every way of running a turn gets the same
+// rules, rows, cards and logging.
+const { createMcpServer } = require('../mcp/server');
+const { cardOf } = require('../mcp/writeGate');
+const { ASSISTANT_CLIENT: CLIENT_NAME } = require('../aiActivity');
+const { awaitAnswer } = require('./approvalDesk');
+const { MAX_TOOL_CALLS, APPROVAL_TIMEOUT_MS } = require('./limits');
+
+// chatId: whose answers count (approvalDesk.js). signal: aborting it denies
+// what still waits. onCard gets every approval card, then its new state
+// (mcp/writeGate.js, plus state 'pending'). onCall, onLimit, restoreText:
+// mcp/callMeter.js.
+function createAssistantServer({
+    chatId,
+    signal,
+    onCall,
+    onCard,
+    onLimit,
+    restoreText
+}) {
+    // Never 'session': the next write asks again.
+    const approver = (request, { signal: timedOut }) => {
+        const signals = [timedOut, signal];
+        const answer = awaitAnswer({ chatId, id: request.id }, signals);
+        onCard({ ...cardOf(request), state: 'pending' });
+        return answer;
+    };
+    return createMcpServer({
+        clientName: CLIENT_NAME,
+        approver,
+        approvalTimeoutMs: APPROVAL_TIMEOUT_MS,
+        onWrite: onCard,
+        maxCalls: MAX_TOOL_CALLS,
+        onCall,
+        onLimit,
+        restoreText
+    });
+}
+
+// For the agent Test: it lists the tools, and runs none.
+const createListingServer = () =>
+    createMcpServer({ clientName: CLIENT_NAME, maxCalls: 0, onCall: () => {} });
+
+module.exports = { createAssistantServer, createListingServer };

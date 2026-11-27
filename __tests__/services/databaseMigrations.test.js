@@ -52,13 +52,14 @@ describe('database migrations', () => {
         fs.rmSync(dataDir, { recursive: true, force: true });
     });
 
-    test('a fresh data folder starts at data version 4 with today’s tables and no backup', () => {
+    test('a fresh data folder starts at data version 7 with today’s tables and no backup', () => {
         const state = startApp(dataDir);
 
-        expect(state.version).toBe(4);
+        expect(state.version).toBe(7);
         expect(state.tables).toEqual([
             'ai_access',
             'ai_activity',
+            'ai_model',
             'connections',
             'idx_ai_activity_connection',
             'idx_ai_activity_time',
@@ -80,7 +81,7 @@ describe('database migrations', () => {
         const second = startApp(dataDir);
 
         expect(second).toEqual(first);
-        expect(second.version).toBe(4);
+        expect(second.version).toBe(7);
         expect(second.connections).toEqual(['test:kept']);
         expect(backups(dataDir)).toEqual([]);
     });

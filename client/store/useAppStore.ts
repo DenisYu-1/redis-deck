@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import type { RedisConnection, KeyDetails } from '@/types';
 import type { OutputLine } from '@/pages/Console/output';
+import { createChatSlice, type ChatSlice } from './chatSlice';
+import { createConsoleSlice, type ConsoleSlice } from './consoleSlice';
 
 const MAX_OUTPUT_LINES = 200;
 
-interface AppState {
+interface AppState extends ChatSlice, ConsoleSlice {
     connections: RedisConnection[];
     currentEnvironment: string | null;
     selectedKey: string | null;
@@ -23,7 +25,9 @@ interface AppState {
     setIsLoading: (loading: boolean) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get, api) => ({
+    ...createChatSlice(set, get, api),
+    ...createConsoleSlice(set, get, api),
     connections: [],
     currentEnvironment: null,
     selectedKey: null,
@@ -40,7 +44,8 @@ export const useAppStore = create<AppState>((set) => ({
         })),
     setKeyPattern: (pattern) => set({ keyPattern: pattern }),
     setConnections: (connections) => set({ connections }),
-    // A key belongs to one connection: switching drops the open key and its details.
+    // A key belongs to one connection: switching drops the open key, its details
+    // and the chat's chips.
     setCurrentEnvironment: (environment) =>
         set((s) =>
             s.currentEnvironment === environment
@@ -48,7 +53,8 @@ export const useAppStore = create<AppState>((set) => ({
                 : {
                       currentEnvironment: environment,
                       selectedKey: null,
-                      keyDetails: null
+                      keyDetails: null,
+                      chat: { ...s.chat, chips: {} }
                   }
         ),
     setSelectedKey: (key) => set({ selectedKey: key }),

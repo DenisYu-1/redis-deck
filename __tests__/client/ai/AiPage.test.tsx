@@ -37,6 +37,20 @@ beforeEach(() => {
         connections: [{ id: 'prod' }, { id: 'dev' }] as RedisConnection[]
     });
     mocked.getAiActivityLogging.mockResolvedValue(true);
+    mocked.getAiModel.mockResolvedValue({
+        mode: 'api',
+        provider: 'anthropic',
+        model: 'claude-sonnet-5-5',
+        models: ['claude-sonnet-5-5'],
+        keyLast4: null,
+        ready: false,
+        baseUrl: '',
+        localUrl: '',
+        localModel: '',
+        agent: 'claude',
+        agents: [],
+        defaultModel: 'claude-sonnet-5-5'
+    });
     mocked.listAiActivityClients.mockResolvedValue([]);
     mocked.listAiTools.mockResolvedValue([]);
     mocked.getAiHiddenFields.mockResolvedValue(['password']);
@@ -80,6 +94,35 @@ beforeEach(() => {
 });
 
 afterAll(() => setDesktop(false));
+
+const sectionNames = () =>
+    screen
+        .getAllByRole('region')
+        .map((section) => section.getAttribute('aria-label'));
+
+test('sections come in order; AI clients cards are Desktop-only', async () => {
+    renderPage();
+    await screen.findAllByTestId('ai-activity-row');
+    expect(sectionNames()).toEqual([
+        'AI access',
+        'Hidden fields',
+        'Tools exposed',
+        'AI activity'
+    ]);
+    cleanup();
+
+    setDesktop(true);
+    renderPage();
+    await screen.findAllByTestId('ai-client-row');
+    expect(sectionNames()).toEqual([
+        'AI access',
+        'Hidden fields',
+        'MCP server',
+        'Add to a client',
+        'Tools exposed',
+        'AI activity'
+    ]);
+});
 
 test('outside Desktop: log and switch show, AI clients section does not', async () => {
     const user = userEvent.setup();
@@ -229,4 +272,15 @@ test('Desktop: absent clients are listed only in Supported AI clients', async ()
     expect(screen.queryByText('Codex')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '1 more supported' }));
     expect(screen.getByText('Codex')).toBeVisible();
+});
+
+test('connected clients asks the server for AI clients only', async () => {
+    setDesktop(true);
+    renderPage();
+
+    await screen.findByRole('region', { name: 'MCP server' });
+
+    expect(mocked.listAiActivityClients).toHaveBeenCalledWith({
+        aiClientsOnly: true
+    });
 });
